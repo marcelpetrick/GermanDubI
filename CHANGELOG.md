@@ -21,6 +21,9 @@ may occur in MINOR releases and are always listed here.
 
 ### Fixed
 
+- Long unpunctuated transcript passages now split at word boundaries instead of producing
+  an oversized dubbing segment, and yt-dlp webpage failures are no longer misclassified as
+  age restrictions.
 - Optional translation and speech providers that are installed but cannot be imported now
   degrade to an available fallback instead of aborting application startup or test
   collection.

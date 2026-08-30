@@ -128,7 +128,22 @@ def _split_long_text(text: str, limit: int) -> list[str]:
             current += token
     if current.strip():
         parts.append(current.strip())
-    return parts or [text]
+
+    bounded: list[str] = []
+    for part in parts or [text]:
+        if len(part) <= limit:
+            bounded.append(part)
+            continue
+        line = ""
+        for word in part.split():
+            if line and len(line) + 1 + len(word) > limit:
+                bounded.append(line)
+                line = word
+            else:
+                line = f"{line} {word}".strip()
+        if line:
+            bounded.append(line)
+    return bounded or [text]
 
 
 def _interval_for(words: tuple[Word, ...], fallback: TimeInterval) -> TimeInterval:

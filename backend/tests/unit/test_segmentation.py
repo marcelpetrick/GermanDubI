@@ -8,9 +8,17 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from germandubi.domain.entities.segment import SpeechSegment, TextOrigin
+from germandubi.domain.entities.segment import SpeechSegment, TextOrigin, Word
+from germandubi.domain.errors import DomainError
 from germandubi.domain.segmentation import (
     SegmentationOptions,
+    _absorb_short_drafts,
+    _Draft,
+    _group_cues,
+    _interval_for,
+    _merge,
+    _split_draft,
+    _split_long_text,
     build_segments,
     split_into_sentences,
 )
@@ -68,6 +76,20 @@ class TestSentenceSplitting:
     def test_unpunctuated_text_stays_one_sentence(self) -> None:
         """This is what automatic captions look like."""
         assert split_into_sentences("no punctuation at all here") == ["no punctuation at all here"]
+
+    def test_one_letter_initial_is_treated_as_an_abbreviation(self) -> None:
+        assert split_into_sentences("J. Smith arrived. Then left.") == [
+            "J. Smith arrived.",
+            "Then left.",
+        ]
+
+    def test_long_unpunctuated_text_falls_back_to_word_boundaries(self) -> None:
+        pieces = _split_long_text("one two three four five six", 10)
+        assert pieces == ["one two", "three four", "five six"]
+        assert all(len(piece) <= 10 for piece in pieces)
+
+    def test_short_text_is_unchanged(self) -> None:
+        assert _split_long_text("short", 10) == ["short"]
 
     def test_handles_quotes_after_the_full_stop(self) -> None:
         assert split_into_sentences('He said "stop." Then he left.') == [
@@ -157,10 +179,43 @@ class TestBounds:
         assert len(segments) == 1
 
     def test_rejects_contradictory_bounds(self) -> None:
-        from germandubi.domain.errors import DomainError
-
         with pytest.raises(DomainError, match="must be below"):
             SegmentationOptions(min_duration_ms=5000, max_duration_ms=1000)
+
+    def test_rejects_non_positive_bounds(self) -> None:
+        with pytest.raises(DomainError, match="positive"):
+            SegmentationOptions(min_duration_ms=0)
+
+
+class TestSegmentationHelpers:
+    def test_interval_uses_words_and_falls_back_without_them(self) -> None:
+        fallback = TimeInterval(0, 1000)
+        words = (Word(100, 300, "one"), Word(400, 800, "two"))
+        assert _interval_for(words, fallback) == TimeInterval(100, 800)
+        assert _interval_for((), fallback) == fallback
+
+    def test_merge_averages_present_confidences(self) -> None:
+        left = _Draft(TimeInterval(0, 500), "one", (), 0.8)
+        right = _Draft(TimeInterval(500, 1000), "two", (), None)
+        merged = _merge(left, right)
+        assert merged.text == "one two" and merged.confidence == 0.8
+
+    def test_grouping_starts_new_drafts_for_character_limit(self) -> None:
+        cues = (cue(0, 1000, "abcdefgh"), cue(1000, 2000, "ijklmnop"))
+        assert len(_group_cues(cues, SegmentationOptions(max_characters=10))) == 2
+
+    def test_split_draft_distributes_words_and_timing(self) -> None:
+        words = (Word(0, 300, "First"), Word(1000, 1400, "Second"))
+        draft = _Draft(TimeInterval(0, 2000), "First. Second.", words, 0.9)
+        pieces = _split_draft(draft, SegmentationOptions())
+        assert [piece.text for piece in pieces] == ["First.", "Second."]
+        assert pieces[0].words and pieces[1].words
+
+    def test_absorbing_with_no_or_one_draft_is_a_noop(self) -> None:
+        options = SegmentationOptions()
+        draft = _Draft(TimeInterval(0, 100), "short", (), None)
+        assert _absorb_short_drafts([], options) == []
+        assert _absorb_short_drafts([draft], options) == [draft]
 
 
 class TestResultInvariants:
