@@ -221,6 +221,29 @@ class TestWorkflow:
         assert {job["stage"] for job in run["jobs"]} >= {"translate", "synthesize", "export"}
         assert all(job["label"] for job in run["jobs"])
 
+    def test_gets_one_run_and_rejects_cross_project_access(
+        self, client: TestClient, dubbed: str
+    ) -> None:
+        run = client.get(url(f"/projects/{dubbed}/runs/latest")).json()
+        response = client.get(url(f"/projects/{dubbed}/runs/{run['id']}"))
+        assert response.status_code == 200
+        other = create_project(client, "https://youtu.be/ccccccccccc")
+        assert client.get(url(f"/projects/{other}/runs/{run['id']}")).status_code == 404
+
+    def test_cancels_and_resumes_a_queued_run(self, client: TestClient, analysed: str) -> None:
+        run = client.post(url(f"/projects/{analysed}/runs"), json={}).json()
+        cancelled = client.post(url(f"/projects/{analysed}/runs/{run['id']}/cancel"))
+        assert cancelled.status_code == 202
+        assert cancelled.json()["finished"] is True
+        resumed = client.post(url(f"/projects/{analysed}/runs/resume"))
+        assert resumed.status_code == 202
+        assert resumed.json()["jobs"]
+
+    def test_refuses_to_resume_a_successful_run(self, client: TestClient, dubbed: str) -> None:
+        response = client.post(url(f"/projects/{dubbed}/runs/resume"))
+        assert response.status_code == 409
+        assert "nothing to resume" in response.json()["message"]
+
     def test_the_project_reaches_review(self, client: TestClient, dubbed: str) -> None:
         assert client.get(url(f"/projects/{dubbed}")).json()["state"] == "review"
 

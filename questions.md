@@ -210,10 +210,12 @@ reason. Revisit when the optional ML groups support it.
 **Provisional:** rebase and fast-forward, keeping the atomic commits. Squashing would
 destroy the per-commit version trace that `setuptools-scm` gives us.
 
-### Q-E3 — Coverage floor? · `PROVISIONAL`
+### Q-E3 — Coverage floor? · `RESOLVED`
 
-**Provisional:** 80 % repository-wide as a diagnostic, with domain and application logic
-expected to be far higher. Coverage is not a goal in itself (`vision.md` §28).
+**Decision:** more than 95% line coverage repository-wide (`fail_under = 95.1`), while
+continuing to prioritize domain invariants and observable behavior over metric-only tests.
+The deterministic fake-provider suite covers default CI; real-provider smoke tests remain
+separate because they require models, network access, or a GPU.
 
 ### Q-E4 — License? · `RESOLVED`
 

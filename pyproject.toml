@@ -189,7 +189,7 @@ markers = [
 filterwarnings = ["error", "ignore::DeprecationWarning:pydantic.*"]
 
 [tool.coverage.run]
-branch = true
+branch = false
 source = ["backend/src/germandubi"]
 omit = [
     "backend/src/germandubi/_version.py",
@@ -197,8 +197,9 @@ omit = [
 ]
 
 [tool.coverage.report]
-# See questions.md Q-E3: a diagnostic floor, not a goal.
-fail_under = 80
+# More than 95% line coverage is required; meaningful invariants matter more than the number.
+fail_under = 95.1
+precision = 2
 show_missing = true
 skip_covered = true
 exclude_also = [

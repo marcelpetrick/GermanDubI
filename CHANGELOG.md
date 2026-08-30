@@ -14,6 +14,7 @@ may occur in MINOR releases and are always listed here.
 
 - GPL-3.0-or-later project licensing, contribution guidance, and consistent package and
   API license metadata.
+- Repository-wide test coverage above 95%, enforced as a 95.1% line-coverage gate.
 - Browser workstation flow for creating and analyzing a project, following pipeline
   progress, previewing and downloading the export, and reviewing, correcting, regenerating,
   and approving individual German segments. Approving every segment completes the project.

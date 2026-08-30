@@ -42,7 +42,7 @@ Evidence: commit `43272ad`.
 
 Evidence: commit `faba5fc`.
 
-## 5. Enforce more than 95% backend line coverage · `IN PROGRESS`
+## 5. Enforce more than 95% backend line coverage · `COMPLETE`
 
 - Exercise meaningful application, provider, process, worker, version, and API boundary
   behavior rather than adding assertion-free coverage fillers.
@@ -50,6 +50,9 @@ Evidence: commit `faba5fc`.
   opt-in and default CI deterministic.
 - Acceptance: formatting, lint, strict typing, and the complete backend suite pass with
   measured coverage above the configured threshold.
+
+Evidence: 732 deterministic tests passed with 95.19% line coverage; formatting, Ruff, and
+strict mypy checks passed.
 
 ## 6. Add a from-scratch local quality pipeline · `PENDING`
 
