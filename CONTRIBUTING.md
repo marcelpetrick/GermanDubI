@@ -8,12 +8,14 @@ contributing, you agree that your contribution is provided under the repository'
 ## Setup
 
 ```bash
-uv sync --all-groups
 corepack enable pnpm
-make install
-uv run pre-commit install
-make check
+make install            # locked backend, frontend and e2e dependencies
+make hooks              # pre-commit
+./localPipeline.sh      # the full gate, once, to confirm the environment
 ```
+
+The pinned runtimes are in `.python-version` and `.node-version`; an older Node produces a
+frontend test suite that fails to load rather than a clear version error, so use the pin.
 
 ## The rules that matter
 
@@ -26,8 +28,12 @@ make check
 3. **Respect the layer boundaries.** `domain` imports nothing from FastAPI, SQLAlchemy,
    `yt-dlp` or FFmpeg. `application` depends on ports, not on provider implementations.
    These rules are enforced by tests in `backend/tests/unit/test_architecture.py`.
-4. **All external processes go through the process runner.** No bare `subprocess` calls.
-5. **`make check` must pass before you commit.** It approximates CI.
+4. **All external processes go through the process runner.** No bare `subprocess` calls
+   in `backend/src`; an architecture test enforces it. Operator scripts under `scripts/`
+   drive the application from outside and are exempt.
+5. **The gate must pass before you push.** `make check` is the fast inner loop;
+   `./localPipeline.sh` is the complete gate and is exactly what CI runs, so a green run
+   locally means a green run there.
 
 ## Definition of Done
 
