@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "germandubi"
 description = "German Dub Interface - turn English videos into editable, synchronized German dubs."
 readme = "README.md"
-license = "MIT"
+license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Marcel Petrick", email = "mail@marcelpetrick.it" }]
 keywords = ["dubbing", "localization", "german", "tts", "asr", "video"]

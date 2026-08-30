@@ -215,11 +215,11 @@ destroy the per-commit version trace that `setuptools-scm` gives us.
 **Provisional:** 80 % repository-wide as a diagnostic, with domain and application logic
 expected to be far higher. Coverage is not a goal in itself (`vision.md` §28).
 
-### Q-E4 — License? · `PROVISIONAL`
+### Q-E4 — License? · `RESOLVED`
 
-**Provisional:** MIT. Note that optional ML dependencies carry their own, sometimes
-non-commercial, licenses; those are documented per provider in `docs/providers/` and are
-not redistributed with this repository.
+**Decision:** GermanDubI is licensed under GPL-3.0-or-later; see ADR-0011. Optional ML
+dependencies and model assets retain their own licenses and are not redistributed as part
+of this repository. Provider-specific license metadata remains visible at the boundary.
 
 ### Q-E5 — Do we publish to PyPI? · `OPEN`
 

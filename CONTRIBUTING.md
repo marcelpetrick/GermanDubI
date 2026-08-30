@@ -1,5 +1,10 @@
 # Contributing to GermanDubI
 
+Contributions are welcome. Please open a focused issue or pull request, or contact Marcel
+Petrick at <mail@marcelpetrick.it> when a change needs design discussion first. By
+contributing, you agree that your contribution is provided under the repository's
+[`GPL-3.0-or-later`](LICENSE) license.
+
 ## Setup
 
 ```bash

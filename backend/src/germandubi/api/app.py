@@ -96,8 +96,15 @@ def create_app(
         openapi_url=f"{API_PREFIX}/openapi.json",
         docs_url=f"{API_PREFIX}/docs",
         redoc_url=None,
-        contact={"name": "GermanDubI", "url": "https://github.com/marcelpetrick/GermanDubI"},
-        license_info={"name": "MIT"},
+        contact={
+            "name": "Marcel Petrick",
+            "url": "https://github.com/marcelpetrick/GermanDubI",
+            "email": "mail@marcelpetrick.it",
+        },
+        license_info={
+            "name": "GNU General Public License v3 or later",
+            "identifier": "GPL-3.0-or-later",
+        },
     )
 
     app.add_middleware(

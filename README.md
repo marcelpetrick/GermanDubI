@@ -11,6 +11,8 @@ German dub while every intermediate stage stays inspectable and reproducible.
 > Unresolved design decisions live in [`questions.md`](questions.md).
 > The implemented system map lives in [`docs/architecture/c4.md`](docs/architecture/c4.md).
 
+**Author:** Marcel Petrick <mail@marcelpetrick.it>
+
 ---
 
 ## What it does
@@ -100,7 +102,9 @@ data/       Default local project storage (never committed)
 
 ## Licensing and rights
 
-GermanDubI is released under the [MIT License](LICENSE).
+GermanDubI is free software released under the
+[GNU General Public License v3 or later](LICENSE). Contributions are welcome; see
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 The software does not circumvent access controls or DRM. **Users are responsible for
 holding the rights to process and redistribute any source content**, and for holding

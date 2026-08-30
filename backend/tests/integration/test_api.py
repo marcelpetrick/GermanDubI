@@ -89,6 +89,8 @@ class TestMeta:
     def test_the_openapi_schema_is_served(self, client: TestClient) -> None:
         schema = client.get(url("/openapi.json")).json()
         assert schema["info"]["title"] == "GermanDubI"
+        assert schema["info"]["license"]["identifier"] == "GPL-3.0-or-later"
+        assert schema["info"]["contact"]["email"] == "mail@marcelpetrick.it"
         assert "/api/v1/projects" in schema["paths"]
 
     def test_every_operation_has_a_stable_operation_id(self, client: TestClient) -> None:
