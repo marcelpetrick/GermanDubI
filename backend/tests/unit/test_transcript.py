@@ -154,3 +154,22 @@ class TestTranscript:
         self, source: TranscriptSource, punctuated: bool
     ) -> None:
         assert source.has_reliable_punctuation is punctuated
+
+
+class TestRedundancyRequiresTimeOverlap:
+    """Regression: substring containment alone was deleting genuine narration."""
+
+    def test_a_later_unrelated_cue_is_not_swallowed_by_a_longer_earlier_one(self) -> None:
+        result = canonicalize_cues([cue(0, 1000, "line 10"), cue(1000, 3000, "line 1")])
+        assert [c.text for c in result] == ["line 10", "line 1"]
+
+    def test_a_repeated_line_at_a_different_time_is_kept(self) -> None:
+        """A narrator really can say the same sentence twice."""
+        result = canonicalize_cues(
+            [cue(0, 2000, "Let us begin."), cue(9000, 11000, "Let us begin.")]
+        )
+        assert len(result) == 2
+
+    def test_an_overlapping_restatement_is_still_removed(self) -> None:
+        result = canonicalize_cues([cue(0, 2000, "the same words"), cue(1000, 3000, "the same")])
+        assert len(result) == 1

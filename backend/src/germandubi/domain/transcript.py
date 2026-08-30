@@ -167,7 +167,16 @@ def canonicalize_cues(cues: list[TranscriptCue]) -> tuple[TranscriptCue, ...]:
 
 
 def _is_redundant(*, previous: TranscriptCue, current: TranscriptCue) -> bool:
-    """Return whether ``current`` adds no new speech beyond ``previous``."""
+    """Return whether ``current`` restates ``previous`` rather than adding new speech.
+
+    Time overlap is the discriminator, not text alone. Scrolling automatic captions always
+    overlap: the same words stay on screen across consecutive cues with shifted timings.
+    Two cues that do not overlap are different speech even when one text happens to contain
+    the other - without this check, a cue reading "line 1" would be swallowed by an earlier
+    unrelated "line 10", silently deleting narration.
+    """
+    if not previous.interval.overlaps(current.interval):
+        return False
     a, b = previous.text.strip(), current.text.strip()
     return a == b or b in a
 
