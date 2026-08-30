@@ -77,10 +77,11 @@ class PiperTTSProvider:
         )
 
     def is_available(self) -> bool:
-        """Return whether the Piper package is importable."""
+        """Return whether the Piper package and its dependency stack are importable."""
         try:
             from piper import PiperVoice  # noqa: F401
-        except ImportError:
+        except Exception:
+            logger.debug("Piper is installed but cannot be imported", exc_info=True)
             return False
         return True
 
@@ -110,9 +111,10 @@ class PiperTTSProvider:
                 return self._loaded[name]
             try:
                 from piper import PiperVoice
-            except ImportError as exc:
+            except Exception as exc:
                 msg = (
-                    "Piper is not installed. Install the optional TTS extra: `uv sync --extra tts`."
+                    "Piper is unavailable. Install or repair the optional TTS extra: "
+                    "`uv sync --extra tts`."
                 )
                 raise ProviderUnavailableError(msg) from exc
 

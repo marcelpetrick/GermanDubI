@@ -64,10 +64,15 @@ class ArgosTranslationProvider:
         )
 
     def is_available(self) -> bool:
-        """Return whether the Argos package is importable."""
+        """Return whether the Argos package and its dependency stack are importable."""
         try:
             import argostranslate.translate  # noqa: F401
-        except ImportError:
+        except Exception:
+            # Optional ML packages can be installed yet unusable because a transitive
+            # dependency is incompatible with this Python version or platform. Provider
+            # discovery must degrade to the fake/fallback provider instead of preventing
+            # the application (or the default test suite) from starting.
+            logger.debug("Argos Translate is installed but cannot be imported", exc_info=True)
             return False
         return True
 
@@ -84,10 +89,10 @@ class ArgosTranslationProvider:
             try:
                 import argostranslate.package
                 import argostranslate.translate
-            except ImportError as exc:
+            except Exception as exc:
                 msg = (
-                    "Argos Translate is not installed. Install the optional translation "
-                    "extra: `uv sync --extra translate`."
+                    "Argos Translate is unavailable. Install or repair the optional "
+                    "translation extra: `uv sync --extra translate`."
                 )
                 raise ProviderUnavailableError(msg) from exc
 
