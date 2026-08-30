@@ -15,6 +15,7 @@ import logging
 from germandubi.application.services.unit_of_work import UnitOfWorkFactory
 from germandubi.domain.entities.artifact import ArtifactKind
 from germandubi.domain.entities.pipeline import Stage
+from germandubi.domain.entities.project import ProjectState
 from germandubi.domain.entities.segment import (
     ReviewState,
     SegmentStatus,
@@ -198,6 +199,18 @@ class SegmentService:
         with self.unit_of_work() as uow:
             segment = uow.segments.get(segment_id).approved()
             uow.segments.save(segment)
+            uow.events.append(
+                segment.project_id, "segment_approved", {"segment_id": str(segment_id)}
+            )
+            project = uow.projects.get(segment.project_id)
+            project_segments = uow.segments.list_for_project(segment.project_id)
+            if (
+                project.state is ProjectState.REVIEW
+                and project_segments
+                and all(item.review_state is ReviewState.APPROVED for item in project_segments)
+            ):
+                uow.projects.save(project.transition_to(ProjectState.COMPLETE))
+                uow.events.append(segment.project_id, "project_completed", {})
             return segment
 
     def reset(self, segment_id: SegmentId) -> tuple[SpeechSegment, Stage]:

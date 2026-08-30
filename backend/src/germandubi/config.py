@@ -28,6 +28,12 @@ def _default_data_dir() -> Path:
     return base / "germandubi"
 
 
+def _default_frontend_dist() -> Path | None:
+    """Return the repository frontend build when running from a source checkout."""
+    candidate = Path.cwd() / "frontend" / "dist"
+    return candidate.resolve() if candidate.is_dir() else None
+
+
 class Settings(BaseSettings):
     """Runtime configuration for the API process, the worker and the CLI."""
 
@@ -55,6 +61,10 @@ class Settings(BaseSettings):
         default=("http://localhost:5173", "http://127.0.0.1:5173"),
         description="Origins allowed to call the API, for the Vite dev server.",
     )
+    frontend_dist: Path | None = Field(
+        default_factory=_default_frontend_dist,
+        description="Compiled browser bundle served by the API, when present.",
+    )
 
     # --- worker ---
     worker_poll_interval_s: float = Field(default=0.5, gt=0, le=30)
@@ -81,6 +91,10 @@ class Settings(BaseSettings):
     translation_provider: str = Field(default="auto")
     tts_provider: str = Field(default="auto")
     separation_provider: str = Field(default="auto")
+    fake_media_fixture: Path | None = Field(
+        default=None,
+        description="Local media copied by fake acquisition in deterministic E2E runs.",
+    )
     tts_voice: str = Field(default="de_DE-thorsten-medium", description="Default German voice.")
     allow_network_providers: bool = Field(
         default=False,
@@ -116,6 +130,12 @@ class Settings(BaseSettings):
     def _expand(cls, value: Path) -> Path:
         """Expand ``~`` and resolve the data directory to an absolute path."""
         return value.expanduser().resolve()
+
+    @field_validator("frontend_dist", "fake_media_fixture")
+    @classmethod
+    def _expand_optional(cls, value: Path | None) -> Path | None:
+        """Resolve an optional configured path."""
+        return value.expanduser().resolve() if value is not None else None
 
     @property
     def projects_dir(self) -> Path:

@@ -21,6 +21,7 @@ help: ## Show this help
 install: ## Install backend and frontend dependencies (fake providers only)
 	$(UV) sync --all-groups
 	cd $(FRONTEND) && $(PNPM) install --frozen-lockfile
+	cd $(E2E) && $(PNPM) install --frozen-lockfile
 
 .PHONY: install-providers
 install-providers: ## Add the real German translation and speech providers
@@ -59,11 +60,13 @@ lint: openapi-check ## Lint backend and frontend
 	$(RUN) ruff format --check backend
 	$(RUN) ruff check backend
 	cd $(FRONTEND) && $(PNPM) run lint
+	cd $(FRONTEND) && $(PNPM) exec prettier --check ../e2e
 
 .PHONY: typecheck
 typecheck: ## Static type checking, backend and frontend
 	$(RUN) mypy
 	cd $(FRONTEND) && $(PNPM) run typecheck
+	cd $(E2E) && $(PNPM) run typecheck
 
 # --------------------------------------------------------------------------- tests
 .PHONY: test

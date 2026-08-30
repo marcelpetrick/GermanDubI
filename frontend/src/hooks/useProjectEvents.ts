@@ -43,6 +43,8 @@ export function useProjectEvents(projectId: string | null, active: boolean): Liv
         kind === 'translation_ready' ||
         kind === 'speech_ready' ||
         kind === 'fit_ready' ||
+        kind === 'segment_edited' ||
+        kind === 'segment_approved' ||
         kind === 'run_finished'
       ) {
         void queryClient.invalidateQueries({ queryKey: ['segments', projectId] });
@@ -84,6 +86,9 @@ export function useProjectEvents(projectId: string | null, active: boolean): Liv
       'export_ready',
       'run_finished',
       'run_cancelled',
+      'segment_edited',
+      'segment_approved',
+      'project_completed',
     ];
     for (const kind of kinds) source.addEventListener(kind, handle as EventListener);
 

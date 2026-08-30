@@ -27,7 +27,7 @@ export function ProjectPage() {
   const active = state ? ACTIVE_STATES.has(state) : false;
   const run = useLatestRun(projectId, active);
   const segments = useSegments(projectId, state === 'review' || state === 'complete');
-  const artifacts = useArtifacts(projectId, state === 'complete');
+  const artifacts = useArtifacts(projectId, state === 'review' || state === 'complete');
   const analyze = useAnalyzeProject(projectId ?? '');
   const start = useStartRun(projectId ?? '');
   const cancel = useCancelRun(projectId ?? '');
@@ -98,7 +98,7 @@ export function ProjectPage() {
         <PipelineProgress run={run.data} liveDetail={eventDetail(live?.payload)} />
       )}
 
-      {state === 'complete' && (
+      {(state === 'review' || state === 'complete') && (
         <section className="card preview" aria-labelledby="preview-heading">
           <div className="row section-heading">
             <div>

@@ -101,7 +101,8 @@ def build_application(
         settings: Settings to use; read from the environment when omitted.
         create_schema: Whether to create missing tables. Convenient for first start and for
             tests; production schema changes still go through Alembic.
-        fixture: A local media file for the fake acquisition provider, used by tests.
+        fixture: A local media file for the fake acquisition provider, used by tests. The
+            configured fake fixture is used when this explicit override is omitted.
 
     Returns:
         The wired application.
@@ -118,7 +119,7 @@ def build_application(
     registry = ProviderRegistry(
         resolved,
         runner=ProcessRunner(default_timeout_s=resolved.process_timeout_s),
-        fixture=fixture,
+        fixture=fixture if fixture is not None else resolved.fake_media_fixture,
     )
 
     return Application(

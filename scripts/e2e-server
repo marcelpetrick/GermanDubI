@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+runtime="$(mktemp -d)"
+cleanup() {
+  rm -rf "$runtime"
+}
+trap cleanup EXIT
+
+cd "$repo_root"
+uv run python -c \
+  'import sys; from pathlib import Path; from backend.tests.fixtures.media import make_narration_video; make_narration_video(Path(sys.argv[1]), seconds=15)' \
+  "$runtime/fixture.mp4"
+
+export GERMANDUBI_DATA_DIR="$runtime/data"
+export GERMANDUBI_FAKE_MEDIA_FIXTURE="$runtime/fixture.mp4"
+export GERMANDUBI_TRANSCRIPTION_PROVIDER="fake"
+export GERMANDUBI_TRANSLATION_PROVIDER="fake"
+export GERMANDUBI_TTS_PROVIDER="fake"
+export GERMANDUBI_SEPARATION_PROVIDER="fake"
+export GERMANDUBI_WORKER_POLL_INTERVAL_S="0.05"
+
+"$repo_root/scripts/dev"

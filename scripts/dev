@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+pids=()
+
+cleanup() {
+  trap - EXIT INT TERM
+  if ((${#pids[@]})); then
+    kill "${pids[@]}" 2>/dev/null || true
+    wait "${pids[@]}" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
+
+cd "$repo_root"
+uv run uvicorn germandubi.api.app:create_app --factory --reload --host 127.0.0.1 --port 8756 &
+pids+=("$!")
+uv run germandubi worker &
+pids+=("$!")
+
+# Vite becoming reachable before the API has completed startup makes the first browser
+# request fail intermittently, especially on a cold environment. Wait for the health
+# endpoint before exposing the UI.
+uv run python - <<'PY'
+import time
+import urllib.error
+import urllib.request
+
+for _ in range(200):
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:8756/api/v1/health", timeout=0.25) as response:
+            if response.status == 200:
+                break
+    except (OSError, urllib.error.URLError):
+        time.sleep(0.1)
+else:
+    raise SystemExit("API did not become ready at http://127.0.0.1:8756")
+PY
+
+(cd frontend && pnpm run dev) &
+pids+=("$!")
+
+wait -n "${pids[@]}"

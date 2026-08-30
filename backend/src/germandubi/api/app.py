@@ -123,8 +123,9 @@ def create_app(
     ):
         app.include_router(router, prefix=API_PREFIX)
 
-    if frontend_dist is not None and frontend_dist.exists():
-        _serve_frontend(app, frontend_dist)
+    static_bundle = frontend_dist if frontend_dist is not None else resolved.frontend_dist
+    if static_bundle is not None and static_bundle.exists():
+        _serve_frontend(app, static_bundle)
 
     return app
 

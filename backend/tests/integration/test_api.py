@@ -104,6 +104,21 @@ class TestMeta:
         assert len(ids) == len(set(ids)), "operation ids must be unique"
         assert all("__" not in i for i in ids), "ids should be hand-chosen, not generated"
 
+    def test_serves_a_compiled_frontend_with_spa_fallback(
+        self, app_and_api: tuple[Application, FastAPI], tmp_path: Path
+    ) -> None:
+        dist = tmp_path / "dist"
+        (dist / "assets").mkdir(parents=True)
+        (dist / "index.html").write_text("<h1>GermanDubI browser</h1>")
+        wired, _ = app_and_api
+        web = create_app(wired.settings, application=wired, frontend_dist=dist)
+
+        with TestClient(web) as frontend:
+            response = frontend.get("/projects/some-project")
+
+        assert response.status_code == 200
+        assert "GermanDubI browser" in response.text
+
 
 class TestProjectCreation:
     def test_creates_a_project_from_a_url(self, client: TestClient) -> None:
@@ -284,6 +299,16 @@ class TestWorkflow:
         segment = client.get(url(f"/projects/{dubbed}/segments")).json()["segments"][0]
         body = client.post(url(f"/projects/{dubbed}/segments/{segment['id']}/approve")).json()
         assert body["review_state"] == "approved"
+
+    def test_approving_every_segment_completes_the_project(
+        self, client: TestClient, dubbed: str
+    ) -> None:
+        segments = client.get(url(f"/projects/{dubbed}/segments")).json()["segments"]
+        for segment in segments:
+            response = client.post(url(f"/projects/{dubbed}/segments/{segment['id']}/approve"))
+            assert response.status_code == 200
+
+        assert client.get(url(f"/projects/{dubbed}")).json()["state"] == "complete"
 
     def test_translation_history_is_kept(self, client: TestClient, dubbed: str) -> None:
         segment = client.get(url(f"/projects/{dubbed}/segments")).json()["segments"][0]
