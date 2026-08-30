@@ -181,10 +181,12 @@ end-to-end dub of step 10 still produces a playable German-dubbed file.
 
 Evidence: the commits named above.
 
-## 13. Finalize the local v0.1.0 release state · `PENDING`
+## 13. Finalize the local v0.1.0 release state · `COMPLETE`
 
-- Move release notes out of `Unreleased`, verify the exact SCM-derived version, and make
-  the final release-readiness commit.
-- Create an annotated local `v0.1.0` tag only on the fully green commit.
-- Do not push. When the maintainer force-pushes the commits and tag, the tag workflow will
-  create the public GitHub release.
+- Moved the release notes out of `Unreleased` into a dated `## [0.1.0]` section, and
+  verified the release workflow's own guards against the real file: the version check
+  matches and the note extraction returns the section and stops at the right boundary.
+- Created an annotated local `v0.1.0` tag on the fully green commit, and confirmed the
+  version derived from it is exactly `0.1.0` with no development or dirty suffix.
+- Not pushed. Pushing the commits and the tag is the maintainer's decision; the tag
+  workflow will then rerun the whole gate and create the public GitHub release.

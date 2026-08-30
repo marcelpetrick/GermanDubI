@@ -10,6 +10,15 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-31
+
+First public release. GermanDubI turns an English video into an editable, synchronized
+German dub on your own machine.
+
+The complete 40-minute reference source dubs end to end in 492 s on CPU -- a 0.21x
+realtime factor -- producing an MKV with a German audio track, the original English kept
+alongside it, and German and English subtitles.
+
 ### Added
 
 - GPL-3.0-or-later project licensing, contribution guidance, and consistent package and
