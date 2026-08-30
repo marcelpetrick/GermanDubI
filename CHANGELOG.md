@@ -19,6 +19,24 @@ may occur in MINOR releases and are always listed here.
   progress, previewing and downloading the export, and reviewing, correcting, regenerating,
   and approving individual German segments. Approving every segment completes the project.
 - OpenAPI-generated frontend types with a staleness check in the default quality gate.
+- `localPipeline.sh`, one quality gate run identically by developers and by CI, covering
+  prerequisites, locked setup, every check, both builds, the browser workflow, and a
+  production server smoke test.
+- Release automation triggered by an annotated `vX.Y.Z` tag. It reruns the whole gate at
+  the tagged commit, refuses to publish when the tag, the built version and the changelog
+  disagree, verifies the wheel installs and runs, and publishes both artifacts.
+- Local media files can be dubbed: they are inspected by a local `ffprobe`-backed provider
+  that contacts nothing.
+- `scripts/benchmark_real_dub.py`, which takes a real source through the whole pipeline
+  with real providers and records a per-stage timing breakdown. Measurements live in
+  `docs/benchmarks/`.
+- Operations documentation for creating a release and for troubleshooting common failures.
+
+### Changed
+
+- The only word-alignment implementation is no longer named `FakeAlignmentProvider`. It
+  runs on every caption-sourced project and is now `ProportionalAlignmentProvider`,
+  reported honestly by `germandubi doctor` as an estimate rather than a measurement.
 
 ### Fixed
 
@@ -27,6 +45,20 @@ may occur in MINOR releases and are always listed here.
   was silently truncated at 256 KB, which cut the downloader's JSON metadata in half; a
   caller that parses output now asks for it whole, and any truncation is reported rather
   than blamed on the source.
+- Dubbing a local file no longer fails at the first stage. Source inspection always chose
+  the downloader, which cannot inspect a file that is already on disk.
+- Long real sources no longer fail during segmentation. Two separate causes: word timing
+  estimated for a caption transcript could run past the end of its cue and collide with the
+  next one, and the word-order invariant rejected the slight overlaps that speech
+  recognizers ordinarily emit.
+- Automatic captions are no longer mistaken for manual ones. A source with no manual
+  captions has its automatic track written under the same file name a manual track would
+  use, so the pipeline preferred unpunctuated text over installed speech recognition and
+  quietly produced worse German.
+- An optional provider package that is only half present now degrades to the fallback
+  instead of raising past the handler meant to catch it.
+- `germandubi doctor` reports every selectable provider, including source inspection for
+  local files and word alignment, which it previously omitted.
 - Long unpunctuated transcript passages now split at word boundaries instead of producing
   an oversized dubbing segment, and yt-dlp webpage failures are no longer misclassified as
   age restrictions.

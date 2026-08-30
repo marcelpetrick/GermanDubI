@@ -128,15 +128,45 @@ Evidence: commit recorded with this step.
 - Acceptance: all gates are green, no untracked generated output remains, and the worktree
   contains only intentional committed changes.
 
-## 12. Review architecture, code, practice, and documentation · `PENDING`
+## 12. Review architecture, code, practice, and documentation · `COMPLETE`
 
-- Review, step by step and in this order: the architecture against its own constraints and
-  ADRs; the implementation against software best practice; and every document against what
-  the code actually does.
-- Fix every finding rated severe or critical. Record accepted lower-severity findings
-  rather than silently leaving them.
-- Acceptance: the full gate stays green, the real end-to-end dub of step 10 still
-  produces a playable German-dubbed file, and no severe or critical finding is open.
+Reviewed in order: architecture against its constraints and ADRs, the implementation
+against best practice, then every document against the code.
+
+Severe findings, all fixed:
+
+1. **Local files could not be dubbed at all.** Probe selection ignored the source kind and
+   always returned the downloader, which refuses a local file. Fixed by adding a local
+   probe and dispatching on source kind (`d2b8e3c`).
+2. **Word ordering rejected ordinary recognizer output.** The invariant checked for overlap
+   while claiming to check order, failing long real sources (`963fa77`).
+3. **Filled-in word timing escaped its cue**, corrupting order across cue boundaries and
+   failing a real 40-minute source (`229d3bd`).
+4. **Automatic captions were treated as manual**, so the pipeline preferred unpunctuated
+   text over installed speech recognition and silently produced worse German (`3923989`).
+5. **Production code lived in `fakes.py`.** The only alignment provider was called
+   `FakeAlignmentProvider` and was reported to users as "Fake alignment"; the bug in
+   finding 3 hid there behind that name (`483f1d2`).
+6. **A half-present optional package crashed instead of degrading** (`2e9e837`).
+
+Also fixed: `germandubi doctor` omitted two selectable providers (`20536cd`); two tests
+passed only because the machine happened not to have the optional extras installed.
+
+Accepted, not fixed, and deliberately recorded:
+
+- **Provider settings are cross-wired.** `probe()` and `prosody()` key off
+  `transcription_provider == "fake"`, so selecting a fake transcript provider silently
+  changes two other ports. It is how the deterministic E2E run selects fakes, and it works,
+  but each port should have its own setting. Not fixed here: adding configuration surface
+  immediately before a release is more risk than the confusion costs.
+- **Stage retries have no backoff.** A failed stage retries twice, immediately. For a
+  deterministic failure that is three identical failures in a row; for a transient network
+  error, immediate retry is the least useful moment to try again.
+
+Acceptance: the full gate is green, `doctor` reports every provider, and the real
+end-to-end dub of step 10 still produces a playable German-dubbed file.
+
+Evidence: the commits named above.
 
 ## 13. Finalize the local v0.1.0 release state · `PENDING`
 
