@@ -92,7 +92,13 @@ def test_argos_translation_success_batch_glossary_and_failures(
     with pytest.raises(TranslationError, match="translation failed"):
         provider.translate(TranslationRequest("text"))
 
-    monkeypatch.delitem(sys.modules, "argostranslate", raising=False)
+    # Block the import instead of deleting it from sys.modules. Deleting only makes the
+    # next import re-read it from disk, so on a machine where the optional extra really is
+    # installed the unavailable path was never exercised. A None entry makes the import
+    # statement itself raise, whether or not the package is present.
+    monkeypatch.setitem(sys.modules, "argostranslate", None)
+    monkeypatch.setitem(sys.modules, "argostranslate.package", None)
+    monkeypatch.setitem(sys.modules, "argostranslate.translate", None)
     provider._translation = None
     with pytest.raises(ProviderUnavailableError, match="Argos Translate is unavailable"):
         provider._load()

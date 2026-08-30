@@ -87,8 +87,13 @@ class ArgosTranslationProvider:
             if self._translation is not None:
                 return self._translation
             try:
-                import argostranslate.package
-                import argostranslate.translate
+                # Bind the submodules directly rather than reaching through the parent
+                # package. A half-present installation can leave the parent importable
+                # while a submodule is missing; attribute access would then raise
+                # AttributeError past this handler, while `from ... import` raises
+                # ImportError and degrades to the fallback as intended.
+                from argostranslate import package as argos_package
+                from argostranslate import translate as argos_translate
             except Exception as exc:
                 msg = (
                     "Argos Translate is unavailable. Install or repair the optional "
@@ -96,10 +101,10 @@ class ArgosTranslationProvider:
                 )
                 raise ProviderUnavailableError(msg) from exc
 
-            translation = self._find_installed(argostranslate.translate)
+            translation = self._find_installed(argos_translate)
             if translation is None and self.auto_install:
-                self._install_model(argostranslate.package)
-                translation = self._find_installed(argostranslate.translate)
+                self._install_model(argos_package)
+                translation = self._find_installed(argos_translate)
             if translation is None:
                 msg = (
                     "no English to German Argos model is installed and it could not be "
