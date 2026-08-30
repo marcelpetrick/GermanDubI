@@ -170,6 +170,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 minversion = "9.0"
 testpaths = ["backend/tests"]
+pythonpath = ["backend"]
 addopts = [
     "--strict-markers",
     "--strict-config",
