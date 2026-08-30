@@ -145,8 +145,12 @@ def test_best_caption_prefers_manual_and_reports_automatic(tmp_path: Path) -> No
     store = SimpleNamespace(
         path_for=lambda artifact: tmp_path / ("manual" if artifact is manual else "auto")
     )
+    # A source that really does advertise a manual English track.
+    probed = SimpleNamespace(
+        english_captions=(SimpleNamespace(automatic=False), SimpleNamespace(automatic=True))
+    )
     context: Any = SimpleNamespace(
-        project=SimpleNamespace(id="project"),
+        project=SimpleNamespace(id="project", media=probed),
         uow=SimpleNamespace(
             artifacts=SimpleNamespace(list_for_project=lambda _project: [automatic, manual]),
             store=store,
@@ -155,6 +159,51 @@ def test_best_caption_prefers_manual_and_reports_automatic(tmp_path: Path) -> No
     assert _best_caption(context) == (tmp_path / "manual", False)
     context.uow.artifacts.list_for_project = lambda _project: [automatic]
     assert _best_caption(context) == (tmp_path / "auto", True)
+
+
+def test_captions_are_automatic_when_the_source_advertised_no_manual_track(
+    tmp_path: Path,
+) -> None:
+    """The downloader's file names cannot be trusted to say which track is which.
+
+    With no manual captions available, the automatic track is written to the same plain
+    `source.en.vtt` a manual one would use. Believing the name made the pipeline treat
+    unpunctuated automatic captions as manual and prefer them over speech recognition,
+    which silently produces noticeably worse German.
+    """
+    looks_manual = SimpleNamespace(
+        kind=ArtifactKind.SOURCE_CAPTIONS,
+        provenance=SimpleNamespace(parameters={"automatic": "False"}),
+    )
+    context: Any = SimpleNamespace(
+        project=SimpleNamespace(
+            id="project",
+            # What the source actually reported: every English track is automatic.
+            media=SimpleNamespace(english_captions=(SimpleNamespace(automatic=True),)),
+        ),
+        uow=SimpleNamespace(
+            artifacts=SimpleNamespace(list_for_project=lambda _project: [looks_manual]),
+            store=SimpleNamespace(path_for=lambda _artifact: tmp_path / "caption"),
+        ),
+    )
+
+    assert _best_caption(context) == (tmp_path / "caption", True)
+
+
+def test_caption_origin_is_left_alone_when_the_source_was_never_probed(tmp_path: Path) -> None:
+    looks_manual = SimpleNamespace(
+        kind=ArtifactKind.SOURCE_CAPTIONS,
+        provenance=SimpleNamespace(parameters={"automatic": "False"}),
+    )
+    context: Any = SimpleNamespace(
+        project=SimpleNamespace(id="project", media=None),
+        uow=SimpleNamespace(
+            artifacts=SimpleNamespace(list_for_project=lambda _project: [looks_manual]),
+            store=SimpleNamespace(path_for=lambda _artifact: tmp_path / "caption"),
+        ),
+    )
+
+    assert _best_caption(context) == (tmp_path / "caption", False)
 
 
 class TestWordDistribution:

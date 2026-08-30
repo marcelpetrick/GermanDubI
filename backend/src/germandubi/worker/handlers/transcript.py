@@ -294,4 +294,16 @@ def _best_caption(context: StageContext) -> tuple[Path | None, bool]:
     manual = [a for a in artifacts if a.provenance and not is_automatic(a.provenance.parameters)]
     chosen = manual[0] if manual else artifacts[0]
     automatic = bool(chosen.provenance and is_automatic(chosen.provenance.parameters))
+
+    # The downloader's file names are not a reliable signal. When a source has no manual
+    # captions at all, the automatic track is written to the same plain `source.en.vtt`
+    # that a manual one would use, and is then indistinguishable by name. The probe is
+    # authoritative here -- the source site reports manual and automatic tracks in separate
+    # metadata -- so a source that advertised no manual English track cannot have supplied
+    # one. Without this, unpunctuated automatic captions are taken for manual ones and are
+    # preferred over speech recognition, which quietly produces noticeably worse German.
+    media = context.project.media
+    if media is not None and not any(not track.automatic for track in media.english_captions):
+        automatic = True
+
     return context.uow.store.path_for(chosen), automatic

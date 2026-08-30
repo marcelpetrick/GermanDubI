@@ -133,10 +133,14 @@ def require_tools() -> None:
 
 
 def describe_providers(settings: Settings) -> dict[str, str]:
-    """Return the provider actually selected for each port.
+    """Return the provider selected for each port before the run starts.
 
     A run using the placeholder providers would finish quickly and prove nothing, so the
     report has to record which implementations really ran.
+
+    Transcription is provisional here: the real choice also depends on whether the source
+    turns out to ship usable captions, which is not known until it has been downloaded.
+    :func:`actual_transcript_source` corrects it afterwards from what was persisted.
     """
     application = build_application(settings, create_schema=False)
     try:
@@ -150,6 +154,24 @@ def describe_providers(settings: Settings) -> dict[str, str]:
         }
     finally:
         application.dispose()
+
+
+def actual_transcript_source(path: Path) -> str | None:
+    """Return the transcript provider that really ran, read from its own artifact.
+
+    The registry can only report what it *would* select. Which transcript provider actually
+    runs depends on the captions the source turns out to carry, so reporting the selection
+    made before the download can name a provider that never executed.
+    """
+    try:
+        payload = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    provider = payload.get("provider_id")
+    origin = payload.get("source")
+    if provider is None and origin is None:
+        return None
+    return f"{provider} ({origin})" if provider and origin else str(provider or origin)
 
 
 def download_excerpt(url: str, seconds: int, destination: Path) -> Path:
@@ -366,6 +388,13 @@ def main() -> int:
                 fail("the run finished without producing an export")
                 return 1
             export_path = Path(uow.store.path_for(export))
+            transcript = uow.artifacts.latest(project.id, ArtifactKind.TRANSCRIPT)
+            transcript_path = Path(uow.store.path_for(transcript)) if transcript else None
+
+        if transcript_path is not None:
+            used = actual_transcript_source(transcript_path)
+            if used is not None:
+                providers["transcription"] = used
 
         if not export_path.exists() or export_path.stat().st_size == 0:
             fail(f"the export is missing or empty: {export_path}")
