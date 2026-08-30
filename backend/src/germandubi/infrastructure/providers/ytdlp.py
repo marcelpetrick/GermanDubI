@@ -25,7 +25,11 @@ from germandubi.domain.entities.project import CaptionTrack, SourceKind, SourceM
 from germandubi.domain.errors import SourceAcquisitionError
 from germandubi.domain.value_objects.language import LanguageCode
 from germandubi.domain.value_objects.timeline import seconds_to_ms
-from germandubi.infrastructure.processes.runner import ProcessError, ProcessRunner
+from germandubi.infrastructure.processes.runner import (
+    MAX_STRUCTURED_OUTPUT_BYTES,
+    ProcessError,
+    ProcessRunner,
+)
 
 __all__ = ["YtDlpAcquisitionProvider", "YtDlpProbeProvider"]
 
@@ -97,11 +101,18 @@ class YtDlpProbeProvider:
                     source.locator,
                 ],
                 timeout_s=_PROBE_TIMEOUT_S,
+                max_output_bytes=MAX_STRUCTURED_OUTPUT_BYTES,
             )
         except ProcessError as exc:
             msg = f"could not read the source: {_explain(exc.message)}"
             raise SourceAcquisitionError(msg, url=source.locator) from exc
 
+        if result.stdout_truncated:
+            msg = (
+                "the source returned more metadata than this version can hold; "
+                "please report this, as it is a limit in GermanDubI, not in the source"
+            )
+            raise SourceAcquisitionError(msg, url=source.locator)
         try:
             payload: dict[str, Any] = json.loads(result.stdout)
         except json.JSONDecodeError as exc:

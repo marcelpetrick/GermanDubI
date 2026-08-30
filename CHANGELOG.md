@@ -22,6 +22,11 @@ may occur in MINOR releases and are always listed here.
 
 ### Fixed
 
+- Probing a long source with many formats and caption languages no longer fails with
+  "the source site returned metadata this version cannot read". Captured process output
+  was silently truncated at 256 KB, which cut the downloader's JSON metadata in half; a
+  caller that parses output now asks for it whole, and any truncation is reported rather
+  than blamed on the source.
 - Long unpunctuated transcript passages now split at word boundaries instead of producing
   an oversized dubbing segment, and yt-dlp webpage failures are no longer misclassified as
   age restrictions.

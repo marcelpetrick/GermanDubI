@@ -17,7 +17,11 @@ from typing import Any, Final
 from germandubi.application.ports.providers import AudioInfo, MixRequest
 from germandubi.domain.errors import ExportError, MediaProcessingError, MixError
 from germandubi.domain.value_objects.timeline import TimeInterval, ms_to_seconds, seconds_to_ms
-from germandubi.infrastructure.processes.runner import ProcessError, ProcessRunner
+from germandubi.infrastructure.processes.runner import (
+    MAX_STRUCTURED_OUTPUT_BYTES,
+    ProcessError,
+    ProcessRunner,
+)
 
 __all__ = ["ASR_SAMPLE_RATE", "MASTER_SAMPLE_RATE", "FFmpegToolkit"]
 
@@ -92,11 +96,15 @@ class FFmpegToolkit:
                     str(path),
                 ],
                 timeout_s=120,
+                max_output_bytes=MAX_STRUCTURED_OUTPUT_BYTES,
             )
         except ProcessError as exc:
             msg = f"could not inspect {path.name}: {exc.message}"
             raise MediaProcessingError(msg, path=str(path)) from exc
 
+        if result.stdout_truncated:
+            msg = f"ffprobe returned more metadata than can be held for {path.name}"
+            raise MediaProcessingError(msg, path=str(path))
         try:
             payload: dict[str, Any] = json.loads(result.stdout)
         except json.JSONDecodeError as exc:

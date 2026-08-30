@@ -8,7 +8,12 @@ from pathlib import Path
 import pytest
 
 from germandubi.domain.errors import CancelledError, ConfigurationError, ResourceError
-from germandubi.infrastructure.processes.runner import ProcessError, ProcessRunner, redact
+from germandubi.infrastructure.processes.runner import (
+    MAX_STRUCTURED_OUTPUT_BYTES,
+    ProcessError,
+    ProcessRunner,
+    redact,
+)
 
 
 @pytest.fixture
@@ -130,6 +135,35 @@ class TestOutputHandling:
         """A chatty tool on a long job must not be able to exhaust memory."""
         result = runner.run(["sh", "-c", "yes abcdefgh | head -c 2000000"], timeout_s=30)
         assert len(result.stdout) <= 256 * 1024
+
+    def test_truncation_is_reported_rather_than_silent(self, runner: ProcessRunner) -> None:
+        """Silent truncation once made a probe blame the source site for a local limit."""
+        result = runner.run(["sh", "-c", "yes abcdefgh | head -c 2000000"], timeout_s=30)
+        assert result.stdout_truncated
+
+    def test_output_within_the_limit_is_not_flagged(self, runner: ProcessRunner) -> None:
+        result = runner.run(["echo", "small"])
+        assert not result.stdout_truncated
+        assert not result.stderr_truncated
+
+    def test_a_caller_may_raise_the_limit_for_structured_output(
+        self, runner: ProcessRunner
+    ) -> None:
+        """Metadata parsed as JSON must arrive whole; 256 KB is not enough for yt-dlp."""
+        size = 700_000
+        result = runner.run(
+            ["sh", "-c", f"yes abcdefgh | head -c {size}"],
+            timeout_s=30,
+            max_output_bytes=MAX_STRUCTURED_OUTPUT_BYTES,
+        )
+        assert not result.stdout_truncated
+        assert len(result.stdout) == size
+
+    def test_stderr_truncation_is_reported(self, runner: ProcessRunner) -> None:
+        result = runner.run(
+            ["sh", "-c", "yes abcdefgh | head -c 2000000 >&2"], timeout_s=30, check=False
+        )
+        assert result.stderr_truncated
 
     def test_failure_summary_returns_the_tail_of_stderr(self, runner: ProcessRunner) -> None:
         result = runner.run(

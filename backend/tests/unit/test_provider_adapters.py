@@ -26,7 +26,11 @@ from germandubi.domain.errors import (
     TranslationError,
 )
 from germandubi.domain.value_objects.timeline import TimeInterval
-from germandubi.infrastructure.processes.runner import CommandResult, ProcessError
+from germandubi.infrastructure.processes.runner import (
+    MAX_STRUCTURED_OUTPUT_BYTES,
+    CommandResult,
+    ProcessError,
+)
 from germandubi.infrastructure.providers.argos import ArgosTranslationProvider, _apply_glossary
 from germandubi.infrastructure.providers.captions import CaptionTranscriptProvider
 from germandubi.infrastructure.providers.demucs import DemucsSeparationProvider
@@ -419,6 +423,17 @@ def test_ytdlp_probe_mapping_and_errors() -> None:
     failed = YtDlpProbeProvider(StubRunner(error=process_error("private video")))  # type: ignore[arg-type]
     with pytest.raises(SourceAcquisitionError, match="private"):
         failed.probe(youtube())
+
+    # A real 40-minute video's metadata exceeded the old 256 KB capture limit, so the
+    # probe received half a JSON document and blamed the source site for a local bug.
+    assert runner.calls[0][1]["max_output_bytes"] >= MAX_STRUCTURED_OUTPUT_BYTES
+    truncated = YtDlpProbeProvider(
+        StubRunner(  # type: ignore[arg-type]
+            CommandResult(("yt-dlp",), 0, json.dumps(payload)[:20], "", 0.1, stdout_truncated=True)
+        )
+    )
+    with pytest.raises(SourceAcquisitionError, match="not in the source"):
+        truncated.probe(youtube())
 
     with pytest.raises(SourceAcquisitionError, match="no duration"):
         _to_source_media({"title": "Live"})

@@ -31,12 +31,23 @@ from germandubi.domain.errors import (
     ResourceError,
 )
 
-__all__ = ["CommandResult", "ProcessError", "ProcessRunner"]
+__all__ = [
+    "MAX_STRUCTURED_OUTPUT_BYTES",
+    "CommandResult",
+    "ProcessError",
+    "ProcessRunner",
+]
 
 logger = logging.getLogger(__name__)
 
 #: Output beyond this is discarded, so a chatty tool cannot exhaust memory on a long job.
+#: This suits progress-chattering tools like FFmpeg, where only the tail matters.
 _MAX_CAPTURED_BYTES: Final = 256 * 1024
+#: The ceiling for a caller that parses stdout as structured data. Such output must arrive
+#: whole or not at all: a JSON document cut in half is not partial information, it is a
+#: parse error blamed on the wrong component. ``yt-dlp --dump-single-json`` for a long
+#: video with many formats and caption languages exceeds 600 KB.
+MAX_STRUCTURED_OUTPUT_BYTES: Final = 16 * 1024 * 1024
 #: How long to wait for a terminated process group to exit before killing it.
 _TERMINATE_GRACE_S: Final = 5.0
 #: Values matching these are replaced before a command is logged.
@@ -63,6 +74,8 @@ class CommandResult:
         stdout: Captured standard output, truncated to a bounded size.
         stderr: Captured standard error, truncated to a bounded size.
         duration_s: Wall-clock runtime.
+        stdout_truncated: Whether ``stdout`` lost trailing bytes to the capture limit.
+        stderr_truncated: Whether ``stderr`` lost trailing bytes to the capture limit.
     """
 
     argv: tuple[str, ...]
@@ -70,6 +83,8 @@ class CommandResult:
     stdout: str
     stderr: str
     duration_s: float
+    stdout_truncated: bool = False
+    stderr_truncated: bool = False
 
     @property
     def succeeded(self) -> bool:
@@ -165,6 +180,7 @@ class ProcessRunner:
         check: bool = True,
         stdin_text: str | None = None,
         env: dict[str, str] | None = None,
+        max_output_bytes: int = _MAX_CAPTURED_BYTES,
     ) -> CommandResult:
         """Run an external program and return its result.
 
@@ -179,6 +195,9 @@ class ProcessRunner:
             check: Whether a non-zero exit code raises.
             stdin_text: Text to write to the process's standard input.
             env: Extra environment variables, merged over the current environment.
+            max_output_bytes: How much of each stream to keep. Callers that parse the
+                output must raise this to :data:`MAX_STRUCTURED_OUTPUT_BYTES`, because a
+                truncated document cannot be parsed.
 
         Returns:
             The captured result.
@@ -226,10 +245,18 @@ class ProcessRunner:
         result = CommandResult(
             argv=command,
             returncode=process.returncode if process.returncode is not None else -1,
-            stdout=stdout[:_MAX_CAPTURED_BYTES],
-            stderr=stderr[:_MAX_CAPTURED_BYTES],
+            stdout=stdout[:max_output_bytes],
+            stderr=stderr[:max_output_bytes],
             duration_s=duration,
+            stdout_truncated=len(stdout) > max_output_bytes,
+            stderr_truncated=len(stderr) > max_output_bytes,
         )
+        if result.stdout_truncated or result.stderr_truncated:
+            logger.warning(
+                "output of %s exceeded the %d byte capture limit and was truncated",
+                Path(command[0]).name,
+                max_output_bytes,
+            )
 
         if cancelled:
             msg = f"{Path(command[0]).name} was cancelled after {duration:.1f}s"
