@@ -66,6 +66,15 @@ class Settings(BaseSettings):
     process_timeout_s: int = Field(
         default=3600, gt=0, description="Ceiling for any single external process."
     )
+    sse_stream_seconds: float = Field(
+        default=600.0,
+        gt=0,
+        description=(
+            "How long one progress stream stays open before closing. The browser "
+            "reconnects automatically and replays what it missed, so bounding the "
+            "generator's lifetime costs nothing and stops connections accumulating."
+        ),
+    )
 
     # --- providers ---
     transcription_provider: str = Field(default="auto")

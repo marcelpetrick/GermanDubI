@@ -47,13 +47,14 @@ Repository = "https://github.com/marcelpetrick/GermanDubI"
 Changelog = "https://github.com/marcelpetrick/GermanDubI/blob/main/CHANGELOG.md"
 
 [project.scripts]
-germandubi = "germandubi.cli.main:app"
+germandubi = "germandubi.cli.main:main"
 
 [dependency-groups]
 dev = [
     "anyio>=4.11.0",
     "coverage[toml]>=7.11.0",
-    "httpx>=0.28.1",
+    # starlette 1.6 requires httpx2 for its test client.
+    "httpx2>=0.29.0",
     "hypothesis>=6.145.1",
     "mypy>=1.19.0",
     "pre-commit>=4.4.0",
