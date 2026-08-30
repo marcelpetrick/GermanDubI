@@ -224,12 +224,18 @@ class SpeechSegment:
         if not self.source_text.strip():
             msg = f"segment {self.ordinal} has no English text"
             raise DomainError(msg, ordinal=self.ordinal)
-        previous_end = -1
+        # Words must be in timeline order. They are deliberately allowed to overlap:
+        # recognizers routinely emit a word starting a millisecond or two before the
+        # previous one ends, especially in connected speech, and that is a property of
+        # real speech rather than a broken transcript. Requiring strict separation
+        # rejected long real sources outright, and no consumer of `words` depends on it --
+        # prosody sums durations, and reloading a segment only ever sorts by start.
+        previous_start = -1
         for word in self.words:
-            if word.start_ms < previous_end:
+            if word.start_ms < previous_start:
                 msg = f"segment {self.ordinal} has words that are not in timeline order"
                 raise DomainError(msg, ordinal=self.ordinal, word=word.text)
-            previous_end = word.end_ms
+            previous_start = word.start_ms
 
     # --- construction -------------------------------------------------------------------
 

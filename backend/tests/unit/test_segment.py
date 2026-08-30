@@ -67,6 +67,25 @@ class TestInvariants:
                 words=(Word(2000, 3000, "two"), Word(500, 900, "words")),
             )
 
+    def test_accepts_words_that_overlap_slightly(self, project_id: ProjectId) -> None:
+        """Recognizers emit overlapping word timings on connected speech.
+
+        Dubbing a real 40-minute source failed permanently at segmentation with "segment
+        11 has words that are not in timeline order" because one word began a millisecond
+        before the previous one ended. That is ordinary ASR output, not a broken
+        transcript, and rejecting it made long real sources undubbable.
+        """
+        segment = SpeechSegment.create(
+            project_id=project_id,
+            ordinal=11,
+            interval=TimeInterval(0, 5000),
+            source_text="overlapping words",
+            source_origin=TextOrigin.ASR,
+            words=(Word(1000, 1500, "overlapping"), Word(1498, 2000, "words")),
+        )
+
+        assert len(segment.words) == 2
+
     def test_strips_surrounding_whitespace_from_the_english_text(
         self, project_id: ProjectId
     ) -> None:
