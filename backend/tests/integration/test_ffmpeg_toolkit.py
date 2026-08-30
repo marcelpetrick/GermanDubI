@@ -35,9 +35,16 @@ def tone(toolkit: FFmpegToolkit, tmp_path: Path) -> Path:
     destination = tmp_path / "tone.wav"
     toolkit.runner.run(
         [
-            "ffmpeg", "-y", "-nostdin",
-            "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
-            "-c:a", "pcm_s16le", str(destination),
+            "ffmpeg",
+            "-y",
+            "-nostdin",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=1",
+            "-c:a",
+            "pcm_s16le",
+            str(destination),
         ]
     )
     return destination
@@ -49,11 +56,27 @@ def clip(toolkit: FFmpegToolkit, tmp_path: Path) -> Path:
     destination = tmp_path / "clip.mp4"
     toolkit.runner.run(
         [
-            "ffmpeg", "-y", "-nostdin",
-            "-f", "lavfi", "-i", "testsrc=size=320x240:rate=15:duration=5",
-            "-f", "lavfi", "-i", "sine=frequency=220:duration=5",
-            "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
-            "-c:a", "aac", "-shortest", str(destination),
+            "ffmpeg",
+            "-y",
+            "-nostdin",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=size=320x240:rate=15:duration=5",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=220:duration=5",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(destination),
         ]
     )
     return destination
@@ -240,9 +263,7 @@ class TestMux:
         german = toolkit.concatenate_speech(
             [(TimeInterval(0, 1000), tone)], tmp_path / "de.wav", total_ms=5000
         )
-        out = toolkit.mux(
-            video_source=clip, german_audio=german, destination=tmp_path / "out.mkv"
-        )
+        out = toolkit.mux(video_source=clip, german_audio=german, destination=tmp_path / "out.mkv")
         assert toolkit.probe(out).video_codec == toolkit.probe(clip).video_codec
 
     def test_produces_a_playable_mp4(
