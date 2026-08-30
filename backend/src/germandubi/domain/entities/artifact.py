@@ -33,6 +33,7 @@ class ArtifactKind(StrEnum):
     ASR_AUDIO = "asr_audio"
     TRANSCRIPT = "transcript"
     ALIGNMENT = "alignment"
+    SEGMENTS = "segments"
     BACKGROUND_STEM = "background_stem"
     VOICE_STEM = "voice_stem"
     SEGMENT_SPEECH = "segment_speech"
@@ -54,6 +55,7 @@ class ArtifactKind(StrEnum):
             ArtifactKind.ASR_AUDIO: "audio",
             ArtifactKind.TRANSCRIPT: "transcript",
             ArtifactKind.ALIGNMENT: "transcript",
+            ArtifactKind.SEGMENTS: "transcript",
             ArtifactKind.BACKGROUND_STEM: "stems",
             ArtifactKind.VOICE_STEM: "stems",
             ArtifactKind.SEGMENT_SPEECH: "speech",

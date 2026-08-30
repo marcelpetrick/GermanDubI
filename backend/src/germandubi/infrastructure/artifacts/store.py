@@ -267,6 +267,23 @@ class ArtifactStore:
             raise ResourceError(msg, relative_path=artifact.relative_path)
         return path.read_text(encoding="utf-8")
 
+    def read_text_at(self, path: Path) -> str:
+        """Read a workspace file that a caller already resolved.
+
+        Args:
+            path: The absolute path, obtained from this store.
+
+        Returns:
+            The decoded content.
+
+        Raises:
+            ResourceError: If the file is missing.
+        """
+        if not path.exists():
+            msg = f"file is missing from the project workspace: {path.name}"
+            raise ResourceError(msg, path=str(path))
+        return path.read_text(encoding="utf-8")
+
     def stream(self, path: Path, *, start: int = 0, end: int | None = None) -> Iterator[bytes]:
         """Yield a byte range of a file in chunks.
 
