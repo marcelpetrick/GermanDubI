@@ -54,3 +54,5 @@ data/*
 .vscode/
 *.swp
 .DS_Store
+benchmark-output/
+.benchmark/

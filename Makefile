@@ -51,14 +51,14 @@ doctor: ## Report the state of external tool and provider dependencies
 # --------------------------------------------------------------------------- quality
 .PHONY: format
 format: ## Auto-format backend and frontend
-	$(RUN) ruff format backend
-	$(RUN) ruff check --fix backend
+	$(RUN) ruff format backend scripts
+	$(RUN) ruff check --fix backend scripts
 	cd $(FRONTEND) && $(PNPM) run format
 
 .PHONY: lint
 lint: openapi-check ## Lint backend and frontend
-	$(RUN) ruff format --check backend
-	$(RUN) ruff check backend
+	$(RUN) ruff format --check backend scripts
+	$(RUN) ruff check backend scripts
 	cd $(FRONTEND) && $(PNPM) run lint
 	cd $(FRONTEND) && $(PNPM) exec prettier --check ../e2e
 

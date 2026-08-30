@@ -86,7 +86,7 @@ germandubi = ["py.typed", "**/*.sql", "alembic.ini", "**/*.mako"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["backend/src", "backend/tests"]
+src = ["backend/src", "backend/tests", "scripts"]
 
 [tool.ruff.lint]
 # A deliberately chosen ruleset, not everything Ruff offers (vision.md section 25.2).
@@ -127,6 +127,9 @@ ignore = [
 "backend/src/germandubi/infrastructure/db/migrations/**" = ["D", "ANN", "ERA", "INP"]
 # The process runner is the one place allowed to touch subprocess.
 "backend/src/germandubi/infrastructure/processes/runner.py" = ["S603"]
+# The real-source benchmark is operator tooling, not application code: it runs outside the
+# process runner by design, because it drives the application rather than living inside it.
+"scripts/*.py" = ["S603", "S607", "T201"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -143,7 +146,7 @@ docstring-code-format = true
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["backend/src", "backend/tests"]
+files = ["backend/src", "backend/tests", "scripts"]
 mypy_path = "backend/src"
 plugins = ["pydantic.mypy"]
 warn_unreachable = true

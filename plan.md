@@ -103,7 +103,7 @@ Evidence: commit recorded with this step.
   real-provider limitations, troubleshooting, release creation, and contribution flow.
 - Resolve or record any newly discovered expensive decision in `questions.md`/ADRs.
 
-## 10. Verify and time a real end-to-end dub · `PENDING`
+## 10. Verify and time a real end-to-end dub · `IN PROGRESS`
 
 - Add committed, re-runnable automation that takes a real YouTube source through the whole
   product path: download, analyze, transcribe, translate, synthesize German speech, mix,

@@ -163,8 +163,8 @@ stage "Generated API client"
 stage_done
 
 stage "Formatting and linting"
-uv run ruff format --check backend
-uv run ruff check backend
+uv run ruff format --check backend scripts
+uv run ruff check backend scripts
 (cd frontend && pnpm run lint)
 (cd frontend && pnpm exec prettier --check ../e2e)
 stage_done
