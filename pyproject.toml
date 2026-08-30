@@ -61,6 +61,8 @@ dev = [
     "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
     "ruff>=0.15.1",
+    # Needed at runtime in a Git checkout so a build-generated _version.py cannot go stale.
+    "setuptools-scm==10.2.1",
 ]
 
 [tool.setuptools_scm]

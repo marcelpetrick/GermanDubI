@@ -22,3 +22,5 @@ may occur in MINOR releases and are always listed here.
 - Optional translation and speech providers that are installed but cannot be imported now
   degrade to an available fallback instead of aborting application startup or test
   collection.
+- Source checkouts now calculate their version from the current Git state even when a
+  previous build left a stale generated version module behind.

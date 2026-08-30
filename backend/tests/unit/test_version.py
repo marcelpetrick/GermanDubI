@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import importlib
 import re
+from pathlib import Path
 
 import pytest
 
 from germandubi.version import BuildInfo, build_info, parse_build_info, resolve_version
+
+version_module = importlib.import_module("germandubi.version")
 
 # PEP 440: release segment, optional .devN, optional +local
 PEP440 = re.compile(r"^\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+[a-zA-Z0-9.]+)?$")
@@ -14,6 +18,18 @@ PEP440 = re.compile(r"^\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+[a-zA-
 
 def test_resolve_version_returns_a_pep440_string() -> None:
     assert PEP440.match(resolve_version()), resolve_version()
+
+
+def test_source_checkout_ignores_a_stale_generated_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / ".git").mkdir()
+    monkeypatch.setattr(version_module, "_repository_root", lambda: tmp_path)
+    monkeypatch.setattr(version_module, "_from_scm", lambda: "0.4.1.dev2+gnew1234")
+    monkeypatch.setattr(version_module, "_from_generated_module", lambda: "0.4.1.dev1+gold1234")
+    monkeypatch.setattr(version_module, "_from_installed_metadata", lambda: "0.4.0")
+
+    assert resolve_version() == "0.4.1.dev2+gnew1234"
 
 
 def test_build_info_is_consistent_with_the_version_string() -> None:
