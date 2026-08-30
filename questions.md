@@ -249,13 +249,27 @@ Currently the wheel is built in CI but not published.
 
 ## G. Performance
 
-### Q-G1 — What hardware baseline should the `Balanced` quality profile assume? · `EXPERIMENT`
+### Q-G1 — What hardware baseline should the `Balanced` quality profile assume? · `MEASURED (CPU)`
 
-Needs measurement of the processing factor (processing time ÷ video duration) per stage on
-CPU-only versus a mid-range GPU. Until measured, `Balanced` targets CPU-only operation so
-the MVP runs everywhere.
+First real measurement, CPU-only, from `scripts/benchmark_real_dub.py`: a 40-minute English
+narration dubs in 492 s, a processing factor of **0.21x**, with speech recognition, Argos
+and Piper and no separation model. Per stage, as a share of the total: assembling the
+German narration 25%, speech synthesis 18%, transcription 15%, export 14%, duration fitting
+11%, download 5%, translation 5%, prosody 5%. Everything else is under 1%.
 
-### Q-G2 — Acceptable processing factor for the MVP? · `OPEN`
+`Balanced` therefore stays CPU-only: the profile already runs comfortably faster than
+realtime on one machine, so requiring a GPU would exclude users for no benefit at this
+quality level. Still open: the same measurement on a GPU, and with a separation model
+installed, which is the one component expected to dominate and to change this answer.
 
-A 20-minute video taking 20 minutes (1.0×) is tolerable for a workstation tool; 5× is not.
-No target is committed until Q-G1 is measured per stage.
+Numbers and host details: `docs/benchmarks/real-dub-full.json`.
+
+### Q-G2 — Acceptable processing factor for the MVP? · `RESOLVED`
+
+Committed target: **at or below 1.0x** on CPU for the first target case, one dominant
+narrator in English. Measured 0.21x on a 40-minute source, so the target holds with room to
+spare, and a regression past 1.0x is a defect rather than a disappointment.
+
+The target deliberately covers the default configuration only. Installing a separation
+model is expected to exceed it substantially on CPU, which is why separation stays optional
+and the ducking fallback stays the default (Q-A3).
