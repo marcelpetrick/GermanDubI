@@ -15,6 +15,9 @@ uv run germandubi worker
 The API binds to loopback by default. If it is exposed beyond the local machine, put it
 behind an authenticated reverse proxy; the `0.x` API does not provide multi-user auth.
 
+Creating a release is documented separately in [`releasing.md`](releasing.md), and common
+failures in [`troubleshooting.md`](troubleshooting.md).
+
 Useful diagnostics:
 
 ```bash

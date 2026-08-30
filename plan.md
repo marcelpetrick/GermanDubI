@@ -95,13 +95,18 @@ Evidence: commit recorded with this step.
 
 Evidence: commit recorded with this step.
 
-## 9. Reconcile C4, setup, operations, and release documentation · `PENDING`
+## 9. Reconcile C4, setup, operations, and release documentation · `COMPLETE`
 
-- Compare every documented boundary and runtime path with the implemented composition
-  roots, provider behavior, persistence, and trust boundaries.
-- Document clean setup, local pipeline use, development and production startup, optional
-  real-provider limitations, troubleshooting, release creation, and contribution flow.
-- Resolve or record any newly discovered expensive decision in `questions.md`/ADRs.
+- Compared every documented boundary and runtime path with the implementation and
+  corrected three places where the documentation described something the code did not do:
+  ADR-0010 claimed automatic selection never picks a network provider, while source
+  acquisition always has and must; the C4 view did not mention that probe selection depends
+  on the source kind; and the setup guide named a Node version the test stack cannot run on.
+- Documented the local pipeline, the optional real-provider limitations and how the gate
+  removes them again, release creation, and troubleshooting.
+- Acceptance: no documented behavior now contradicts the implementation.
+
+Evidence: commit recorded with this step.
 
 ## 10. Verify and time a real end-to-end dub · `IN PROGRESS`
 

@@ -1,12 +1,17 @@
 # Development workflow
 
-Install Python 3.12, Node 20.19 or newer, `uv`, `pnpm`, FFmpeg, and `yt-dlp`, then run:
+Install `uv`, FFmpeg and `yt-dlp`, plus the runtimes pinned in `.python-version` and
+`.node-version` (Python 3.12 and Node 24). `corepack` provisions `pnpm`. Then run:
 
 ```bash
 make install
-make check
+make check          # fast inner loop: lint, types, tests
 make dev
 ```
+
+An older Node appears to work and then fails obscurely: the frontend test stack needs an
+API that Node 20 does not have, so every test file fails to load. `./localPipeline.sh`
+checks this before doing anything else.
 
 Open `http://127.0.0.1:5173`. `scripts/dev` starts the API and worker first, waits for API
 health, then starts Vite. `Ctrl-C` stops all three processes.
@@ -19,6 +24,35 @@ stacks are optional:
 make install-providers
 make test-real
 ```
+
+Neither the gate nor CI installs them, so `uv sync --locked` removes them again. Reinstall
+with `make install-providers` after running the pipeline.
+
+## Verifying a real dub
+
+Every gate above runs against deterministic fakes, which proves nothing about the product
+itself. To take a real source through the whole path with real providers and measure it:
+
+```bash
+make install-providers
+./scripts/benchmark_real_dub.py --excerpt-seconds 120
+./scripts/benchmark_real_dub.py --full
+```
+
+See [`docs/benchmarks/`](../benchmarks/) for what the last run measured.
+
+## The full gate
+
+`make check` is the inner loop. Before pushing, run the complete pipeline -- the same
+script CI runs, so a green run here means a green run there:
+
+```bash
+./localPipeline.sh          # or: make pipeline
+./localPipeline.sh --fast   # gates only: no build, browser or smoke test
+```
+
+It checks prerequisites, installs from the lockfiles, runs every gate, builds both
+distributions, runs the browser workflow, and smoke-tests the production server.
 
 ## Deterministic browser test
 

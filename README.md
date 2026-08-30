@@ -83,7 +83,7 @@ Then open the URL printed by the Vite dev server.
 backend/    Python modular monolith (domain / application / infrastructure / api / worker / cli)
 frontend/   React + TypeScript + Vite single-page app
 e2e/        Playwright end-to-end tests
-docs/       Architecture, ADRs, development and operations documentation
+docs/       Architecture, ADRs, development, operations and benchmarks
 scripts/    Thin wrappers used by the Makefile
 data/       Default local project storage (never committed)
 ```
