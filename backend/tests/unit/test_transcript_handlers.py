@@ -10,7 +10,10 @@ from germandubi.domain.entities.artifact import ArtifactKind
 from germandubi.domain.errors import CaptionError, TranscriptionError
 from germandubi.domain.transcript import Transcript, TranscriptCue, TranscriptSource
 from germandubi.domain.value_objects.timeline import TimeInterval
-from germandubi.infrastructure.providers.fakes import FakeAlignmentProvider, _distribute_words
+from germandubi.infrastructure.providers.alignment import (
+    ProportionalAlignmentProvider,
+    distribute_words,
+)
 from germandubi.worker.handlers.transcript import (
     _best_caption,
     _deserialize,
@@ -54,7 +57,7 @@ class HandlerContext:
         self.providers = iter(providers)
         self.registry = SimpleNamespace(
             transcription=lambda **_kwargs: next(self.providers),
-            alignment=lambda: FakeAlignmentProvider(),
+            alignment=lambda: ProportionalAlignmentProvider(),
         )
         self.project = SimpleNamespace(id="project")
         self.uow = SimpleNamespace(
@@ -176,7 +179,7 @@ class TestWordDistribution:
         short cue ran past its end and collided with the next cue, so the transcript's
         words were no longer in timeline order.
         """
-        words = _distribute_words(text, interval)
+        words = distribute_words(text, interval)
 
         assert [w.text for w in words] == text.split()
         assert all(w.start_ms >= interval.start_ms for w in words)
@@ -187,4 +190,4 @@ class TestWordDistribution:
         assert words[-1].end_ms == interval.end_ms
 
     def test_an_empty_cue_yields_no_words(self) -> None:
-        assert _distribute_words("   ", TimeInterval(0, 1000)) == ()
+        assert distribute_words("   ", TimeInterval(0, 1000)) == ()

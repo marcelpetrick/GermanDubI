@@ -7,12 +7,12 @@ import pytest
 
 from germandubi.config import Settings
 from germandubi.domain.entities.project import SourceKind, SourceRef
+from germandubi.infrastructure.providers.alignment import ProportionalAlignmentProvider
 from germandubi.infrastructure.providers.argos import ArgosTranslationProvider
 from germandubi.infrastructure.providers.captions import CaptionTranscriptProvider
 from germandubi.infrastructure.providers.demucs import DemucsSeparationProvider
 from germandubi.infrastructure.providers.fakes import (
     FakeAcquisitionProvider,
-    FakeAlignmentProvider,
     FakeProbeProvider,
     FakeProsodyProvider,
     FakeSeparationProvider,
@@ -75,7 +75,7 @@ def test_fake_selection_and_cached_media(tmp_path: Path) -> None:
     assert isinstance(registry.probe(youtube_source()), FakeProbeProvider)
     assert isinstance(registry.acquisition(), FakeAcquisitionProvider)
     assert isinstance(registry.transcription(), FakeTranscriptionProvider)
-    assert isinstance(registry.alignment(), FakeAlignmentProvider)
+    assert isinstance(registry.alignment(), ProportionalAlignmentProvider)
     assert isinstance(registry.translation(), FakeTranslationProvider)
     assert isinstance(registry.tts(), FakeTTSProvider)
     assert isinstance(registry.prosody(), FakeProsodyProvider)

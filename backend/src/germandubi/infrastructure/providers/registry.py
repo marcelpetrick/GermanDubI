@@ -31,12 +31,12 @@ from germandubi.config import Settings
 from germandubi.domain.entities.project import SourceKind, SourceRef
 from germandubi.infrastructure.media.ffmpeg import FFmpegToolkit
 from germandubi.infrastructure.processes.runner import ProcessRunner
+from germandubi.infrastructure.providers.alignment import ProportionalAlignmentProvider
 from germandubi.infrastructure.providers.argos import ArgosTranslationProvider
 from germandubi.infrastructure.providers.captions import CaptionTranscriptProvider
 from germandubi.infrastructure.providers.demucs import DemucsSeparationProvider
 from germandubi.infrastructure.providers.fakes import (
     FakeAcquisitionProvider,
-    FakeAlignmentProvider,
     FakeProbeProvider,
     FakeProsodyProvider,
     FakeSeparationProvider,
@@ -207,9 +207,10 @@ class ProviderRegistry:
         """Return the word-alignment provider.
 
         Recognition already emits word timestamps, so this only fills in timing for a
-        caption-derived transcript that has none (questions.md Q-C2).
+        caption-derived transcript that has none (questions.md Q-C2). There is one
+        implementation and it runs in production; it is not a test double.
         """
-        return FakeAlignmentProvider()
+        return ProportionalAlignmentProvider()
 
     # --- translation --------------------------------------------------------------------
 
