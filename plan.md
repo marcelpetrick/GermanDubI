@@ -108,7 +108,7 @@ Evidence: commit recorded with this step.
 
 Evidence: commit recorded with this step.
 
-## 10. Verify and time a real end-to-end dub · `IN PROGRESS`
+## 10. Verify and time a real end-to-end dub · `COMPLETE`
 
 - Add committed, re-runnable automation that takes a real YouTube source through the whole
   product path: download, analyze, transcribe, translate, synthesize German speech, mix,
@@ -117,8 +117,17 @@ Evidence: commit recorded with this step.
   writing a machine-readable result next to a human-readable summary.
 - Use `https://www.youtube.com/watch?v=f3r05guSo1w` (40 min, English, auto-captions) as
   the reference source, with a bounded-excerpt mode so the run is practical to repeat.
-- Acceptance: a real German-dubbed output file exists and plays, with a recorded timing
-  breakdown committed alongside the automation.
+- Acceptance met. The complete 40-minute reference source dubs end to end in 492 s, a
+  0.21x realtime factor, producing a 754 MB MKV with a German audio track, the original
+  English kept as a second track, and German and English subtitles. Speech recognition,
+  Argos and Piper all really ran; the transcript provider is read back from the persisted
+  artifact rather than from what the registry would have chosen.
+- Getting there required fixing four defects that only a real, full-length source exposed:
+  segmentation rejected ordinary recognizer output, estimated word timing escaped its cue,
+  automatic captions were mistaken for manual ones, and the mix stage built an FFmpeg
+  expression too large to evaluate.
+
+Evidence: `docs/benchmarks/real-dub.json`, `docs/benchmarks/real-dub-full.json`.
 
 ## 11. Perform clean-install and live release-candidate verification · `PENDING`
 
