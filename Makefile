@@ -18,9 +18,13 @@ help: ## Show this help
 
 # --------------------------------------------------------------------------- setup
 .PHONY: install
-install: ## Install backend and frontend dependencies
+install: ## Install backend and frontend dependencies (fake providers only)
 	$(UV) sync --all-groups
 	cd $(FRONTEND) && $(PNPM) install --frozen-lockfile
+
+.PHONY: install-providers
+install-providers: ## Add the real German translation and speech providers
+	$(UV) sync --all-groups --extra translate --extra tts
 
 .PHONY: hooks
 hooks: ## Install the pre-commit hooks
