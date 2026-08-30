@@ -31,7 +31,7 @@ def handle_probe(context: StageContext) -> None:
         SourceAcquisitionError: If the source cannot be inspected.
     """
     context.progress(0.1, "contacting the source")
-    provider = context.registry.probe()
+    provider = context.registry.probe(context.project.source)
     media = provider.probe(context.project.source)
     context.checkpoint()
 

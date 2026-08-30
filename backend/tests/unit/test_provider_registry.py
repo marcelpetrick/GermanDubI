@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from germandubi.config import Settings
+from germandubi.domain.entities.project import SourceKind, SourceRef
 from germandubi.infrastructure.providers.argos import ArgosTranslationProvider
 from germandubi.infrastructure.providers.captions import CaptionTranscriptProvider
 from germandubi.infrastructure.providers.demucs import DemucsSeparationProvider
@@ -19,6 +20,7 @@ from germandubi.infrastructure.providers.fakes import (
     FakeTranslationProvider,
     FakeTTSProvider,
 )
+from germandubi.infrastructure.providers.localfile import LocalFileProbeProvider
 from germandubi.infrastructure.providers.piper import PiperTTSProvider
 from germandubi.infrastructure.providers.prosody import TimingProsodyProvider
 from germandubi.infrastructure.providers.registry import DependencyReport, ProviderRegistry
@@ -52,6 +54,10 @@ def test_dependency_report_required_tools(tmp_path: Path) -> None:
     assert not missing.can_dub and missing.missing_required == ["ffmpeg", "ffprobe"]
 
 
+def youtube_source() -> SourceRef:
+    return SourceRef(kind=SourceKind.YOUTUBE, locator="https://www.youtube.com/watch?v=abcdefghijk")
+
+
 def test_fake_selection_and_cached_media(tmp_path: Path) -> None:
     fixture = tmp_path / "fixture.mp4"
     fixture.touch()
@@ -66,7 +72,7 @@ def test_fake_selection_and_cached_media(tmp_path: Path) -> None:
         runner=RegistryRunner(),  # type: ignore[arg-type]
         fixture=fixture,
     )
-    assert isinstance(registry.probe(), FakeProbeProvider)
+    assert isinstance(registry.probe(youtube_source()), FakeProbeProvider)
     assert isinstance(registry.acquisition(), FakeAcquisitionProvider)
     assert isinstance(registry.transcription(), FakeTranscriptionProvider)
     assert isinstance(registry.alignment(), FakeAlignmentProvider)
@@ -82,7 +88,20 @@ def test_real_source_and_provider_fallbacks(
 ) -> None:
     runner = RegistryRunner(installed=False)
     registry = ProviderRegistry(settings(tmp_path), runner=runner)  # type: ignore[arg-type]
-    assert isinstance(registry.probe(), FakeProbeProvider)
+
+    # Force every optional provider to look absent rather than assuming it is. Without
+    # this the fallback assertions below silently depend on whether the developer happens
+    # to have run `make install-providers`: they pass in CI, which never installs the
+    # extras, and fail on a machine set up to produce a real dub.
+    for absent in (
+        ArgosTranslationProvider,
+        PiperTTSProvider,
+        DemucsSeparationProvider,
+        WhisperTranscriptionProvider,
+    ):
+        monkeypatch.setattr(absent, "is_available", lambda _self: False)
+
+    assert isinstance(registry.probe(youtube_source()), FakeProbeProvider)
     assert isinstance(registry.acquisition(), YtDlpAcquisitionProvider)
     assert isinstance(registry.translation(), FakeTranslationProvider)
     assert isinstance(registry.tts(), FakeTTSProvider)
@@ -93,10 +112,18 @@ def test_real_source_and_provider_fallbacks(
     monkeypatch.setattr(ArgosTranslationProvider, "is_available", lambda _self: True)
     monkeypatch.setattr(PiperTTSProvider, "is_available", lambda _self: True)
     monkeypatch.setattr(DemucsSeparationProvider, "is_available", lambda _self: True)
-    assert isinstance(registry.probe(), YtDlpProbeProvider)
+    assert isinstance(registry.probe(youtube_source()), YtDlpProbeProvider)
     assert isinstance(registry.translation(), ArgosTranslationProvider)
     assert isinstance(registry.tts(), PiperTTSProvider)
     assert isinstance(registry.separation(), DemucsSeparationProvider)
+
+    # A downloader cannot inspect a file that is already on disk. Selecting one for a
+    # local source failed every local-file project at the very first stage.
+    local = SourceRef.from_local_file("/media/clip.mp4")
+    monkeypatch.setattr(LocalFileProbeProvider, "is_available", lambda _self: True)
+    assert isinstance(registry.probe(local), LocalFileProbeProvider)
+    monkeypatch.setattr(LocalFileProbeProvider, "is_available", lambda _self: False)
+    assert isinstance(registry.probe(local), FakeProbeProvider)
 
     none = ProviderRegistry(settings(tmp_path, separation_provider="none"), runner=runner)  # type: ignore[arg-type]
     assert none.separation() is None

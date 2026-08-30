@@ -28,6 +28,7 @@ from germandubi.application.ports.providers import (
     TTSProvider,
 )
 from germandubi.config import Settings
+from germandubi.domain.entities.project import SourceKind, SourceRef
 from germandubi.infrastructure.media.ffmpeg import FFmpegToolkit
 from germandubi.infrastructure.processes.runner import ProcessRunner
 from germandubi.infrastructure.providers.argos import ArgosTranslationProvider
@@ -43,6 +44,7 @@ from germandubi.infrastructure.providers.fakes import (
     FakeTranslationProvider,
     FakeTTSProvider,
 )
+from germandubi.infrastructure.providers.localfile import LocalFileProbeProvider
 from germandubi.infrastructure.providers.piper import PiperTTSProvider
 from germandubi.infrastructure.providers.prosody import TimingProsodyProvider
 from germandubi.infrastructure.providers.whisper import WhisperTranscriptionProvider
@@ -124,14 +126,25 @@ class ProviderRegistry:
 
     # --- source -------------------------------------------------------------------------
 
-    def probe(self) -> ProbeProvider:
-        """Return the source probe provider.
+    def probe(self, source: SourceRef) -> ProbeProvider:
+        """Return the probe provider that can inspect this source.
+
+        Selection depends on the source itself: a downloader cannot inspect a file that is
+        already on disk, and ``ffprobe`` cannot inspect a URL. Dispatching here keeps that
+        knowledge in the registry, which is where provider selection belongs.
+
+        Args:
+            source: The source about to be inspected.
 
         Returns:
-            The real ``yt-dlp`` probe, or the fake when it is unavailable or selected.
+            The provider for this source kind, or the fake when the real one is
+            unavailable or has been selected explicitly.
         """
         if self.settings.transcription_provider == FAKE:
             return FakeProbeProvider()
+        if source.kind is SourceKind.LOCAL_FILE:
+            local = LocalFileProbeProvider(self.media())
+            return local if local.is_available() else FakeProbeProvider()
         real = YtDlpProbeProvider(self.runner, executable=self.settings.yt_dlp_path)
         return real if real.is_available() else FakeProbeProvider()
 
