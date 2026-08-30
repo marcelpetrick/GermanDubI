@@ -195,26 +195,39 @@ class FakeTranscriptionProvider:
 def _distribute_words(text: str, interval: TimeInterval) -> tuple[Word, ...]:
     """Spread a cue's duration across its words, in proportion to word length.
 
+    Every word stays inside the cue. A cue can hold more words than it has milliseconds --
+    captions over fast speech routinely do -- and in that case the trailing words share the
+    cue's last millisecond. They must not be allowed to run past the cue's end instead: the
+    next cue's first word would then start earlier than this cue's last one, making the
+    transcript's words non-monotonic and failing segmentation for the whole project.
+
     Args:
         text: The cue text.
         interval: The cue's timing.
 
     Returns:
-        Word timing covering the interval without gaps or overlaps.
+        Word timing covering the interval, in non-decreasing order of start.
     """
     words = text.split()
     if not words:
         return ()
     total = sum(len(w) for w in words)
+    # Every word needs a positive length, so no word may begin at the cue's final
+    # millisecond boundary.
+    last_start = interval.end_ms - 1
     cursor = interval.start_ms
     result: list[Word] = []
     for index, word in enumerate(words):
         is_last = index == len(words) - 1
-        share = max(1, round(interval.duration_ms * len(word) / total))
-        end = interval.end_ms if is_last else min(cursor + share, interval.end_ms - 1)
-        if end <= cursor:
-            end = cursor + 1
-        result.append(Word(cursor, end, word, confidence=0.95))
+        start = min(cursor, last_start)
+        if is_last:
+            end = interval.end_ms
+        else:
+            share = max(1, round(interval.duration_ms * len(word) / total))
+            end = min(start + share, last_start)
+        if end <= start:
+            end = start + 1
+        result.append(Word(start, end, word, confidence=0.95))
         cursor = end
     return tuple(result)
 

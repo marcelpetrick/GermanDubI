@@ -10,7 +10,7 @@ from germandubi.domain.entities.artifact import ArtifactKind
 from germandubi.domain.errors import CaptionError, TranscriptionError
 from germandubi.domain.transcript import Transcript, TranscriptCue, TranscriptSource
 from germandubi.domain.value_objects.timeline import TimeInterval
-from germandubi.infrastructure.providers.fakes import FakeAlignmentProvider
+from germandubi.infrastructure.providers.fakes import FakeAlignmentProvider, _distribute_words
 from germandubi.worker.handlers.transcript import (
     _best_caption,
     _deserialize,
@@ -152,3 +152,39 @@ def test_best_caption_prefers_manual_and_reports_automatic(tmp_path: Path) -> No
     assert _best_caption(context) == (tmp_path / "manual", False)
     context.uow.artifacts.list_for_project = lambda _project: [automatic]
     assert _best_caption(context) == (tmp_path / "auto", True)
+
+
+class TestWordDistribution:
+    """Word timing filled in for a caption transcript that carries none."""
+
+    @pytest.mark.parametrize(
+        ("text", "interval"),
+        [
+            ("one two three four five", TimeInterval(1000, 1003)),
+            ("a b c d e f g h i j k l", TimeInterval(500, 501)),
+            ("single", TimeInterval(0, 1)),
+            ("two words", TimeInterval(2_000, 2_002)),
+            ("a normally spaced cue with room to breathe", TimeInterval(0, 5_000)),
+        ],
+    )
+    def test_words_stay_inside_the_cue_and_in_order(
+        self, text: str, interval: TimeInterval
+    ) -> None:
+        """A cue may hold more words than milliseconds; the words must still fit.
+
+        Dubbing a real 40-minute source failed at segmentation because words in a very
+        short cue ran past its end and collided with the next cue, so the transcript's
+        words were no longer in timeline order.
+        """
+        words = _distribute_words(text, interval)
+
+        assert [w.text for w in words] == text.split()
+        assert all(w.start_ms >= interval.start_ms for w in words)
+        assert all(w.end_ms <= interval.end_ms for w in words)
+        assert all(w.end_ms > w.start_ms for w in words)
+        starts = [w.start_ms for w in words]
+        assert starts == sorted(starts)
+        assert words[-1].end_ms == interval.end_ms
+
+    def test_an_empty_cue_yields_no_words(self) -> None:
+        assert _distribute_words("   ", TimeInterval(0, 1000)) == ()
