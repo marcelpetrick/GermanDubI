@@ -1,0 +1,105 @@
+name: Release
+
+# Triggered only by an annotated semantic-version tag. Creating the tag is the deliberate
+# act that publishes a release; nothing on a branch can trigger this.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+
+# Least privilege: the only write this workflow needs is the release it creates.
+permissions:
+  contents: write
+
+# Two runs for one tag must never race to create the same release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: |
+            frontend/pnpm-lock.yaml
+            e2e/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+
+      # A tag can be pushed at any commit, including one that never passed CI. Re-running
+      # the whole gate here is what makes a published release trustworthy rather than a
+      # claim about a commit nobody verified.
+      - name: Run the pipeline
+        run: ./localPipeline.sh
+
+      # Guards against tagging the wrong commit: the version the package reports is
+      # derived from the tag by setuptools-scm, so a mismatch means the checkout is not
+      # what the tag says it is.
+      - name: Verify the tag matches the built version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          built="$(uv run python -c 'from germandubi.version import build_info; print(build_info().version)')"
+          echo "tag=$tag built=$built"
+          if [[ "$built" != "$tag" ]]; then
+            echo "::error::tag $tag does not match built version $built" >&2
+            exit 1
+          fi
+
+      # A release whose notes are still sitting under "Unreleased" is a release nobody
+      # wrote notes for.
+      - name: Verify the changelog documents this version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          if ! grep -qE "^## \[${tag//./\\.}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$tag]' section" >&2
+            exit 1
+          fi
+
+      - name: Extract the release notes
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          awk -v version="## [$tag]" '
+            index($0, version) == 1 { capture = 1; next }
+            capture && /^## \[/ { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+          if [[ ! -s release-notes.md ]]; then
+            echo "::error::the changelog section for $tag is empty" >&2
+            exit 1
+          fi
+          cat release-notes.md
+
+      - name: Check the built artifacts are installable
+        run: |
+          wheel="$(ls dist/*.whl)"
+          python -m venv /tmp/verify
+          /tmp/verify/bin/pip install --quiet "$wheel"
+          /tmp/verify/bin/germandubi version
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "GermanDubI $GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            dist/*.whl dist/*.tar.gz

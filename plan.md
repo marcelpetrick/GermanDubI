@@ -81,13 +81,19 @@ Evidence: commit `22d4ffc`.
 
 Evidence: commit recorded with this step.
 
-## 8. Align GitHub quality and public-release automation · `PENDING`
+## 8. Align GitHub quality and public-release automation · `COMPLETE`
 
-- Make GitHub Actions call the local pipeline so CI cannot drift from developer checks.
-- Add least-privilege, concurrency-safe release automation triggered by an annotated
-  semantic-version tag; validate version and changelog, rebuild, and publish verified
-  artifacts as a public GitHub release.
-- Add truthful quality, release, coverage, runtime, and GPL badges to the README.
+- CI now calls `./localPipeline.sh` instead of restating its steps, so the developer gate
+  and the CI gate cannot drift; both read the Node version from `.node-version`.
+- Added least-privilege, concurrency-safe release automation triggered by an annotated
+  semantic-version tag. It reruns the whole pipeline, refuses to publish when the tag does
+  not match the built version or the changelog has no section for it, verifies the wheel
+  installs and runs, and publishes both artifacts with notes extracted from the changelog.
+- Added CI, release, coverage, Python, and GPL badges to the README.
+- Acceptance: both workflows parse, and the changelog extraction and version guards were
+  exercised against fixtures covering the match, absent, and boundary cases.
+
+Evidence: commit recorded with this step.
 
 ## 9. Reconcile C4, setup, operations, and release documentation · `PENDING`
 

@@ -1,5 +1,11 @@
 # GermanDubI
 
+[![CI](https://github.com/marcelpetrick/GermanDubI/actions/workflows/ci.yml/badge.svg)](https://github.com/marcelpetrick/GermanDubI/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/marcelpetrick/GermanDubI?sort=semver)](https://github.com/marcelpetrick/GermanDubI/releases)
+[![Coverage](https://img.shields.io/badge/coverage-%3E95%25-brightgreen)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+
 **German Dub Interface** — English YouTube videos to German ones, made easy.
 
 GermanDubI is a local-first, browser-based video dubbing workstation. Paste an English
