@@ -14,7 +14,7 @@ may occur in MINOR releases and are always listed here.
 
 - Browser workstation flow for creating and analyzing a project, following pipeline
   progress, previewing and downloading the export, and reviewing, correcting, regenerating,
-  and approving individual German segments.
+  and approving individual German segments. Approving every segment completes the project.
 - OpenAPI-generated frontend types with a staleness check in the default quality gate.
 
 ### Fixed

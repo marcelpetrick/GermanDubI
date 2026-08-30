@@ -9,6 +9,7 @@ German dub while every intermediate stage stays inspectable and reproducible.
 > The full product vision and technical architecture live in [`vision.md`](vision.md).
 > Ways of working live in [`AGENTS.md`](AGENTS.md).
 > Unresolved design decisions live in [`questions.md`](questions.md).
+> The implemented system map lives in [`docs/architecture/c4.md`](docs/architecture/c4.md).
 
 ---
 
@@ -88,8 +89,11 @@ data/       Default local project storage (never committed)
 | `make dev` | Run API, frontend and worker together |
 | `make check` | Approximate the full CI pipeline locally |
 | `make test` | Run the whole test suite |
+| `make test-e2e` | Run the deterministic browser workflow in Chromium |
 | `make lint` / `make format` | Ruff + ESLint/Prettier |
 | `make typecheck` | `mypy --strict` and `tsc --noEmit` |
+| `make openapi` | Regenerate browser types after an API contract change |
+| `make build` | Build the wheel and production browser bundle |
 | `make version` | Print the VCS-derived build version |
 
 ---
