@@ -45,7 +45,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for what exists today.
 | --- | --- |
 | Linux | Primary and only supported host for `0.x` |
 | Python (see `pyproject.toml`) | Managed by [`uv`](https://docs.astral.sh/uv/) |
-| Node.js 20+ with `corepack` | Frontend toolchain, `pnpm` is provisioned by corepack |
+| Node.js 24 with `corepack` | Pinned in `.node-version`; `pnpm` is provisioned by corepack |
 | `ffmpeg` / `ffprobe` | Media inspection, extraction, muxing |
 | `yt-dlp` | Source acquisition |
 
@@ -63,7 +63,7 @@ uv sync --all-groups          # backend environment
 corepack enable pnpm          # frontend package manager
 make install                  # frontend dependencies
 
-make check                    # formatting, lint, types, tests — must pass on a clean checkout
+./localPipeline.sh            # the complete gate, exactly as CI runs it
 make dev                      # API + Vite dev server + processing worker
 ```
 
@@ -89,7 +89,8 @@ data/       Default local project storage (never committed)
 | Command | Purpose |
 | --- | --- |
 | `make dev` | Run API, frontend and worker together |
-| `make check` | Approximate the full CI pipeline locally |
+| `make check` | Fast inner loop: lint, types, tests |
+| `make pipeline` | Run the complete gate exactly as CI runs it |
 | `make test` | Run the whole test suite |
 | `make test-e2e` | Run the deterministic browser workflow in Chromium |
 | `make lint` / `make format` | Ruff + ESLint/Prettier |

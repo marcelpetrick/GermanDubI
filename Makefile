@@ -1,5 +1,5 @@
 # GermanDubI developer command surface.
-# `make check` approximates the CI pipeline locally (vision.md section 42).
+# `make check` is the fast inner loop; `make pipeline` runs the full CI gate (plan.md step 7).
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
@@ -130,5 +130,9 @@ clean: ## Remove build and cache artifacts
 
 # --------------------------------------------------------------------------- gate
 .PHONY: check
-check: lint typecheck test ## Approximate the CI pipeline locally
+check: lint typecheck test ## Run the quality gates only (fast inner loop)
 	@echo "check: all gates passed"
+
+.PHONY: pipeline
+pipeline: ## Run the complete pipeline exactly as CI runs it
+	./localPipeline.sh

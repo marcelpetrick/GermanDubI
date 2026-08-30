@@ -66,13 +66,20 @@ strict mypy checks passed.
 
 Evidence: commit `22d4ffc`.
 
-## 7. Add a from-scratch local quality pipeline · `PENDING`
+## 7. Add a from-scratch local quality pipeline · `COMPLETE`
 
-- Add an executable `localPipeline.sh` as the single local/CI entry point.
-- Validate prerequisites and pinned runtimes, perform locked setup, run every quality
-  gate and build, install the deterministic browser, execute E2E, and smoke-test the
-  production server with cleanup on every exit path.
-- Acceptance: it succeeds from a clean checkout using only documented prerequisites.
+- Added an executable `localPipeline.sh` as the single local/CI entry point, reachable as
+  `make pipeline`.
+- It validates prerequisites and pinned runtimes, performs locked setup, runs every
+  quality gate and build, installs the deterministic browser, executes E2E, and
+  smoke-tests the production server, tearing the server down on every exit path.
+- Fixed three defects the first real run exposed: Playwright's generated output failed the
+  Prettier gate, the Node version pinned in `.node-version` was neither enforced by the
+  gate nor stated correctly in the README, and the browser install demanded a sudo
+  password on a developer machine.
+- Acceptance: passes from a clean checkout in 136 s using only documented prerequisites.
+
+Evidence: commit recorded with this step.
 
 ## 8. Align GitHub quality and public-release automation · `PENDING`
 
