@@ -33,6 +33,10 @@ ASR_SAMPLE_RATE: Final = 16_000
 MASTER_SAMPLE_RATE: Final = 48_000
 #: Broadcast loudness target, so the German dub is as loud as the original.
 LOUDNESS_TARGET_LUFS: Final = -16.0
+#: How many speech intervals one ducking ``volume`` filter may name. Chosen well below the
+#: size at which FFmpeg fails to evaluate the expression, since the cost of another filter
+#: in the chain is negligible next to the cost of a mix that cannot run at all.
+_DUCK_INTERVALS_PER_FILTER: Final = 40
 
 
 class FFmpegToolkit:
@@ -373,11 +377,22 @@ class FFmpegToolkit:
 
     @staticmethod
     def _ducking_filter(intervals: tuple[TimeInterval, ...], duck_db: float) -> str:
-        """Build a volume filter that attenuates the original audio under German speech.
+        """Build volume filters that attenuate the original audio under German speech.
 
-        Returns an empty string when there is nothing to duck. Intervals are merged first,
-        because one ``volume`` expression per segment would produce a filter graph
-        thousands of terms long on a real video.
+        Returns an empty string when there is nothing to duck.
+
+        Adjacent intervals are merged first, but merging alone is not enough. A
+        40-minute narration yields hundreds of separate speech runs even after merging,
+        and one ``enable`` expression naming all of them is tens of kilobytes long --
+        which FFmpeg fails to evaluate outright:
+
+            Error when evaluating the expression '...' for enable
+            Error initializing filters ... Cannot allocate memory
+
+        So the intervals are spread over several chained ``volume`` filters instead. The
+        chaining is safe precisely because the merged intervals are disjoint: at any
+        instant at most one filter has its ``enable`` satisfied, and the rest pass the
+        signal through at unity gain, so the attenuation never compounds.
         """
         if not intervals:
             return ""
@@ -388,12 +403,16 @@ class FFmpegToolkit:
             else:
                 merged.append(interval)
 
-        conditions = "+".join(
-            f"between(t,{ms_to_seconds(i.start_ms):.3f},{ms_to_seconds(i.end_ms):.3f})"
-            for i in merged
-        )
         gain = 10 ** (duck_db / 20)
-        return f",volume=enable='gt({conditions}\\,0)':volume={gain:.4f}:eval=frame"
+        stages = []
+        for index in range(0, len(merged), _DUCK_INTERVALS_PER_FILTER):
+            batch = merged[index : index + _DUCK_INTERVALS_PER_FILTER]
+            conditions = "+".join(
+                f"between(t,{ms_to_seconds(i.start_ms):.3f},{ms_to_seconds(i.end_ms):.3f})"
+                for i in batch
+            )
+            stages.append(f"volume=enable='gt({conditions}\\,0)':volume={gain:.4f}:eval=frame")
+        return "," + ",".join(stages)
 
     def time_stretch(self, source: Path, destination: Path, *, factor: float) -> Path:
         """Change a clip's duration without changing its pitch.

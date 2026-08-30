@@ -45,6 +45,9 @@ may occur in MINOR releases and are always listed here.
   was silently truncated at 256 KB, which cut the downloader's JSON metadata in half; a
   caller that parses output now asks for it whole, and any truncation is reported rather
   than blamed on the source.
+- Mixing a full-length video no longer fails. Ducking named every speech run in a single
+  FFmpeg expression, which reached tens of kilobytes on a 40-minute source and was rejected
+  with "Cannot allocate memory"; the ranges are now spread over several chained filters.
 - Dubbing a local file no longer fails at the first stage. Source inspection always chose
   the downloader, which cannot inspect a file that is already on disk.
 - Long real sources no longer fail during segmentation. Two separate causes: word timing

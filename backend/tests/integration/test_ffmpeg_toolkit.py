@@ -191,10 +191,10 @@ class TestMixing:
         )
         assert toolkit.probe(out).duration_ms > 0
 
-    def test_many_speech_intervals_do_not_produce_an_unusable_filter_graph(
+    def test_adjacent_speech_intervals_are_merged(
         self, toolkit: FFmpegToolkit, tone: Path, clip: Path, tmp_path: Path
     ) -> None:
-        """A real video has hundreds of segments; adjacent ones must be merged."""
+        """Intervals separated by less than the merge gap collapse into one."""
         original = toolkit.extract_audio(clip, tmp_path / "orig.wav")
         narration = toolkit.concatenate_speech(
             [(TimeInterval(1000, 2000), tone)], tmp_path / "nar.wav", total_ms=5000
@@ -209,6 +209,35 @@ class TestMixing:
             )
         )
         assert out.exists()
+
+    def test_hundreds_of_separated_speech_intervals_still_mix(
+        self, toolkit: FFmpegToolkit, tone: Path, clip: Path, tmp_path: Path
+    ) -> None:
+        """A 40-minute dub has hundreds of speech runs that merging cannot collapse.
+
+        The previous version of this test spaced its intervals 10 ms apart, so all of them
+        merged into a single range and the many-intervals case was never exercised. A real
+        source has real pauses: 936 segments stayed separate, the enable expression grew to
+        tens of kilobytes, and FFmpeg refused it with "Cannot allocate memory", failing the
+        mix stage for the whole project.
+        """
+        original = toolkit.extract_audio(clip, tmp_path / "orig.wav")
+        narration = toolkit.concatenate_speech(
+            [(TimeInterval(1000, 2000), tone)], tmp_path / "nar.wav", total_ms=5000
+        )
+        # Gaps far wider than the merge tolerance, so every interval survives merging.
+        intervals = tuple(TimeInterval(i * 2_500, i * 2_500 + 1_800) for i in range(1, 900))
+
+        out = toolkit.mix(
+            MixRequest(
+                narration_path=narration,
+                original_path=original,
+                destination=tmp_path / "hundreds.wav",
+                speech_intervals=intervals,
+            )
+        )
+
+        assert toolkit.probe(out).duration_ms > 0
 
 
 class TestTimeStretch:

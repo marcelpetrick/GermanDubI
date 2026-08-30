@@ -103,3 +103,22 @@ def test_ducking_filter_handles_empty_overlapping_and_separate_ranges() -> None:
     )
     assert "between(t,1.000,2.000)" in graph
     assert "between(t,3.000,3.500)" in graph
+    # Few enough intervals to stay in one filter.
+    assert graph.count("volume=enable") == 1
+
+
+def test_ducking_filter_splits_many_intervals_across_several_filters() -> None:
+    """One enable expression naming hundreds of ranges is one FFmpeg cannot evaluate.
+
+    Chaining is only safe because merged intervals are disjoint, so at most one filter is
+    enabled at a time and the attenuation never compounds.
+    """
+    intervals = tuple(TimeInterval(i * 2_500, i * 2_500 + 1_800) for i in range(1, 900))
+
+    graph = FFmpegToolkit._ducking_filter(intervals, -10)
+
+    stages = graph.count("volume=enable")
+    assert stages > 1
+    # Every interval is named exactly once across the chain.
+    assert graph.count("between(t,") == len(intervals)
+    assert max(len(stage) for stage in graph.split(",volume=enable")) < 4_000
