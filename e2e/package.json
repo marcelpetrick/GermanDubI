@@ -8,12 +8,12 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@playwright/test": "1.55.1",
-    "@types/node": "24.7.2",
+    "@playwright/test": "1.62.1",
+    "@types/node": "26.4.0",
     "typescript": "5.9.3"
   },
   "engines": {
-    "node": ">=20.19"
+    "node": ">=24.15 <25"
   },
   "packageManager": "pnpm@10.34.5"
 }

@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ErrorAlert } from '@/components/ErrorAlert';
@@ -19,7 +19,7 @@ export function HomePage() {
   const create = useCreateAndAnalyzeProject();
   const remove = useDeleteProject();
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = (event: SyntheticEvent<HTMLFormElement, SubmitEvent>) => {
     event.preventDefault();
     const source = url.trim();
     if (!source) return;

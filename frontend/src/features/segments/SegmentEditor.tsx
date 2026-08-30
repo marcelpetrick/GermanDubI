@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type SyntheticEvent, useState } from 'react';
 
 import { mediaUrl } from '@/api/client';
 import type { Segment } from '@/api/types';
@@ -14,14 +14,14 @@ export function SegmentEditor({ projectId, segment }: { projectId: string; segme
   const action = useSegmentAction(projectId);
   const error = update.error ?? action.error;
 
-  const saveSource = (event: FormEvent<HTMLFormElement>) => {
+  const saveSource = (event: SyntheticEvent<HTMLFormElement, SubmitEvent>) => {
     event.preventDefault();
     const value = source.trim();
     if (value && value !== segment.source_text) {
       update.mutate({ segmentId: segment.id, payload: { source_text: value }, regenerate: true });
     }
   };
-  const saveTranslation = (event: FormEvent<HTMLFormElement>) => {
+  const saveTranslation = (event: SyntheticEvent<HTMLFormElement, SubmitEvent>) => {
     event.preventDefault();
     const value = translation.trim();
     if (value && value !== segment.translation) {
