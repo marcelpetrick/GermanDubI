@@ -47,17 +47,17 @@ export function useLatestRun(id: string | undefined, active: boolean) {
   });
 }
 
-export function useSegments(id: string | undefined) {
+export function useSegments(id: string | undefined, enabled = true) {
   return useQuery({
     queryKey: ['segments', id],
-    queryFn: id ? () => api.listSegments(id) : skipToken,
+    queryFn: id && enabled ? () => api.listSegments(id) : skipToken,
   });
 }
 
-export function useArtifacts(id: string | undefined) {
+export function useArtifacts(id: string | undefined, enabled = true) {
   return useQuery({
     queryKey: ['artifacts', id],
-    queryFn: id ? () => api.listArtifacts(id) : skipToken,
+    queryFn: id && enabled ? () => api.listArtifacts(id) : skipToken,
   });
 }
 
