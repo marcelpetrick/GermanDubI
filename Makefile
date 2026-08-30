@@ -55,7 +55,7 @@ format: ## Auto-format backend and frontend
 	cd $(FRONTEND) && $(PNPM) run format
 
 .PHONY: lint
-lint: ## Lint backend and frontend
+lint: openapi-check ## Lint backend and frontend
 	$(RUN) ruff format --check backend
 	$(RUN) ruff check backend
 	cd $(FRONTEND) && $(PNPM) run lint
@@ -101,6 +101,10 @@ test-e2e: ## Run Playwright end-to-end tests against fake providers
 .PHONY: openapi
 openapi: ## Regenerate the OpenAPI schema and the typed frontend client
 	./scripts/generate-client
+
+.PHONY: openapi-check
+openapi-check: ## Fail when the committed frontend API types are stale
+	./scripts/generate-client --check
 
 .PHONY: migrate
 migrate: ## Upgrade the development database to head

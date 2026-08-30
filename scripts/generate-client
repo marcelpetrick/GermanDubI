@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+generated="$repo_root/frontend/src/api/generated/schema.ts"
+temporary="$(mktemp -d)"
+trap 'rm -rf "$temporary"' EXIT
+
+cd "$repo_root"
+uv run python -c \
+  'import json, sys; from germandubi.api.app import create_app; json.dump(create_app().openapi(), open(sys.argv[1], "w"), indent=2)' \
+  "$temporary/openapi.json"
+cd "$repo_root/frontend"
+pnpm exec openapi-typescript "$temporary/openapi.json" --output "$temporary/schema.ts"
+
+if [[ "${1:-}" == "--check" ]]; then
+  if [[ ! -f "$generated" ]] || ! cmp -s "$temporary/schema.ts" "$generated"; then
+    echo "generated API types are stale; run 'make openapi'" >&2
+    diff -u "$generated" "$temporary/schema.ts" || true
+    exit 1
+  fi
+  echo "generated API types are current"
+else
+  mkdir -p "$(dirname "$generated")"
+  cp "$temporary/schema.ts" "$generated"
+  echo "wrote ${generated#"$repo_root/"}"
+fi
