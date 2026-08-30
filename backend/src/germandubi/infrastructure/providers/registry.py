@@ -302,13 +302,17 @@ class ProviderRegistry:
                 self.settings.yt_dlp_path,
             )
         }
+        # Every provider that can actually be selected, so the report is a complete
+        # picture of what may run rather than a list of the optional extras.
         candidates: list[object] = [
             YtDlpProbeProvider(self.runner, executable=self.settings.yt_dlp_path),
+            LocalFileProbeProvider(self.media()),
             WhisperTranscriptionProvider(download_root=self.settings.models_dir),
             ArgosTranslationProvider(),
             PiperTTSProvider(voices_dir=self.settings.models_dir / "piper"),
             DemucsSeparationProvider(self.runner),
             TimingProsodyProvider(self.runner),
+            ProportionalAlignmentProvider(),
         ]
         providers = [
             (provider.info, provider.is_available())  # type: ignore[attr-defined]

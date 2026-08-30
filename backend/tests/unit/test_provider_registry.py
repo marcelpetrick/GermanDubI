@@ -164,7 +164,19 @@ def test_report_covers_available_and_unwritable_environment(
     monkeypatch.setattr(DemucsSeparationProvider, "is_available", lambda _self: False)
     registry = ProviderRegistry(settings(tmp_path), runner=RegistryRunner())  # type: ignore[arg-type]
     report = registry.report()
-    assert report.writable and len(report.providers) == 6 and report.can_dub
+    # Every selectable provider is reported, not only the optional extras: a report that
+    # omits one is a report a user cannot use to work out what will actually run.
+    assert report.writable and report.can_dub
+    assert {info.id for info, _ in report.providers} == {
+        "yt_dlp_probe",
+        "local_file_probe",
+        "faster_whisper",
+        "argos",
+        "piper",
+        "demucs",
+        "timing_prosody",
+        "proportional_align",
+    }
 
     def fail_directories(_self: Settings) -> None:
         raise OSError("read only")
