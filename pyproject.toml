@@ -1,0 +1,206 @@
+[build-system]
+requires = ["setuptools>=77", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "germandubi"
+description = "German Dub Interface - turn English videos into editable, synchronized German dubs."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Marcel Petrick", email = "mail@marcelpetrick.it" }]
+keywords = ["dubbing", "localization", "german", "tts", "asr", "video"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Video",
+    "Typing :: Typed",
+]
+# See questions.md Q-E1: 3.12 floor because the optional ML stack lags new releases.
+requires-python = ">=3.12,<3.14"
+dynamic = ["version"]
+
+dependencies = [
+    "alembic>=1.16.5",
+    "fastapi>=0.121.2",
+    "pydantic>=2.12.4",
+    "pydantic-settings>=2.12.0",
+    "python-ulid>=3.1.0",
+    "sqlalchemy>=2.0.44",
+    "typer>=0.20.0",
+    "uvicorn[standard]>=0.38.0",
+]
+
+[project.optional-dependencies]
+# Optional provider stacks. Never installed by default: they are large and their CUDA /
+# torch requirements conflict. See AGENTS.md section 7 and questions.md section C.
+asr = ["faster-whisper>=1.2.0"]
+translate = ["argostranslate>=1.9.6"]
+tts = ["piper-tts>=1.3.0"]
+separation = ["demucs>=4.0.1"]
+
+[project.urls]
+Homepage = "https://github.com/marcelpetrick/GermanDubI"
+Repository = "https://github.com/marcelpetrick/GermanDubI"
+Changelog = "https://github.com/marcelpetrick/GermanDubI/blob/main/CHANGELOG.md"
+
+[project.scripts]
+germandubi = "germandubi.cli.main:app"
+
+[dependency-groups]
+dev = [
+    "anyio>=4.11.0",
+    "coverage[toml]>=7.11.0",
+    "httpx>=0.28.1",
+    "hypothesis>=6.145.1",
+    "mypy>=1.19.0",
+    "pre-commit>=4.4.0",
+    "pytest>=9.0.1",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.1",
+]
+
+[tool.setuptools_scm]
+version_file = "backend/src/germandubi/_version.py"
+# Every commit after a tag becomes <next-patch>.devN+g<sha>, so no commit ever needs a
+# manual version bump. See AGENTS.md section 3.
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
+fallback_version = "0.0.0"
+
+[tool.setuptools.packages.find]
+where = ["backend/src"]
+
+[tool.setuptools.package-data]
+germandubi = ["py.typed", "**/*.sql", "alembic.ini", "**/*.mako"]
+
+# --------------------------------------------------------------------------------------
+# Ruff
+# --------------------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["backend/src", "backend/tests"]
+
+[tool.ruff.lint]
+# A deliberately chosen ruleset, not everything Ruff offers (vision.md section 25.2).
+select = [
+    "F",    # pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # comprehensions
+    "SIM",  # simplification
+    "RET",  # return hygiene
+    "PTH",  # use pathlib
+    "S",    # bandit-style security
+    "A",    # builtin shadowing
+    "ARG",  # unused arguments
+    "DTZ",  # timezone-aware datetimes
+    "ISC",  # implicit string concat
+    "PIE",
+    "RSE",
+    "TID",  # tidy imports
+    "ERA",  # commented-out code
+    "D",    # docstrings
+    "ANN",  # annotations
+    "N",    # naming
+    "RUF",
+]
+ignore = [
+    "D203",   # incompatible with D211
+    "D213",   # incompatible with D212
+    "ANN401", # Any is occasionally correct at provider boundaries
+    "ISC001", # conflicts with the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/tests/**" = ["D", "S101", "S603", "S607", "ANN", "ARG"]
+"backend/src/germandubi/infrastructure/db/migrations/**" = ["D", "ANN", "ERA", "INP"]
+# The process runner is the one place allowed to touch subprocess.
+"backend/src/germandubi/infrastructure/processes/runner.py" = ["S603"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# --------------------------------------------------------------------------------------
+# mypy
+# --------------------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["backend/src", "backend/tests"]
+mypy_path = "backend/src"
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+disallow_any_generics = true
+show_error_codes = true
+exclude = ["backend/src/germandubi/infrastructure/db/migrations/versions/"]
+
+[[tool.mypy.overrides]]
+# Third-party ML libraries ship incomplete typing. Ignores stay localized to the provider
+# adapters instead of weakening typing globally (vision.md section 25.3).
+module = [
+    "faster_whisper.*",
+    "argostranslate.*",
+    "piper.*",
+    "demucs.*",
+    "onnxruntime.*",
+    "setuptools_scm.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "germandubi._version"
+ignore_missing_imports = true
+
+# --------------------------------------------------------------------------------------
+# pytest
+# --------------------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["backend/tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "-m",
+    "not real_provider",
+]
+markers = [
+    "real_provider: needs a real model, network access or a GPU; deselected by default",
+    "slow: takes more than a couple of seconds",
+]
+filterwarnings = ["error", "ignore::DeprecationWarning:pydantic.*"]
+
+[tool.coverage.run]
+branch = true
+source = ["backend/src/germandubi"]
+omit = [
+    "backend/src/germandubi/_version.py",
+    "backend/src/germandubi/infrastructure/db/migrations/*",
+]
+
+[tool.coverage.report]
+# See questions.md Q-E3: a diagnostic floor, not a goal.
+fail_under = 80
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "class .*\\(Protocol\\):",
+    "\\.\\.\\.",
+]
