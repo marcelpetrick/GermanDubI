@@ -87,11 +87,14 @@ jobs:
           fi
           cat release-notes.md
 
+      # Built with uv against the pinned interpreter, not the runner's default `python`,
+      # which may sit outside the supported range and would fail this step for a reason
+      # that has nothing to do with the release.
       - name: Check the built artifacts are installable
         run: |
           wheel="$(ls dist/*.whl)"
-          python -m venv /tmp/verify
-          /tmp/verify/bin/pip install --quiet "$wheel"
+          uv venv --python "$(cat .python-version)" /tmp/verify
+          uv pip install --python /tmp/verify/bin/python "$wheel"
           /tmp/verify/bin/germandubi version
 
       - name: Publish the release

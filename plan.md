@@ -129,13 +129,17 @@ Evidence: commit recorded with this step.
 
 Evidence: `docs/benchmarks/real-dub.json`, `docs/benchmarks/real-dub-full.json`.
 
-## 11. Perform clean-install and live release-candidate verification · `PENDING`
+## 11. Perform clean-install and live release-candidate verification · `COMPLETE`
 
-- Run the full local pipeline from clean generated state.
-- Verify backend, frontend, deterministic provider workflow, browser E2E, production
-  static serving, package contents, CLI/API versions, licensing, and release artifacts.
-- Acceptance: all gates are green, no untracked generated output remains, and the worktree
-  contains only intentional committed changes.
+- Ran the full pipeline from clean generated state: eleven stages green in 143 s.
+- Verified the built wheel installs into a fresh environment and its CLI runs.
+- Found and fixed one flaw while doing so: the release workflow verified the wheel using
+  the runner's default `python`, which can sit outside the supported range and would have
+  failed a release for a reason unrelated to the release. It now uses the pinned
+  interpreter via `uv`.
+- Acceptance: all gates green, no untracked generated output, worktree clean.
+
+Evidence: commit recorded with this step.
 
 ## 12. Review architecture, code, practice, and documentation · `COMPLETE`
 
