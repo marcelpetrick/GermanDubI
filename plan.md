@@ -54,7 +54,19 @@ Evidence: commit `faba5fc`.
 Evidence: 732 deterministic tests passed with 95.19% line coverage; formatting, Ruff, and
 strict mypy checks passed.
 
-## 6. Add a from-scratch local quality pipeline · `PENDING`
+## 6. Repair the real-source probe · `COMPLETE`
+
+- Diagnosed a real 40-minute source failing to analyze with "the source site returned
+  metadata this version cannot read": captured process output was capped at 256 KB, which
+  truncated the downloader's ~640 KB JSON metadata and misattributed a local limit to the
+  source.
+- Made the capture limit a per-call decision, raised it for the two callers that parse
+  stdout as JSON, and made truncation reported rather than silent.
+- Acceptance: the failing URL probes successfully through the application's own code path.
+
+Evidence: commit `22d4ffc`.
+
+## 7. Add a from-scratch local quality pipeline · `PENDING`
 
 - Add an executable `localPipeline.sh` as the single local/CI entry point.
 - Validate prerequisites and pinned runtimes, perform locked setup, run every quality
@@ -62,7 +74,7 @@ strict mypy checks passed.
   production server with cleanup on every exit path.
 - Acceptance: it succeeds from a clean checkout using only documented prerequisites.
 
-## 7. Align GitHub quality and public-release automation · `PENDING`
+## 8. Align GitHub quality and public-release automation · `PENDING`
 
 - Make GitHub Actions call the local pipeline so CI cannot drift from developer checks.
 - Add least-privilege, concurrency-safe release automation triggered by an annotated
@@ -70,7 +82,7 @@ strict mypy checks passed.
   artifacts as a public GitHub release.
 - Add truthful quality, release, coverage, runtime, and GPL badges to the README.
 
-## 8. Reconcile C4, setup, operations, and release documentation · `PENDING`
+## 9. Reconcile C4, setup, operations, and release documentation · `PENDING`
 
 - Compare every documented boundary and runtime path with the implemented composition
   roots, provider behavior, persistence, and trust boundaries.
@@ -78,7 +90,19 @@ strict mypy checks passed.
   real-provider limitations, troubleshooting, release creation, and contribution flow.
 - Resolve or record any newly discovered expensive decision in `questions.md`/ADRs.
 
-## 9. Perform clean-install and live release-candidate verification · `PENDING`
+## 10. Verify and time a real end-to-end dub · `PENDING`
+
+- Add committed, re-runnable automation that takes a real YouTube source through the whole
+  product path: download, analyze, transcribe, translate, synthesize German speech, mix,
+  and produce a playable video carrying the German audio.
+- Measure and report wall-clock time per pipeline stage and as a ratio of source duration,
+  writing a machine-readable result next to a human-readable summary.
+- Use `https://www.youtube.com/watch?v=f3r05guSo1w` (40 min, English, auto-captions) as
+  the reference source, with a bounded-excerpt mode so the run is practical to repeat.
+- Acceptance: a real German-dubbed output file exists and plays, with a recorded timing
+  breakdown committed alongside the automation.
+
+## 11. Perform clean-install and live release-candidate verification · `PENDING`
 
 - Run the full local pipeline from clean generated state.
 - Verify backend, frontend, deterministic provider workflow, browser E2E, production
@@ -86,7 +110,17 @@ strict mypy checks passed.
 - Acceptance: all gates are green, no untracked generated output remains, and the worktree
   contains only intentional committed changes.
 
-## 10. Finalize the local v0.1.0 release state · `PENDING`
+## 12. Review architecture, code, practice, and documentation · `PENDING`
+
+- Review, step by step and in this order: the architecture against its own constraints and
+  ADRs; the implementation against software best practice; and every document against what
+  the code actually does.
+- Fix every finding rated severe or critical. Record accepted lower-severity findings
+  rather than silently leaving them.
+- Acceptance: the full gate stays green, the real end-to-end dub of step 10 still
+  produces a playable German-dubbed file, and no severe or critical finding is open.
+
+## 13. Finalize the local v0.1.0 release state · `PENDING`
 
 - Move release notes out of `Unreleased`, verify the exact SCM-derived version, and make
   the final release-readiness commit.
