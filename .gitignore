@@ -1,0 +1,56 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+backend/src/germandubi/_version.py
+
+# --- Node / frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# --- Playwright ---
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/.playwright/
+
+# --- Application data (never commit user media or models) ---
+data/*
+!data/.gitkeep
+*.mkv
+*.mp4
+*.webm
+*.m4a
+*.opus
+*.pt
+*.onnx
+*.bin
+*.ckpt
+*.safetensors
+
+# --- Local environment ---
+.env
+.env.local
+*.db
+*.db-wal
+*.db-shm
+
+# --- Editors / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
