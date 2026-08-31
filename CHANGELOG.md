@@ -28,8 +28,9 @@ may occur in MINOR releases and are always listed here.
   ceiling, which is why the quality tier is shown when choosing a voice -- `x_low` voices
   render at 16 kHz.
 - Voice/background separation uses the GPU when one is available. It was hardcoded to the
-  CPU, so the heaviest provider in the pipeline never used the hardware present: about 10x
-  realtime on a GPU against roughly 1x on the CPU.
+  CPU, so the heaviest provider in the pipeline never used the hardware present. Measured
+  on 120 s of real source audio: 14.2 s on a GPU against 50.5 s on the CPU, a factor of
+  3.6. Speech recognition already selected a GPU on its own and is unchanged.
 - Narration assembly mixes segments in batches instead of building one filter graph over
   every segment. Measured on 400 clips: 94.4 s to 33.1 s, with identical output.
 

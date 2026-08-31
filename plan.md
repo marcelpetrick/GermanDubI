@@ -266,8 +266,16 @@ Done, and what was measured:
 
 - **Device selection.** `GERMANDUBI_DEVICE` (`auto`/`cpu`/`cuda`), resolved once in
   settings so every provider agrees, reported by `doctor` and recorded in the benchmark.
-  Separation moved from a hardcoded CPU to the GPU: 244 s for 2400 s of audio, about 10x
-  realtime, against roughly 1x on the CPU.
+  Recognition already asked for `auto` and already found the GPU, so the change affects
+  separation alone, which was hardcoded to the CPU.
+
+  Measured head to head on 120 s of the reference source's own audio: **14.2 s on the GPU
+  against 50.5 s on the CPU, a factor of 3.6**. An earlier note in this plan claimed a
+  factor of ten, extrapolated from a six-second clip where loading the model dominated the
+  run; that figure was wrong and is corrected here. On the full source, separation costs
+  205 s on the GPU and would cost roughly 730 s on the CPU -- about nine minutes saved on a
+  forty-minute video, which is worth having and is not the order of magnitude first
+  claimed.
 - **Assembly.** Mixed in batches of fifty rather than one graph over every segment. On 400
   clips laid out like a real dub, 94.4 s became 33.1 s with output differing by -91 dB,
   the sixteen-bit noise floor.
@@ -290,13 +298,13 @@ Full before-and-after on the reference source, both on an idle machine
 | stage | before | after | |
 | --- | --- | --- | --- |
 | assemble | 124.3 s | 48.9 s | 2.5x faster, as predicted |
-| separate | not run | 205.5 s | new work, on the GPU |
+| separate | not run | 205.5 s | new work; ~730 s if it ran on the CPU |
 | transcribe | 80.7 s | 152.3 s | slower, unexplained |
 | total | 509 s | 783 s | with separation included |
 
 Read honestly: assembly improved by the predicted amount on real data. The total grew
 because separation now runs at all, which is new work worth 205 s and was previously
-absent -- on the GPU rather than the roughly 2400 s it would cost on the CPU. Transcription
+absent. The GPU is why that number is 205 s rather than roughly 730 s. Transcription
 took nearly twice as long as in the earlier reference for reasons not established here;
 both runs used the same GPU and the same model, so it is recorded rather than explained,
 and is worth investigating before any further performance claim rests on it.
