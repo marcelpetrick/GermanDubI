@@ -242,3 +242,27 @@ Evidence: the commits named above.
 - Compared against comparable tools, the remaining gaps are a media preview scrubber and
   keyboard navigation of the segment list. Both are worth doing and neither is a blocker
   for a review pass, so they are recorded rather than rushed.
+
+## 18. Use the hardware that is actually present · `PENDING`
+
+Measured starting point, from `docs/benchmarks/real-dub-full.json`: 509 s for a 2400 s
+source, before separation became a default. Where that time goes, largest first --
+assemble 124 s, synthesize 88 s, transcribe 81 s, export 67 s, fit 54 s.
+
+- **Select a compute device, and say which one was used.** There is no device setting at
+  all today. Speech recognition passes `auto` and so already finds a GPU; separation is
+  hardcoded to `cpu` and never will. On this machine that is the difference between about
+  1x realtime and 5.8x for the slowest provider in the pipeline, and separation now runs
+  by default. Add a `device` setting, honour it everywhere, and report the resolved device
+  in `doctor` so a slow run has a visible cause.
+- **Fix assembly, which is the slowest stage and should be the cheapest.** It builds one
+  FFmpeg input per segment, so a 500-segment dub means a 500-input filter graph. This is
+  the same shape as the ducking expression that could not be evaluated at all: work that
+  grows with segment count in a single command.
+- **Look for parallelism that is genuinely free.** Speech synthesis is per-segment and
+  sequential on a 20-thread machine. Whether Piper can be driven concurrently needs
+  measuring rather than assuming.
+- Acceptance: a measured before-and-after on the same reference source, recorded in
+  `docs/benchmarks/`, with the device used written into the result. No change is kept
+  that does not show an improvement on that measurement.
+
