@@ -289,3 +289,26 @@ one run made after these changes overlapped a second dub on the same machine, so
 stage in it is contended and not comparable to the committed reference. The per-change
 measurements above were each taken in isolation. A clean full run on an idle machine is
 still owed.
+
+## 19. Let the reviewer choose the German voice, and hear it first · `PENDING`
+
+Eight German voices are already known to the code, and none of them is reachable: the voice
+comes from a single global setting that nothing in the product surfaces. Choosing a narrator
+is the most consequential creative decision in a dub, and it is currently made for the user.
+
+- **Make the voice a property of the project**, chosen when it is created and shown
+  afterwards, rather than a machine-wide setting. Two projects on one machine should be
+  able to use different narrators.
+- **Publish the catalogue.** An endpoint listing each voice with its quality tier and
+  whether its model is already downloaded, so the interface never guesses and never offers
+  something that cannot run.
+- **Let the user hear each voice before committing.** A short German sample, synthesized
+  once on demand and cached. A dropdown of identifiers like `de_DE-pavoque-low` asks
+  someone to choose a narrator they have never heard; a play button answers the question
+  the list poses.
+- **Raise the audio quality of the result.** The export is AAC at 192 kbit/s and the
+  default voice is the medium model when a high one exists. Both are defensible defaults
+  and neither is the best the pipeline can do.
+- Acceptance: a project can be created with a chosen voice, the choice is audible before
+  it is made, the dub uses it, and the quality change is measured rather than assumed.
+
