@@ -190,3 +190,47 @@ Evidence: the commits named above.
   version derived from it is exactly `0.1.0` with no development or dirty suffix.
 - Not pushed. Pushing the commits and the tag is the maintainer's decision; the tag
   workflow will then rerun the whole gate and create the public GitHub release.
+
+## 14. Give the workstation a neon identity with real light and dark modes · `PENDING`
+
+- Retune the existing token set to a neon palette -- pink and cyan, gradient accents, glow
+  rather than flat fills. The tokens already exist; the rules stay, the values change.
+- Support three theme states: light, dark, and follow-the-system. The current stylesheet
+  only reacts to `prefers-color-scheme`, so a reader cannot override their OS.
+- Keep the glow decorative. Neon is used for borders, accents and shadows, never for body
+  text, so contrast does not depend on the aesthetic. Honour `prefers-reduced-motion`.
+- Acceptance: both themes are legible, the choice persists across reloads, and no text
+  falls below its current contrast.
+
+## 15. Let the interface speak the reader's language · `PENDING`
+
+- Offer English, German, Croatian and Mandarin for the interface, chosen in the header and
+  remembered, defaulting to the browser's language.
+- Keep it dependency-free and typed: a locale is a record keyed by the English catalogue,
+  so a missing or misspelled key fails `tsc` rather than rendering a blank.
+- State plainly that this is the *interface* language. The dub is English to German in
+  `0.x` regardless, and conflating the two would be a cruel surprise.
+- Acceptance: every visible string comes from the catalogue, all four locales are complete,
+  and a test proves completeness rather than trusting review.
+
+## 16. Explain the product and credit what it is built on · `PENDING`
+
+- Add a Help page showing what the pipeline actually does: the sixteen stages, what the
+  reviewer can change, and what happens when they change it.
+- Add an About page naming the tools and models used and their licences, the author, the
+  GPL-3.0-or-later terms, and where to find the project on GitHub. It reads live provider
+  data rather than a hand-written list that would drift.
+- Make the running version visible in the interface, not only in the footer.
+- Acceptance: both pages are reachable from every screen and state nothing the repository
+  cannot back up.
+
+## 17. Round out the review loop · `PENDING`
+
+- Compare against what comparable dubbing tools offer and adopt what is genuinely useful
+  at this scope, rather than copying feature lists.
+- Filtering the segment table is the clear gap: the review loop is "find what needs
+  attention", and 500 rows with no way to narrow them is the difference between usable and
+  not. Flagged, unapproved and failed are already in the data.
+- Improve the states around the work: what to do when there are no projects, what a
+  degraded environment means, and what each pipeline stage is doing while it runs.
+- Acceptance: reviewing a long project is possible without scrolling through every row.
