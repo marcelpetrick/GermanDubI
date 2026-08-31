@@ -28,6 +28,11 @@ make test-real
 Neither the gate nor CI installs them, so `uv sync --locked` removes them again. Reinstall
 with `make install-providers` after running the pipeline.
 
+They are not optional in practice: without a translator and a German voice the pipeline
+refuses to run rather than producing placeholder output, and `germandubi doctor` will say
+so. Only separation is genuinely optional -- without it the mix ducks the original audio
+instead of removing it.
+
 ## Verifying a real dub
 
 Every gate above runs against deterministic fakes, which proves nothing about the product

@@ -59,7 +59,14 @@ See [`CHANGELOG.md`](CHANGELOG.md) for what exists today.
 | `ffmpeg` / `ffprobe` | Media inspection, extraction, muxing |
 | `yt-dlp` | Source acquisition |
 
-Run `germandubi doctor` at any time to check the environment.
+Run `germandubi doctor` at any time to check the environment. It reports "Ready to dub"
+only when a real translator and a real German voice are installed -- FFmpeg alone is not
+enough to produce German, and a run without them is refused rather than filled in with
+placeholder audio.
+
+> **The optional provider stacks are easy to lose.** `uv sync --locked`, which both
+> `make install` and `./localPipeline.sh` run, installs exactly the locked default set and
+> removes the extras. Re-run `make install-providers` afterwards.
 
 ---
 
@@ -72,6 +79,7 @@ cd GermanDubI
 uv sync --all-groups          # backend environment
 corepack enable pnpm          # frontend package manager
 make install                  # frontend dependencies
+make install-providers        # the real German translator and voice
 
 ./localPipeline.sh            # the complete gate, exactly as CI runs it
 make dev                      # API + Vite dev server + processing worker

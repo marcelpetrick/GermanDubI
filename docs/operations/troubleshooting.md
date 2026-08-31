@@ -23,7 +23,27 @@ can access anonymously, or supply the file yourself as a local path.
 The local file is not media, or is truncated. `ffprobe <file>` will say the same thing more
 verbosely.
 
+## The run fails with "no ... provider is installed"
+
+This is deliberate. Translation and speech have no usable substitute: the placeholder
+providers append "ung" to English words and emit a quiet tone, so a run using them finishes
+and contains no German. The error names the command:
+
+```bash
+make install-providers      # translation and German speech
+uv sync --extra asr         # speech recognition, for sources without good captions
+germandubi doctor           # confirm before starting a long run
+```
+
+Note that `uv sync --locked` -- run by `make install` and by `./localPipeline.sh` -- removes
+the optional extras again, so reinstall them after running the gate.
+
 ## The dub sounds wrong
+
+**The German is not German at all** -- text like "fuer Manyung Yearsung" and audio that is a
+quiet tone rather than speech. That is the placeholder output of a run made without the real
+providers. Versions before 0.1.1 selected the placeholders silently and reported success;
+install the providers and re-run the project.
 
 **The German is obviously machine-literal.** Check which transcript provider ran. Automatic
 captions are unpunctuated, and translation quality depends heavily on punctuation:
@@ -47,6 +67,10 @@ uv sync --extra separation      # large; a GPU is strongly preferred
 **A segment is rushed or clipped.** The German is longer than the English it replaces.
 Segments that could not be fitted within the configured limits are flagged rather than
 forced; review them in the browser and shorten the German text.
+
+**Every phrase appears two or three times in the segments.** Fixed in 0.1.1. Scrolling
+captions restate each finished line in the following cue, and those repeats were being
+treated as new speech. Re-run the project to rebuild its transcript.
 
 ## Nothing happens after pressing Create German Dub
 

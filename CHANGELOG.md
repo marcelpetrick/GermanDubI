@@ -10,6 +10,24 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Changed
+
+- A run without a real translation provider, German voice or transcript source now fails
+  with the command that installs it, instead of silently substituting the placeholder
+  providers used by the test suite. Those placeholders do not translate and do not speak, so
+  a run that used them completed every stage, reported success, and produced no German.
+  Separation keeps its fallback: without it the mix ducks the original audio rather than
+  removing it, which is a worse dub but still a dub.
+- `germandubi doctor` reports "Ready to dub" only when a real translator and a real German
+  voice are present. FFmpeg alone was previously treated as sufficient.
+
+### Fixed
+
+- Scrolling captions no longer reach the dub two or three times over. YouTube restates each
+  finished line in the following cue, and because those cues abut rather than overlap the
+  repetition was treated as new speech, so segments read "For many years, archaeologists
+  puzzled For many years, archaeologists puzzled over how...".
+
 ## [0.1.0] - 2026-08-31
 
 First public release. GermanDubI turns an English video into an editable, synchronized
