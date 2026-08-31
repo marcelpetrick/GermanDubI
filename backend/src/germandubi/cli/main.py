@@ -90,6 +90,13 @@ def doctor() -> None:
         )
     if not report.writable:
         _fail(f"cannot write to {report.data_dir}")
+    if report.missing_for_a_real_dub:
+        errors.print(
+            "\n[bold yellow]Not ready to dub.[/] These produce placeholder output, not "
+            "German:\n  " + "\n  ".join(report.missing_for_a_real_dub)
+        )
+        errors.print("\nInstall them with `make install-providers`, then run this again.")
+        raise typer.Exit(code=1)
     console.print("\n[green]Ready to dub.[/]")
 
 

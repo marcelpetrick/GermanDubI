@@ -29,6 +29,7 @@ from germandubi.application.ports.providers import (
 )
 from germandubi.config import Settings
 from germandubi.domain.entities.project import SourceKind, SourceRef
+from germandubi.domain.errors import ProviderUnavailableError
 from germandubi.infrastructure.media.ffmpeg import FFmpegToolkit
 from germandubi.infrastructure.processes.runner import ProcessRunner
 from germandubi.infrastructure.providers.alignment import ProportionalAlignmentProvider
@@ -78,16 +79,45 @@ class DependencyReport:
 
     @property
     def can_dub(self) -> bool:
-        """Return whether a full German dub is possible with what is installed.
+        """Return whether a real German dub is possible with what is installed.
 
-        FFmpeg is genuinely required; everything else has a working fallback.
+        FFmpeg alone is not enough. Without a translation provider and a German voice there
+        is nothing to say and nothing to say it with, so this used to report "Ready to dub"
+        on a machine that could only produce placeholder audio.
         """
-        return self.tools.get("ffmpeg", False) and self.tools.get("ffprobe", False)
+        return not self.missing_required and not self.missing_for_a_real_dub
 
     @property
     def missing_required(self) -> list[str]:
-        """Return the required tools that are absent."""
+        """Return the required external tools that are absent."""
         return [name for name in ("ffmpeg", "ffprobe") if not self.tools.get(name)]
+
+    @property
+    def missing_for_a_real_dub(self) -> list[str]:
+        """Return the provider stacks whose absence would give placeholder output.
+
+        Separation is deliberately excluded: without it the mix ducks the original audio
+        instead of removing it, which is a worse dub but still a real one.
+        """
+        ready = {info.id for info, available in self.providers if available}
+        needed = {
+            "argos": "translation (uv sync --extra translate)",
+            "piper": "German speech (uv sync --extra tts)",
+        }
+        return [label for provider, label in needed.items() if provider not in ready]
+
+
+def _missing(what: str, extra: str) -> str:
+    """Return the message shown when a required provider stack is absent.
+
+    Naming the exact command matters: the alternative to this error was a run that
+    completed, looked finished in the browser, and contained no German.
+    """
+    return (
+        f"no {what} provider is installed, so this run would produce placeholder output "
+        f"rather than a usable dub. Install it with `uv sync --extra {extra}` "
+        f"(or `make install-providers`), then run `germandubi doctor` to confirm."
+    )
 
 
 class ProviderRegistry:
@@ -201,7 +231,7 @@ class ProviderRegistry:
                 "which usually produces noticeably worse German"
             )
             return captions
-        return FakeTranscriptionProvider()
+        raise ProviderUnavailableError(_missing("English transcript", "asr"), port="transcription")
 
     def alignment(self) -> AlignmentProvider:
         """Return the word-alignment provider.
@@ -218,8 +248,12 @@ class ProviderRegistry:
         """Return the English-to-German translation provider.
 
         Returns:
-            Argos when installed, otherwise the deterministic fake so the pipeline still
-            completes and the failure is visible in the output rather than fatal.
+            Argos when installed. The deterministic fake only when it is asked for by name.
+
+        Raises:
+            ProviderUnavailableError: If no real provider is installed. This is deliberately
+                fatal: the placeholder does not translate, and a run that used it silently
+                produced a finished-looking dub of unusable text.
         """
         configured = self.settings.translation_provider
         if configured == FAKE:
@@ -227,11 +261,9 @@ class ProviderRegistry:
         argos = ArgosTranslationProvider()
         if configured in {AUTO, "argos"} and argos.is_available():
             return argos
-        logger.warning(
-            "no real translation provider is installed; using the placeholder provider. "
-            "Install it with `uv sync --extra translate`."
+        raise ProviderUnavailableError(
+            _missing("German translation", "translate"), port="translation"
         )
-        return FakeTranslationProvider()
 
     # --- speech -------------------------------------------------------------------------
 
@@ -239,7 +271,11 @@ class ProviderRegistry:
         """Return the German speech provider.
 
         Returns:
-            Piper when installed, otherwise the deterministic fake.
+            Piper when installed. The deterministic fake only when it is asked for by name.
+
+        Raises:
+            ProviderUnavailableError: If no real German voice is installed. The placeholder
+                emits a quiet synthetic tone, not speech.
         """
         configured = self.settings.tts_provider
         if configured == FAKE:
@@ -250,11 +286,7 @@ class ProviderRegistry:
         )
         if configured in {AUTO, "piper"} and piper.is_available():
             return piper
-        logger.warning(
-            "no real German voice is installed; using the placeholder provider. "
-            "Install it with `uv sync --extra tts`."
-        )
-        return FakeTTSProvider()
+        raise ProviderUnavailableError(_missing("German speech", "tts"), port="tts")
 
     def prosody(self) -> ProsodyProvider:
         """Return the narrator delivery analysis provider."""

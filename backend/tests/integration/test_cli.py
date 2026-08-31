@@ -12,6 +12,8 @@ from typer.testing import CliRunner
 import germandubi.cli.main as cli
 from germandubi.composition import Application, build_application
 from germandubi.config import Settings
+from germandubi.infrastructure.providers.argos import ArgosTranslationProvider
+from germandubi.infrastructure.providers.piper import PiperTTSProvider
 from tests.fixtures.media import make_narration_video
 
 runner = CliRunner()
@@ -59,6 +61,8 @@ def test_doctor_reports_tools_and_provider_privacy(
     monkeypatch: pytest.MonkeyPatch, application: Application
 ) -> None:
     bind_application(monkeypatch, application)
+    monkeypatch.setattr(ArgosTranslationProvider, "is_available", lambda _self: True)
+    monkeypatch.setattr(PiperTTSProvider, "is_available", lambda _self: True)
 
     result = runner.invoke(cli.app, ["doctor"])
 
@@ -66,6 +70,26 @@ def test_doctor_reports_tools_and_provider_privacy(
     assert "External tools" in result.stdout
     assert "Providers" in result.stdout
     assert "Ready to dub" in result.stdout
+
+
+def test_doctor_refuses_to_report_readiness_without_a_translator_or_voice(
+    monkeypatch: pytest.MonkeyPatch, application: Application
+) -> None:
+    """The one command a user runs to check their setup must not bless a broken one.
+
+    It previously printed "Ready to dub" whenever FFmpeg was present, so a machine with no
+    translation and no German voice was declared fine and produced quiet tones over
+    English narration.
+    """
+    bind_application(monkeypatch, application)
+    monkeypatch.setattr(ArgosTranslationProvider, "is_available", lambda _self: False)
+    monkeypatch.setattr(PiperTTSProvider, "is_available", lambda _self: False)
+
+    result = runner.invoke(cli.app, ["doctor"])
+
+    assert result.exit_code == 1
+    assert "Ready to dub" not in result.stdout
+    assert "make install-providers" in result.output
 
 
 def test_list_and_inspect_projects(
