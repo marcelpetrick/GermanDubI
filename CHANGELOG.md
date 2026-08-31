@@ -10,6 +10,13 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Changed
+
+- `make install-providers` now installs voice/background separation as well, and a new
+  `make setup` takes a clean checkout to a machine that can really dub in one command.
+  Separation was the one provider no documented step ever installed, so following the
+  instructions produced a dub with the English voice still faintly audible under the German.
+
 ## [0.2.0] - 2026-08-31
 
 The interface grows up, and four defects that only a real, full-length source could expose

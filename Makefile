@@ -18,14 +18,18 @@ help: ## Show this help
 
 # --------------------------------------------------------------------------- setup
 .PHONY: install
-install: ## Install backend and frontend dependencies (fake providers only)
+install: ## Lean install: no real providers. This is what CI and the gate use.
 	$(UV) sync --locked --all-groups
 	cd $(FRONTEND) && $(PNPM) install --frozen-lockfile
 	cd $(E2E) && $(PNPM) install --frozen-lockfile
 
 .PHONY: install-providers
-install-providers: ## Add the real recognition, translation and speech providers
-	$(UV) sync --locked --all-groups --extra asr --extra translate --extra tts
+install-providers: ## Add every real provider: recognition, translation, speech, separation
+	$(UV) sync --locked --all-groups --extra asr --extra translate --extra tts --extra separation
+
+.PHONY: setup
+setup: install install-providers hooks ## Clean checkout to a machine that can really dub
+	@$(RUN) germandubi doctor
 
 .PHONY: hooks
 hooks: ## Install the pre-commit hooks

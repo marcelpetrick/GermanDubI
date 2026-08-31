@@ -30,7 +30,8 @@ providers append "ung" to English words and emit a quiet tone, so a run using th
 and contains no German. The error names the command:
 
 ```bash
-make install-providers      # recognition, translation and German speech
+make setup                  # from a clean checkout: everything, then a doctor report
+make install-providers      # recognition, translation, German speech and separation
 germandubi doctor           # confirm before starting a long run
 ```
 
@@ -56,11 +57,11 @@ Installing the ASR extra (`uv sync --extra asr`) moves a source with only automa
 captions onto the recognition path.
 
 **The German plays over the English.** No separation model is installed, so the mix ducks
-the original instead of removing the narration. This is the documented fallback. Install
-the extra for real separation:
+the original instead of removing the narration. This is the documented fallback.
+`make install-providers` includes separation; if you installed the extras by hand, add it:
 
 ```bash
-uv sync --extra separation      # large; a GPU is strongly preferred
+uv sync --extra separation
 ```
 
 **A segment is rushed or clipped.** The German is longer than the English it replaces.

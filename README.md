@@ -64,9 +64,10 @@ only when a real translator and a real German voice are installed -- FFmpeg alon
 enough to produce German, and a run without them is refused rather than filled in with
 placeholder audio.
 
-> **The optional provider stacks are easy to lose.** `uv sync --locked`, which both
-> `make install` and `./localPipeline.sh` run, installs exactly the locked default set and
-> removes the extras. Re-run `make install-providers` afterwards.
+> **The provider stacks are easy to lose.** `uv sync --locked`, which both `make install`
+> and `./localPipeline.sh` run, installs exactly the locked default set and removes the
+> extras — the gate runs against deterministic fakes and does not need them. Re-run
+> `make install-providers` afterwards.
 
 ---
 
@@ -76,10 +77,8 @@ placeholder audio.
 git clone https://github.com/marcelpetrick/GermanDubI.git
 cd GermanDubI
 
-uv sync --all-groups          # backend environment
 corepack enable pnpm          # frontend package manager
-make install                  # frontend dependencies
-make install-providers        # real recognition, translation and German voice
+make setup                    # everything: dependencies, all real providers, hooks
 
 ./localPipeline.sh            # the complete gate, exactly as CI runs it
 make dev                      # API + Vite dev server + processing worker

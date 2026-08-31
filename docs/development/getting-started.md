@@ -21,7 +21,8 @@ Run `make doctor` to see the exact tools and providers available. Real translati
 stacks are optional:
 
 ```bash
-make install-providers
+make setup              # dependencies, every real provider, hooks, then `doctor`
+make install-providers  # just the providers, if the rest is already there
 make test-real
 ```
 
@@ -30,8 +31,9 @@ with `make install-providers` after running the pipeline.
 
 They are not optional in practice: without a translator and a German voice the pipeline
 refuses to run rather than producing placeholder output, and `germandubi doctor` will say
-so. Only separation is genuinely optional -- without it the mix ducks the original audio
-instead of removing it.
+so. Separation still has a working fallback -- without it the mix ducks the original audio
+instead of removing it -- but it is installed by default now, because a dub that leaves the
+English voice faintly audible is not the result most people want.
 
 ## Verifying a real dub
 
