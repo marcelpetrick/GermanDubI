@@ -11,6 +11,23 @@
     />
   </head>
   <body>
+    <script>
+      // Resolve the theme before first paint. Without this a dark-mode reader gets a
+      // white flash on every load, because React has not mounted yet.
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('germandubi.theme');
+          var preference =
+            stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+          var dark =
+            preference === 'dark' ||
+            (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        } catch (error) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

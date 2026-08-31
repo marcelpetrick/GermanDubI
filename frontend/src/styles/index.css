@@ -3,48 +3,83 @@
  *
  * A design system is not justified at this size, but a consistent token set is: every
  * colour, radius and spacing value below is referenced by name, so the whole UI can be
- * retuned in one place. Light and dark both work because the tokens are redefined rather
- * than the rules.
+ * retuned in one place.
+ *
+ * The theme is always explicit. `data-theme` is set on <html> before first paint, and the
+ * "follow my system" case is resolved to light or dark in script rather than in a media
+ * query. That keeps one definition per theme instead of two that can drift, and it is what
+ * lets a reader override their OS.
+ *
+ * The neon treatment is deliberately decorative: it lives in borders, accents and shadows,
+ * never in body text. Legibility must not depend on the aesthetic.
  */
 
-:root {
-  color-scheme: light dark;
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
 
-  --bg: #f6f7f9;
+  --bg: #f6f4fb;
+  --bg-glow-a: rgb(255 79 216 / 10%);
+  --bg-glow-b: rgb(53 214 255 / 12%);
   --surface: #ffffff;
-  --surface-2: #f0f2f5;
-  --border: #dfe3e8;
-  --text: #14181f;
-  --text-dim: #5b6472;
-  --accent: #2f6feb;
-  --accent-contrast: #ffffff;
-  --ok: #1a7f45;
-  --warn: #a35a00;
-  --danger: #b3261e;
-  --running: #2f6feb;
+  --surface-2: #f2eefa;
+  --border: #e3ddf2;
+  --border-strong: #cfc5e8;
+  --text: #14121d;
+  --text-dim: #5c5673;
 
-  --radius: 8px;
-  --radius-sm: 5px;
-  --gap: 16px;
-  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 10%);
-  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
+  /* Deepened against white: the dark-mode neon would not carry enough contrast here. */
+  --neon-pink: #c9169b;
+  --neon-blue: #0b7fa8;
+  --accent: #0b7fa8;
+  --accent-contrast: #ffffff;
+
+  --ok: #12703c;
+  --warn: #8a4b00;
+  --danger: #a51b14;
+  --running: var(--neon-blue);
+
+  --glow-soft: 0 0 0 1px rgb(201 22 155 / 8%);
+  --glow-accent: 0 0 12px rgb(11 127 168 / 22%);
+  --glow-pink: 0 0 14px rgb(201 22 155 / 20%);
+  --shadow: 0 1px 2px rgb(20 18 29 / 6%), 0 6px 20px rgb(20 18 29 / 6%);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14171c;
-    --surface: #1b1f26;
-    --surface-2: #232833;
-    --border: #333a47;
-    --text: #e8ebf0;
-    --text-dim: #98a2b3;
-    --accent: #4f8cff;
-    --ok: #3fb96f;
-    --warn: #e0a244;
-    --danger: #ef6b62;
-    --running: #4f8cff;
-    --shadow: 0 1px 2px rgb(0 0 0 / 30%);
-  }
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #08090f;
+  --bg-glow-a: rgb(255 79 216 / 14%);
+  --bg-glow-b: rgb(53 214 255 / 14%);
+  --surface: #11131e;
+  --surface-2: #191d2c;
+  --border: #272c42;
+  --border-strong: #3a4166;
+  --text: #eaecf7;
+  --text-dim: #99a0bd;
+
+  --neon-pink: #ff4fd8;
+  --neon-blue: #35d6ff;
+  --accent: #35d6ff;
+  --accent-contrast: #06121a;
+
+  --ok: #3fe08a;
+  --warn: #ffc46b;
+  --danger: #ff7a70;
+  --running: var(--neon-blue);
+
+  --glow-soft: 0 0 0 1px rgb(255 79 216 / 12%);
+  --glow-accent: 0 0 18px rgb(53 214 255 / 35%);
+  --glow-pink: 0 0 18px rgb(255 79 216 / 32%);
+  --shadow: 0 1px 2px rgb(0 0 0 / 45%), 0 8px 30px rgb(0 0 0 / 35%);
+}
+
+:root {
+  --radius: 12px;
+  --radius-sm: 8px;
+  --gap: 16px;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
+  --neon-gradient: linear-gradient(100deg, var(--neon-pink), var(--neon-blue));
 }
 
 * {
@@ -53,7 +88,10 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(60rem 30rem at 12% -10%, var(--bg-glow-a), transparent 60%),
+    radial-gradient(50rem 26rem at 88% 0%, var(--bg-glow-b), transparent 55%), var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font:
     15px/1.5 system-ui,
@@ -97,26 +135,88 @@ a {
 .topbar {
   display: flex;
   align-items: center;
-  gap: var(--gap);
+  gap: 12px;
   padding: 12px 20px;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--neon-pink) 22%, transparent);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
-.topbar__brand {
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: -0.01em;
+.topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbar__link {
+  color: var(--text-dim);
   text-decoration: none;
+  font-size: 0.86rem;
+  /* Translations are longer than the English. Without this, "So funktioniert es" wraps
+     onto three lines and takes the header apart. */
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.topbar__link:hover {
   color: var(--text);
+  background: var(--surface-2);
+}
+
+.topbar__link[aria-current='page'] {
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: var(--glow-accent);
+}
+
+.topbar__brand {
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  background: var(--neon-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* The gradient sits on the text itself, so a forced-colours reader still gets a colour. */
+@media (forced-colors: active) {
+  .topbar__brand {
+    color: canvastext;
+  }
 }
 
 .topbar__tag {
   color: var(--text-dim);
   font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The tagline is the first thing worth losing when the controls need the room. */
+@media (max-width: 1100px) {
+  .topbar__tag {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar__spacer {
+    flex-basis: 100%;
+    height: 0;
+  }
 }
 
 .topbar__spacer {
@@ -132,6 +232,9 @@ a {
 }
 
 .footer {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
   padding: 14px 20px;
   border-top: 1px solid var(--border);
   color: var(--text-dim);
@@ -170,16 +273,49 @@ a {
 /* ---------------------------------------------------------------- surfaces */
 
 .card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), var(--glow-soft);
+}
+
+/* A hairline of neon along the top edge, drawn rather than coloured, so it never
+   interferes with the contrast of anything inside the card. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--neon-gradient);
+  opacity: 0.55;
+}
+
+.card--hero::before {
+  height: 2px;
+  opacity: 0.9;
 }
 
 .card--hero {
-  padding: 32px;
+  padding: 40px 32px;
   text-align: center;
+  overflow: hidden;
+}
+
+.card--hero h1 {
+  font-size: clamp(1.7rem, 4vw, 2.5rem);
+  background: var(--neon-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (forced-colors: active) {
+  .card--hero h1 {
+    color: canvastext;
+  }
 }
 
 .section-heading,
@@ -301,9 +437,17 @@ textarea:focus-visible,
 
 .button--primary,
 button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--neon-gradient);
+  border-color: transparent;
   color: var(--accent-contrast);
+  font-weight: 650;
+  box-shadow: var(--glow-accent);
+}
+
+.button--primary:hover:not(:disabled),
+button.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--glow-accent), var(--glow-pink);
 }
 
 button.danger {
@@ -383,7 +527,7 @@ textarea {
 /* ---------------------------------------------------------------- progress */
 
 .progress {
-  height: 6px;
+  height: 8px;
   background: var(--surface-2);
   border-radius: 999px;
   overflow: hidden;
@@ -391,8 +535,9 @@ textarea {
 
 .progress__bar {
   height: 100%;
-  background: var(--accent);
+  background: var(--neon-gradient);
   border-radius: 999px;
+  box-shadow: var(--glow-accent);
   transition: width 0.3s ease;
 }
 
@@ -589,4 +734,233 @@ audio {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---------------------------------------------------------------- switchers */
+
+.switcher {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+  background: var(--surface-2);
+}
+
+.switcher button {
+  border: none;
+  background: none;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.switcher button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--glow-accent);
+}
+
+.select-inline {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.version-chip {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.version-chip:hover {
+  color: var(--text);
+  box-shadow: var(--glow-pink);
+}
+
+/* ---------------------------------------------------------------- content pages */
+
+.prose {
+  max-width: 74ch;
+}
+
+.prose p,
+.prose li {
+  color: var(--text-dim);
+}
+
+.prose strong {
+  color: var(--text);
+}
+
+.lede {
+  font-size: 1.05rem;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.step__index {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--neon-gradient);
+  color: var(--accent-contrast);
+  font-weight: 700;
+  font-size: 0.85rem;
+  box-shadow: var(--glow-accent);
+}
+
+.step__title {
+  margin: 0 0 2px;
+  font-size: 0.98rem;
+  color: var(--text);
+}
+
+.step__body {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stage-card {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.stage-card__name {
+  font-weight: 620;
+  font-size: 0.9rem;
+}
+
+.stage-card__what {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  color: var(--text-dim);
+}
+
+.facts {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.facts > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) 1fr;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.facts > div:last-child {
+  border-bottom: none;
+}
+
+.facts dt {
+  color: var(--text-dim);
+  font-size: 0.86rem;
+}
+
+.facts dd {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 620px) {
+  .facts > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+/* ---------------------------------------------------------------- filters */
+
+.filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filters button {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border-radius: 999px;
+}
+
+.filters button[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--neon-gradient);
+  color: var(--accent-contrast);
+  box-shadow: var(--glow-accent);
+}
+
+.empty {
+  text-align: center;
+  padding: 28px 20px;
+  color: var(--text-dim);
+}
+
+.footer__spacer {
+  flex: 1;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  z-index: 20;
+}
+
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+}
+
+.split-even {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--gap);
 }
