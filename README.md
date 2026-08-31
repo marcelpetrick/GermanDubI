@@ -17,7 +17,11 @@ German dub while every intermediate stage stays inspectable and reproducible.
 > Unresolved design decisions live in [`questions.md`](questions.md).
 > The implemented system map lives in [`docs/architecture/c4.md`](docs/architecture/c4.md).
 
-**Author:** Marcel Petrick <mail@marcelpetrick.it>
+**Author: Marcel Petrick <mail@marcelpetrick.it>**
+
+**License: GPLv3 or later. See `LICENSE`.**
+
+**Note: project is generated with AI.**
 
 ---
 
