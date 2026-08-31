@@ -338,3 +338,55 @@ at 16 kHz, which is why the tier is shown in the dropdown. The default voice mov
 `high` and the export to AAC 256 kbit/s; Piper's 22.05 kHz output remains the ceiling and no
 export setting can lift it.
 
+## 20. Stop a second video from breaking the first · `PENDING`
+
+Adding a URL while a dub was running returned `500 Internal Server Error`:
+
+    sqlite3.OperationalError: database is locked
+    [SQL: INSERT INTO events ...  'project_created' ...]
+
+Two separate defects, and the visible one is not the one that was suspected.
+
+### The crash: a write lock held for the length of a stage
+
+`WorkerProcess._execute` opens one unit of work, writes a `stage_started` event into it
+immediately -- which takes SQLite's write lock -- and only then runs the stage handler. The
+transaction stays open until the stage finishes. Transcription of a 40-minute source took
+123 s, so the write lock was held for 123 s, and `POST /projects` waited out its 10 s
+`busy_timeout` and failed.
+
+WAL and `busy_timeout` are already configured and cannot help: they make a *brief* conflict
+wait, not a two-minute one. The fault is the duration of the transaction, not the settings.
+
+- Run the stage outside the write transaction. Claiming the job, recording that it started,
+  and recording how it ended are three short transactions; the work between them holds no
+  lock.
+- Progress updates and events are advisory rather than part of a stage's result, so each
+  becomes its own short write instead of riding inside the stage's transaction.
+- Keep a stage's *results* atomic. That is worth preserving; holding the lock while a model
+  runs is not.
+
+### The stall: a cheap probe queued behind an entire dub
+
+`claim_next` is strict FIFO by creation time, so analysing a newly pasted URL waits behind
+every remaining stage of the run already in progress. Measured on a reproduction: the new
+project's probe sat at **position 15**, behind all fifteen remaining jobs.
+
+Nothing is broken by this -- the queue is fair and the work is correctly serialised -- but
+the user pastes a URL and the interface does nothing for many minutes, which is
+indistinguishable from a hang.
+
+- Give source inspection priority over pipeline work. It costs a second or two and is what
+  the user is waiting on; a dub already running is not harmed by being interrupted at a
+  stage boundary.
+- Show the queue position, so waiting is legible rather than mysterious.
+
+### Not a problem, and deliberately not changed
+
+Runs do not need isolating from each other. One worker claims one job at a time, each
+project has its own workspace, and the claim is atomic. Adding per-run isolation would
+solve a problem the system does not have.
+
+- Acceptance: adding a URL during a long dub returns promptly and is analysed within one
+  stage boundary, with a regression test that writes through the API while a stage holds
+  the worker.
