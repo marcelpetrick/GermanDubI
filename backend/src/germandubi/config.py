@@ -96,6 +96,14 @@ class Settings(BaseSettings):
         description="Local media copied by fake acquisition in deterministic E2E runs.",
     )
     tts_voice: str = Field(default="de_DE-thorsten-medium", description="Default German voice.")
+    device: Literal["auto", "cpu", "cuda"] = Field(
+        default="auto",
+        description=(
+            "Compute device for the model providers. 'auto' uses a CUDA GPU when one is "
+            "usable and falls back to the CPU, which is the only device the pipeline "
+            "requires."
+        ),
+    )
     allow_network_providers: bool = Field(
         default=False,
         description="Whether a provider that sends data off the machine may be selected.",
@@ -141,6 +149,24 @@ class Settings(BaseSettings):
     def projects_dir(self) -> Path:
         """Return the directory holding one workspace per project."""
         return self.data_dir / "projects"
+
+    def resolved_device(self) -> str:
+        """Return the device the model providers should actually use.
+
+        Resolved once, here, rather than by each provider: a run where recognition used the
+        GPU and separation quietly used the CPU is the confusing case, and 'auto' has to
+        mean the same thing to everyone. Detection is deliberately tolerant -- a machine
+        with a driver problem should dub slowly, not fail.
+        """
+        if self.device != "auto":
+            return self.device
+        try:
+            import torch
+
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        except Exception:
+            # Any import or driver failure means no usable GPU, never a failed run.
+            return "cpu"
 
     @property
     def models_dir(self) -> Path:

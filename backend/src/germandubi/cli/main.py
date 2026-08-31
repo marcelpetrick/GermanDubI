@@ -78,7 +78,9 @@ def doctor() -> None:
         )
     console.print(providers)
 
-    console.print(f"\nProject data: [cyan]{report.data_dir}[/]")
+    device = "GPU (cuda)" if report.device == "cuda" else "CPU"
+    console.print(f"\nCompute:      [cyan]{device}[/]")
+    console.print(f"Project data: [cyan]{report.data_dir}[/]")
     console.print(f"Writable:     {'[green]yes[/]' if report.writable else '[red]no[/]'}")
 
     application.dispose()

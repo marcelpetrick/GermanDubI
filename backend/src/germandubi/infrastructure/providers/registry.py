@@ -70,12 +70,14 @@ class DependencyReport:
         providers: Provider identity and whether it can run.
         data_dir: Where project data will be stored.
         writable: Whether the data directory can be written to.
+        device: The compute device the model providers resolved to.
     """
 
     tools: dict[str, bool]
     providers: list[tuple[ProviderInfo, bool]]
     data_dir: Path
     writable: bool
+    device: str = "cpu"
 
     @property
     def can_dub(self) -> bool:
@@ -220,7 +222,9 @@ class ProviderRegistry:
             logger.info("using the source's manual captions as the English transcript")
             return captions
 
-        whisper = WhisperTranscriptionProvider(download_root=self.settings.models_dir)
+        whisper = WhisperTranscriptionProvider(
+            download_root=self.settings.models_dir, device=self.settings.resolved_device()
+        )
         if configured in {AUTO, "whisper", "faster_whisper"} and whisper.is_available():
             logger.info("using speech recognition for the English transcript")
             return whisper
@@ -309,7 +313,7 @@ class ProviderRegistry:
             return FakeSeparationProvider()
         if configured == "none":
             return None
-        demucs = DemucsSeparationProvider(self.runner)
+        demucs = DemucsSeparationProvider(self.runner, device=self.settings.resolved_device())
         if configured in {AUTO, "demucs"} and demucs.is_available():
             return demucs
         logger.info(
@@ -339,10 +343,12 @@ class ProviderRegistry:
         candidates: list[object] = [
             YtDlpProbeProvider(self.runner, executable=self.settings.yt_dlp_path),
             LocalFileProbeProvider(self.media()),
-            WhisperTranscriptionProvider(download_root=self.settings.models_dir),
+            WhisperTranscriptionProvider(
+                download_root=self.settings.models_dir, device=self.settings.resolved_device()
+            ),
             ArgosTranslationProvider(),
             PiperTTSProvider(voices_dir=self.settings.models_dir / "piper"),
-            DemucsSeparationProvider(self.runner),
+            DemucsSeparationProvider(self.runner, device=self.settings.resolved_device()),
             TimingProsodyProvider(self.runner),
             ProportionalAlignmentProvider(),
         ]
@@ -365,4 +371,5 @@ class ProviderRegistry:
             providers=providers,
             data_dir=self.settings.data_dir,
             writable=writable,
+            device=self.settings.resolved_device(),
         )

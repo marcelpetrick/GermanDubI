@@ -426,6 +426,7 @@ def main() -> int:
                 "platform": platform.platform(),
                 "python": platform.python_version(),
                 "processor": platform.processor() or "unknown",
+                "device": settings.resolved_device(),
             },
             providers=providers,
             source_title=analysed.display_title,
