@@ -5,6 +5,7 @@ type Schemas = components['schemas'];
 
 export type ProjectState = Schemas['ProjectDetail']['state'];
 export type JobStatus = Schemas['JobDetail']['status'];
+export type Stage = Schemas['JobDetail']['stage'];
 export type SegmentStatus = Schemas['SegmentDetail']['status'];
 export type ReviewState = Schemas['SegmentDetail']['review_state'];
 export type CaptionTrack = Schemas['CaptionTrackModel'];

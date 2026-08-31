@@ -3,6 +3,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
+import { LocaleProvider } from '@/i18n/LocaleProvider';
+import { ThemeProvider } from '@/theme/ThemeProvider';
+
 import { api } from '@/api/client';
 import type { Health, Meta, ProjectDetail, Run, Segment } from '@/api/types';
 import { App } from '@/app/App';
@@ -24,9 +27,13 @@ function renderApp(path = '/') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
+      <ThemeProvider>
+        <LocaleProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <App />
+          </MemoryRouter>
+        </LocaleProvider>
+      </ThemeProvider>
     </QueryClientProvider>,
   );
 }
