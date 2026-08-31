@@ -30,21 +30,16 @@ jobs:
         with:
           enable-cache: true
 
-      # corepack must provide pnpm *before* setup-node runs: the pnpm cache invokes pnpm
-      # to compute its cache key, and fails the job outright when it cannot find it.
-      - name: Enable pnpm
-        run: corepack enable pnpm
-
+      # No `cache: pnpm` here. This repository has no pnpm project at its root -- the two
+      # are in frontend/ and e2e/ -- so setup-node's post-job cache step resolves a store
+      # path that never gets created and fails the whole job with a Path Validation Error,
+      # after the gate has already passed. Caching a few seconds of install is not worth a
+      # job that reports failure on a successful run.
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
-          cache: pnpm
-          cache-dependency-path: |
-            frontend/pnpm-lock.yaml
-            e2e/pnpm-lock.yaml
 
-      # setup-node put a different Node on PATH, so re-create the shims against it.
-      - name: Re-enable pnpm for the selected Node
+      - name: Enable pnpm
         run: corepack enable pnpm
 
       - name: Install FFmpeg
