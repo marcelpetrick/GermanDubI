@@ -338,7 +338,7 @@ at 16 kHz, which is why the tier is shown in the dropdown. The default voice mov
 `high` and the export to AAC 256 kbit/s; Piper's 22.05 kHz output remains the ceiling and no
 export setting can lift it.
 
-## 20. Stop a second video from breaking the first · `PENDING`
+## 20. Stop a second video from breaking the first · `COMPLETE`
 
 Adding a URL while a dub was running returned `500 Internal Server Error`:
 
@@ -387,6 +387,14 @@ Runs do not need isolating from each other. One worker claims one job at a time,
 project has its own workspace, and the claim is atomic. Adding per-run isolation would
 solve a problem the system does not have.
 
-- Acceptance: adding a URL during a long dub returns promptly and is analysed within one
-  stage boundary, with a regression test that writes through the API while a stage holds
-  the worker.
+Acceptance met. `backend/tests/integration/test_worker_concurrency.py` creates a project
+while a stage is running and asserts it returns in under five seconds; against the previous
+worker it fails with the exact `OperationalError` after waiting out the busy timeout. A
+second test asserts a newly added URL is the next job claimed rather than the sixteenth.
+
+One thing learned the hard way and worth keeping: the first attempt gave progress reporting
+and cancellation their own database connections. That deadlocks the process against itself
+-- a second connection cannot write while the first holds the lock, and the first will not
+commit until the handler returns. The test suite went from 113 s to over 600 s and had to be
+killed. Progress and cancellation stay on the stage's connection; what changed is how long
+that connection holds the lock.

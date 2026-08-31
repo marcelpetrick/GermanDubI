@@ -21,6 +21,14 @@ may occur in MINOR releases and are always listed here.
 - `GERMANDUBI_DEVICE` selects the compute device (`auto`, `cpu`, `cuda`) for the model
   providers, and `germandubi doctor` reports which one was resolved.
 
+### Fixed
+
+- Adding a video while another is being dubbed no longer fails with "database is locked".
+  The worker held SQLite's write lock for the entire duration of a stage -- two minutes
+  while transcribing a long source -- so any write from the API during that window failed.
+- A newly added URL is now inspected before the running dub continues, instead of queueing
+  behind every one of its remaining stages.
+
 ### Changed
 
 - Higher audio quality by default: the default voice moves from Thorsten `medium` to
