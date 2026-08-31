@@ -55,9 +55,11 @@ async def create_project(payload: CreateProjectRequest, projects: ProjectsDep) -
         msg = "provide either a source URL or a local file path, not both and not neither"
         raise DomainError(msg)
     project = (
-        projects.create_from_url(payload.url, quality=payload.quality)
+        projects.create_from_url(payload.url, quality=payload.quality, voice=payload.voice)
         if payload.url
-        else projects.create_from_file(payload.file_path or "", quality=payload.quality)
+        else projects.create_from_file(
+            payload.file_path or "", quality=payload.quality, voice=payload.voice
+        )
     )
     return ProjectDetail.of(project)
 

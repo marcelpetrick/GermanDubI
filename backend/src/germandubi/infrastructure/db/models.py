@@ -64,6 +64,7 @@ class ProjectRow(Base):
     source_language: Mapped[str] = mapped_column(String(8), default="en")
     target_language: Mapped[str] = mapped_column(String(8), default="de")
     quality: Mapped[str] = mapped_column(String(16), default="balanced")
+    voice: Mapped[str | None] = mapped_column(String(64))
     state: Mapped[str] = mapped_column(String(32), default="new", index=True)
     title: Mapped[str | None] = mapped_column(Text)
     error: Mapped[str | None] = mapped_column(Text)

@@ -23,5 +23,6 @@ export type TranslationRevision = Schemas['TranslationRevisionModel'];
 export type Meta = Schemas['MetaResponse'];
 export type Health = Schemas['HealthResponse'];
 export type Provider = Schemas['ProviderStatus'];
+export type Voice = Schemas['VoiceStatus'];
 export type Artifact = Schemas['ArtifactModel'];
 export type ApiErrorBody = Schemas['ErrorResponse'];

@@ -576,7 +576,9 @@ class FFmpegToolkit:
         for index in subtitle_indices.values():
             argv += ["-map", f"{index}:s:0"]
 
-        argv += ["-c:v", "copy", "-c:a", "aac", "-b:a", "192k"]
+        # The narration is the point of the file; 256 kbit/s keeps the encoder well clear
+        # of the speech it is carrying. Piper's 22.05 kHz output is the real ceiling.
+        argv += ["-c:v", "copy", "-c:a", "aac", "-b:a", "256k"]
         # MP4 only carries mov_text subtitles; Matroska takes SRT directly.
         argv += ["-c:s", "mov_text" if is_mp4 else "srt"]
 

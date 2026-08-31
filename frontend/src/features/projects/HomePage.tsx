@@ -8,6 +8,7 @@ import {
   useHealth,
   useProjects,
 } from '@/hooks/queries';
+import { VoicePicker } from '@/features/projects/VoicePicker';
 import { useT } from '@/i18n/LocaleProvider';
 import { formatDuration } from '@/lib/format';
 
@@ -15,6 +16,7 @@ import { formatDuration } from '@/lib/format';
 export function HomePage() {
   const t = useT();
   const [url, setUrl] = useState('');
+  const [voice, setVoice] = useState<string | null>(null);
   const navigate = useNavigate();
   const projects = useProjects();
   const health = useHealth();
@@ -25,9 +27,10 @@ export function HomePage() {
     event.preventDefault();
     const source = url.trim();
     if (!source) return;
-    create.mutate(source, {
-      onSuccess: (project) => void navigate(`/projects/${project.id}`),
-    });
+    create.mutate(
+      { url: source, voice },
+      { onSuccess: (project) => void navigate(`/projects/${project.id}`) },
+    );
   };
 
   const deleteProject = (id: string, title: string) => {
@@ -58,6 +61,7 @@ export function HomePage() {
             {t('home.analyze')}
           </button>
         </form>
+        <VoicePicker value={voice} onChange={setVoice} />
         {create.error && <ErrorAlert error={create.error} />}
         {health.data?.status === 'degraded' && (
           <div className="alert alert--warn" role="status">

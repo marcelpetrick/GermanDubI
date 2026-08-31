@@ -31,6 +31,13 @@ export const hr: Catalogue = {
   'home.degradedHelp': 'Pokreni {command} da vidiš što nedostaje.',
   'home.newToThis': 'Prvi put ovdje? Pročitaj kako obrada teče.',
 
+  'voice.label': 'Njemački pripovjedač',
+  'voice.play': 'Poslušaj glas',
+  'voice.loading': 'Učitavanje…',
+  'voice.notDownloaded': 'preuzima se pri prvoj upotrebi',
+  'voice.hint': 'Odaberi glas i poslušaj ga prije početka.',
+  'voice.sampleFailed': 'Uzorak se nije mogao reproducirati. Glas se možda još preuzima.',
+
   'processing.title': 'Obrada',
   'processing.percentComplete': '{percent} % dovršeno',
   'processing.progressLabel': 'Napredak sinkronizacije',

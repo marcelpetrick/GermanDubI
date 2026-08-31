@@ -153,6 +153,12 @@ class CreateProjectRequest(BaseModel):
     quality: QualityProfile = Field(
         default=QualityProfile.BALANCED, description="The speed/quality trade-off."
     )
+    voice: str | None = Field(
+        default=None,
+        description=(
+            "The German narrator, from `GET /voices`. Omit to use the configured default."
+        ),
+    )
 
 
 class ProjectSummary(BaseModel):
@@ -439,3 +445,14 @@ class ArtifactModel(BaseModel):
     provider_id: str | None
     model_id: str | None
     created_at: datetime | None
+
+
+class VoiceStatus(BaseModel):
+    """One German narrator a project can use."""
+
+    id: str = Field(description="The Piper voice identifier, e.g. `de_DE-thorsten-medium`.")
+    speaker: str = Field(description="Readable speaker name, e.g. `Thorsten`.")
+    quality: str = Field(description="Model quality tier: `low`, `medium`, `high` or similar.")
+    downloaded: bool = Field(
+        description="Whether the model is already on this machine. If not, first use fetches it."
+    )

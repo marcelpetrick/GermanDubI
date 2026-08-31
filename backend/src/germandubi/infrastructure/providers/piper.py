@@ -30,8 +30,11 @@ __all__ = ["DEFAULT_GERMAN_VOICE", "GERMAN_VOICES", "PiperTTSProvider"]
 logger = logging.getLogger(__name__)
 
 #: Thorsten is a permissively licensed, single-speaker German corpus, which is what makes
-#: it usable here without a licensing question hanging over every export.
-DEFAULT_GERMAN_VOICE: Final = "de_DE-thorsten-medium"
+#: it usable here without a licensing question hanging over every export. The `high` model
+#: is the default because the narration is the product: it costs more synthesis time than
+#: `medium` and is the best this voice offers. The ceiling is Piper's own 22.05 kHz output,
+#: which no export setting can raise.
+DEFAULT_GERMAN_VOICE: Final = "de_DE-thorsten-high"
 GERMAN_VOICES: Final[tuple[str, ...]] = (
     "de_DE-thorsten-medium",
     "de_DE-thorsten-high",

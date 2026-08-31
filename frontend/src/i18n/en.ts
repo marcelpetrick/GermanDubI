@@ -37,6 +37,13 @@ export const en = {
   'home.degradedHelp': 'Run {command} to see what is missing.',
   'home.newToThis': 'New here? Read how the pipeline works.',
 
+  'voice.label': 'German narrator',
+  'voice.play': 'Hear this voice',
+  'voice.loading': 'Loading…',
+  'voice.notDownloaded': 'downloads on first use',
+  'voice.hint': 'Pick a voice, then press play to hear it before you start.',
+  'voice.sampleFailed': 'That sample could not be played. The voice may still be downloading.',
+
   'processing.title': 'Processing',
   'processing.percentComplete': '{percent}% complete',
   'processing.progressLabel': 'Dub progress',

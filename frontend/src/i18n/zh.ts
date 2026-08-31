@@ -32,6 +32,13 @@ export const zh: Catalogue = {
   'home.degradedHelp': '运行 {command} 查看缺少什么。',
   'home.newToThis': '第一次使用？先了解处理流程。',
 
+  'voice.label': '德语旁白',
+  'voice.play': '试听',
+  'voice.loading': '加载中…',
+  'voice.notDownloaded': '首次使用时下载',
+  'voice.hint': '选择一个声音，开始前先试听。',
+  'voice.sampleFailed': '无法播放试听。该声音可能仍在下载。',
+
   'processing.title': '处理中',
   'processing.percentComplete': '已完成 {percent}%',
   'processing.progressLabel': '配音进度',

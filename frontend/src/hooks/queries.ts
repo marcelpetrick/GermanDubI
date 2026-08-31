@@ -22,6 +22,11 @@ export function useProviders() {
   return useQuery({ queryKey: ['providers'], queryFn: api.providers, staleTime: 60_000 });
 }
 
+export function useVoices() {
+  // The catalogue changes only when a model is downloaded, so it is cheap to hold.
+  return useQuery({ queryKey: ['voices'], queryFn: api.voices, staleTime: 5 * 60_000 });
+}
+
 export function useProjects() {
   return useQuery({ queryKey: ['projects'], queryFn: api.listProjects });
 }
@@ -64,8 +69,8 @@ export function useArtifacts(id: string | undefined, enabled = true) {
 export function useCreateAndAnalyzeProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (url: string) => {
-      const project = await api.createProject(url);
+    mutationFn: async ({ url, voice }: { url: string; voice?: string | null }) => {
+      const project = await api.createProject(url, voice);
       await api.analyzeProject(project.id);
       return project;
     },

@@ -63,6 +63,7 @@ test('creates and analyzes a project from the primary action', async () => {
 
   vi.spyOn(api, 'meta').mockResolvedValue(meta);
   vi.spyOn(api, 'health').mockResolvedValue(health);
+  vi.spyOn(api, 'voices').mockResolvedValue([]);
   vi.spyOn(api, 'listProjects').mockResolvedValue([]);
   const create = vi.spyOn(api, 'createProject').mockResolvedValue(project);
   const analyze = vi.spyOn(api, 'analyzeProject').mockResolvedValue({} as never);
@@ -76,7 +77,7 @@ test('creates and analyzes a project from the primary action', async () => {
   );
   await user.click(screen.getByRole('button', { name: 'Analyze' }));
 
-  expect(create).toHaveBeenCalledWith('https://www.youtube.com/watch?v=abcdefghijk');
+  expect(create).toHaveBeenCalledWith('https://www.youtube.com/watch?v=abcdefghijk', null);
   expect(analyze).toHaveBeenCalledWith(project.id);
   expect(await screen.findByRole('heading', { name: 'New project' })).toBeInTheDocument();
 });

@@ -197,6 +197,7 @@ def _apply_project(row: ProjectRow, project: Project) -> None:
     row.source_language = project.source_language.value
     row.target_language = project.target_language.value
     row.quality = project.quality.value
+    row.voice = project.voice
     row.state = project.state.value
     row.title = project.title
     row.error = project.error
@@ -267,6 +268,7 @@ def _row_to_project(row: ProjectRow) -> Project:
         source_language=LanguageCode(row.source_language),
         target_language=LanguageCode(row.target_language),
         quality=QualityProfile(row.quality),
+        voice=row.voice,
         state=ProjectState(row.state),
         title=row.title,
         media=_json_to_media(row.media),

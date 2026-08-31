@@ -95,7 +95,10 @@ class Settings(BaseSettings):
         default=None,
         description="Local media copied by fake acquisition in deterministic E2E runs.",
     )
-    tts_voice: str = Field(default="de_DE-thorsten-medium", description="Default German voice.")
+    tts_voice: str = Field(
+        default="de_DE-thorsten-high",
+        description="German voice used by a project that does not choose one.",
+    )
     device: Literal["auto", "cpu", "cuda"] = Field(
         default="auto",
         description=(

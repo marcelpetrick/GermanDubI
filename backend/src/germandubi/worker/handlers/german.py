@@ -134,7 +134,8 @@ def handle_synthesize(context: StageContext) -> None:
         return
 
     provider = context.registry.tts()
-    voice = _pick_voice(provider, context.settings.tts_voice)
+    # The project's own narrator wins; the setting is only the default.
+    voice = _pick_voice(provider, context.project.voice or context.settings.tts_voice)
     speech_dir = context.directory("speech")
     context.progress(0.02, f"using {provider.info.name}")
 

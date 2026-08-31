@@ -35,7 +35,11 @@ class ProjectService:
         self.unit_of_work = unit_of_work
 
     def create_from_url(
-        self, url: str, *, quality: QualityProfile = QualityProfile.BALANCED
+        self,
+        url: str,
+        *,
+        quality: QualityProfile = QualityProfile.BALANCED,
+        voice: str | None = None,
     ) -> Project:
         """Create a project from a source URL.
 
@@ -45,6 +49,7 @@ class ProjectService:
         Args:
             url: The URL as typed by the user.
             quality: The speed/quality trade-off to use.
+            voice: The German narrator, or ``None`` for the configured default.
 
         Returns:
             The created project, in the ``NEW`` state.
@@ -53,16 +58,21 @@ class ProjectService:
             SourceValidationError: If the URL is not acceptable.
         """
         source = SourceRef.from_url(validate_source_url(url))
-        return self._create(source, quality)
+        return self._create(source, quality, voice)
 
     def create_from_file(
-        self, path: str, *, quality: QualityProfile = QualityProfile.BALANCED
+        self,
+        path: str,
+        *,
+        quality: QualityProfile = QualityProfile.BALANCED,
+        voice: str | None = None,
     ) -> Project:
         """Create a project from a local media file.
 
         Args:
             path: Absolute path to a readable media file.
             quality: The speed/quality trade-off to use.
+            voice: The German narrator, or ``None`` for the configured default.
 
         Returns:
             The created project.
@@ -70,11 +80,13 @@ class ProjectService:
         Raises:
             DomainError: If the path is not absolute.
         """
-        return self._create(SourceRef.from_local_file(path), quality)
+        return self._create(SourceRef.from_local_file(path), quality, voice)
 
-    def _create(self, source: SourceRef, quality: QualityProfile) -> Project:
+    def _create(
+        self, source: SourceRef, quality: QualityProfile, voice: str | None = None
+    ) -> Project:
         """Persist a new project and create its workspace."""
-        project = Project.create(source, quality=quality)
+        project = Project.create(source, quality=quality, voice=voice)
         with self.unit_of_work() as uow:
             uow.projects.add(project, created_with=build_info().version)
             uow.store.create_workspace(project.id)

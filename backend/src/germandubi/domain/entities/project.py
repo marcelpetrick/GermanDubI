@@ -204,6 +204,9 @@ class Project:
         source_language: Always English in ``0.x``.
         target_language: Always German in ``0.x``.
         quality: The chosen speed/quality trade-off.
+        voice: The German narrator, or ``None`` to use the configured default. Held per
+            project rather than per machine: two dubs on one machine can want different
+            narrators, and the choice belongs to the work.
         state: Lifecycle state.
         title: Display title, filled in by the probe.
         media: Probe results, once analysed.
@@ -217,6 +220,7 @@ class Project:
     source_language: LanguageCode = SOURCE_LANGUAGE
     target_language: LanguageCode = TARGET_LANGUAGE
     quality: QualityProfile = QualityProfile.BALANCED
+    voice: str | None = None
     state: ProjectState = ProjectState.NEW
     title: str | None = None
     media: SourceMedia | None = None
@@ -241,18 +245,23 @@ class Project:
 
     @classmethod
     def create(
-        cls, source: SourceRef, *, quality: QualityProfile = QualityProfile.BALANCED
+        cls,
+        source: SourceRef,
+        *,
+        quality: QualityProfile = QualityProfile.BALANCED,
+        voice: str | None = None,
     ) -> Self:
         """Create a new project in the ``NEW`` state.
 
         Args:
             source: The validated source reference.
             quality: The speed/quality trade-off to use.
+            voice: The German narrator, or ``None`` for the configured default.
 
         Returns:
             The new project.
         """
-        return cls(id=ProjectId(new_id()), source=source, quality=quality)
+        return cls(id=ProjectId(new_id()), source=source, quality=quality, voice=voice)
 
     @property
     def display_title(self) -> str:

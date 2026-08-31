@@ -13,6 +13,7 @@ import type {
   ProjectDetail,
   ProjectSummary,
   Provider,
+  Voice,
   Run,
   Segment,
   SegmentList,
@@ -69,13 +70,16 @@ export const api = {
   meta: () => request<Meta>('/meta'),
   health: () => request<Health>('/health'),
   providers: () => request<Provider[]>('/providers'),
+  voices: () => request<Voice[]>('/voices'),
+  /** Absolute URL of a voice sample, for an <audio> element to fetch itself. */
+  voiceSampleUrl: (voice: string) => `${API_BASE}/voices/${encodeURIComponent(voice)}/sample`,
 
   listProjects: () => request<ProjectSummary[]>('/projects'),
   getProject: (id: string) => request<ProjectDetail>(`/projects/${id}`),
-  createProject: (url: string) =>
+  createProject: (url: string, voice?: string | null) =>
     request<ProjectDetail>('/projects', {
       method: 'POST',
-      body: JSON.stringify({ url }),
+      body: JSON.stringify(voice ? { url, voice } : { url }),
     }),
   deleteProject: (id: string) => request<undefined>(`/projects/${id}`, { method: 'DELETE' }),
   analyzeProject: (id: string) => request<Run>(`/projects/${id}/analyze`, { method: 'POST' }),

@@ -33,6 +33,14 @@ export const de: Catalogue = {
   'home.degradedHelp': 'Führe {command} aus, um zu sehen, was fehlt.',
   'home.newToThis': 'Neu hier? Lies, wie die Verarbeitung abläuft.',
 
+  'voice.label': 'Deutsche Erzählstimme',
+  'voice.play': 'Stimme anhören',
+  'voice.loading': 'Lädt…',
+  'voice.notDownloaded': 'wird beim ersten Mal geladen',
+  'voice.hint': 'Wähle eine Stimme und höre sie ab, bevor du startest.',
+  'voice.sampleFailed':
+    'Die Hörprobe konnte nicht abgespielt werden. Die Stimme wird vielleicht noch geladen.',
+
   'processing.title': 'Verarbeitung',
   'processing.percentComplete': '{percent} % abgeschlossen',
   'processing.progressLabel': 'Fortschritt der Synchronisation',

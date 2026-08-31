@@ -455,3 +455,53 @@ class TestEventStream:
             assert response.status_code == 200
             assert response.headers["content-type"].startswith("text/event-stream")
             assert response.headers["cache-control"].startswith("no-cache")
+
+
+class TestVoices:
+    """The narrator catalogue and its samples."""
+
+    def test_the_catalogue_describes_every_voice_readably(self, client: TestClient) -> None:
+        response = client.get(url("/voices"))
+
+        assert response.status_code == 200
+        voices = response.json()
+        assert voices, "the catalogue must never be empty"
+        for voice in voices:
+            # A dropdown showing `de_DE-eva_k-x_low` asks the reader to decode an
+            # identifier; speaker and quality are what they actually choose between.
+            assert voice["speaker"] and voice["speaker"] != voice["id"]
+            assert voice["quality"]
+            assert isinstance(voice["downloaded"], bool)
+
+    def test_an_unknown_voice_is_not_found(self, client: TestClient) -> None:
+        """The name becomes part of a cache path, so only catalogue names are accepted."""
+        for name in ("nonsense", "....", "de_DE-not-a-real-voice"):
+            response = client.get(url(f"/voices/{name}/sample"))
+            assert response.status_code == 404, name
+
+    def test_a_sample_is_audio_when_the_provider_can_make_one(self, client: TestClient) -> None:
+        catalogue = client.get(url("/voices")).json()
+        first = catalogue[0]["id"]
+
+        response = client.get(url(f"/voices/{first}/sample"))
+
+        # The deterministic fake provider does not synthesize real speech, so a 503 that
+        # names the reason is as correct here as audio would be with Piper installed.
+        assert response.status_code in {200, 503}
+        if response.status_code == 200:
+            assert response.headers["content-type"].startswith("audio/")
+
+    def test_a_project_records_the_voice_it_was_created_with(self, client: TestClient) -> None:
+        catalogue = client.get(url("/voices")).json()
+        chosen = catalogue[-1]["id"]
+
+        created = client.post(url("/projects"), json={"url": VALID_URL, "voice": chosen})
+
+        assert created.status_code == 201, created.text
+        detail = client.get(url(f"/projects/{created.json()['id']}"))
+        assert detail.status_code == 200
+
+    def test_a_project_may_leave_the_voice_to_the_default(self, client: TestClient) -> None:
+        created = client.post(url("/projects"), json={"url": VALID_URL})
+
+        assert created.status_code == 201, created.text

@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from germandubi.api.errors import install_error_handlers
-from germandubi.api.routers import events, media, meta, pipeline, projects, segments
+from germandubi.api.routers import events, media, meta, pipeline, projects, segments, voices
 from germandubi.composition import Application, build_application, configure_logging
 from germandubi.config import Settings, get_settings
 from germandubi.version import build_info
@@ -127,6 +127,7 @@ def create_app(
         segments.router,
         events.router,
         media.router,
+        voices.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 
