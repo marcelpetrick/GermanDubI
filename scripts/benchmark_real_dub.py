@@ -36,7 +36,7 @@ from germandubi.composition import build_application, configure_logging
 from germandubi.config import Settings, get_settings
 from germandubi.domain.entities.artifact import ArtifactKind
 from germandubi.domain.entities.project import QualityProfile
-from germandubi.domain.errors import GermanDubIError
+from germandubi.domain.errors import GermanDubIError, ProviderUnavailableError
 
 #: The reference source: 40 minutes of English narration with one dominant narrator, which
 #: is exactly the case GermanDubI targets first.
@@ -146,8 +146,15 @@ def describe_providers(settings: Settings) -> dict[str, str]:
     try:
         registry = application.registry
         separation = registry.separation()
+        try:
+            transcription = type(registry.transcription()).__name__
+        except ProviderUnavailableError:
+            # Recognition is absent, which is not yet an error: a source that ships usable
+            # captions still has a transcript. Whether this run does is unknown until the
+            # source has been downloaded, and the real answer is read back afterwards.
+            transcription = "pending (depends on the source's captions)"
         return {
-            "transcription": type(registry.transcription()).__name__,
+            "transcription": transcription,
             "translation": type(registry.translation()).__name__,
             "tts": type(registry.tts()).__name__,
             "separation": type(separation).__name__ if separation else "none (ducking fallback)",

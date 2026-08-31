@@ -79,7 +79,7 @@ cd GermanDubI
 uv sync --all-groups          # backend environment
 corepack enable pnpm          # frontend package manager
 make install                  # frontend dependencies
-make install-providers        # the real German translator and voice
+make install-providers        # real recognition, translation and German voice
 
 ./localPipeline.sh            # the complete gate, exactly as CI runs it
 make dev                      # API + Vite dev server + processing worker

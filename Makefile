@@ -24,8 +24,8 @@ install: ## Install backend and frontend dependencies (fake providers only)
 	cd $(E2E) && $(PNPM) install --frozen-lockfile
 
 .PHONY: install-providers
-install-providers: ## Add the real German translation and speech providers
-	$(UV) sync --locked --all-groups --extra translate --extra tts
+install-providers: ## Add the real recognition, translation and speech providers
+	$(UV) sync --locked --all-groups --extra asr --extra translate --extra tts
 
 .PHONY: hooks
 hooks: ## Install the pre-commit hooks

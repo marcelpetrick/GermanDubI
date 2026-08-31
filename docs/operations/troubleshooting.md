@@ -30,8 +30,7 @@ providers append "ung" to English words and emit a quiet tone, so a run using th
 and contains no German. The error names the command:
 
 ```bash
-make install-providers      # translation and German speech
-uv sync --extra asr         # speech recognition, for sources without good captions
+make install-providers      # recognition, translation and German speech
 germandubi doctor           # confirm before starting a long run
 ```
 
