@@ -173,3 +173,60 @@ class TestRedundancyRequiresTimeOverlap:
     def test_an_overlapping_restatement_is_still_removed(self) -> None:
         result = canonicalize_cues([cue(0, 2000, "the same words"), cue(1000, 3000, "the same")])
         assert len(result) == 1
+
+
+class TestScrollingCaptions:
+    """YouTube's rolling captions, which repeat each finished line into the next cue."""
+
+    def test_repeated_lines_are_removed_from_a_rolling_caption_run(self) -> None:
+        """The real failure: every phrase reached the dub two or three times.
+
+        YouTube keeps a finished line on screen while the next is spoken, so it emits the
+        line alone, then a zero-length restatement, then the line again followed by the
+        new one. These cues abut rather than overlap, so an overlap-only check let all of
+        the repetition through and segments read "For many years, archaeologists puzzled
+        For many years, archaeologists puzzled over how...".
+        """
+        cues = [
+            TranscriptCue(TimeInterval(13520, 15470), "For many years, archaeologists puzzled"),
+            TranscriptCue(TimeInterval(15470, 15480), "For many years, archaeologists puzzled"),
+            TranscriptCue(
+                TimeInterval(15480, 17350),
+                "For many years, archaeologists puzzled over how a small city managed",
+            ),
+            TranscriptCue(TimeInterval(17350, 17360), "over how a small city managed"),
+            TranscriptCue(
+                TimeInterval(17360, 20150),
+                "over how a small city managed half the known world.",
+            ),
+        ]
+
+        result = canonicalize_cues(cues)
+
+        spoken = " ".join(c.text for c in result)
+        assert spoken == (
+            "For many years, archaeologists puzzled over how a small city managed "
+            "half the known world."
+        )
+
+    def test_a_genuine_repeat_after_a_pause_is_kept(self) -> None:
+        """Only a scrolling run carries text over; a real pause means real repetition."""
+        cues = [
+            TranscriptCue(TimeInterval(0, 2000), "we attacked at dawn"),
+            TranscriptCue(TimeInterval(9000, 11000), "we attacked at dawn"),
+        ]
+
+        result = canonicalize_cues(cues)
+
+        assert [c.text for c in result] == ["we attacked at dawn", "we attacked at dawn"]
+
+    def test_a_cue_that_adds_nothing_is_dropped_entirely(self) -> None:
+        cues = [
+            TranscriptCue(TimeInterval(0, 1000), "the legion marched north"),
+            TranscriptCue(TimeInterval(1000, 1010), "the legion marched north"),
+            TranscriptCue(TimeInterval(1010, 3000), "the legion marched north and camped"),
+        ]
+
+        result = canonicalize_cues(cues)
+
+        assert [c.text for c in result] == ["the legion marched north", "and camped"]

@@ -141,12 +141,20 @@ def canonicalize_cues(cues: list[TranscriptCue]) -> tuple[TranscriptCue, ...]:
     speech.sort(key=lambda c: (c.interval.start_ms, c.interval.end_ms))
 
     deduplicated: list[TranscriptCue] = []
-    for cue in speech:
-        if deduplicated and _is_redundant(previous=deduplicated[-1], current=cue):
-            # Scrolling automatic captions restate the previous line; keep the longer one.
-            if len(cue.text) > len(deduplicated[-1].text):
-                deduplicated[-1] = replace(cue, interval=deduplicated[-1].interval)
-            continue
+    for raw in speech:
+        cue = raw
+        if deduplicated:
+            previous = deduplicated[-1]
+            if _is_redundant(previous=previous, current=cue):
+                # Scrolling captions restate the previous line; keep the longer one.
+                if len(cue.text) > len(previous.text):
+                    deduplicated[-1] = replace(cue, interval=previous.interval)
+                continue
+            if _carries_over(previous=previous, current=cue):
+                trimmed = _strip_carried_over_prefix(previous.text, cue.text)
+                if not trimmed:
+                    continue
+                cue = replace(cue, text=trimmed)
         deduplicated.append(cue)
 
     clipped: list[TranscriptCue] = []
@@ -164,6 +172,37 @@ def canonicalize_cues(cues: list[TranscriptCue]) -> tuple[TranscriptCue, ...]:
         msg = "the captions collapsed to nothing once overlaps were resolved"
         raise CaptionError(msg)
     return tuple(clipped)
+
+
+#: Largest gap between two cues that can still be part of one scrolling caption run.
+#: YouTube's rolling captions abut exactly or leave a few milliseconds; a wider gap is
+#: separate speech, where repeated words are the narrator's own and must be kept.
+_CARRY_OVER_GAP_MS: Final = 100
+
+
+def _carries_over(*, previous: TranscriptCue, current: TranscriptCue) -> bool:
+    """Return whether two cues are close enough to be one scrolling caption run."""
+    return current.start_ms <= previous.end_ms + _CARRY_OVER_GAP_MS
+
+
+def _strip_carried_over_prefix(previous_text: str, current_text: str) -> str:
+    """Remove the words ``current_text`` repeats from the end of ``previous_text``.
+
+    Scrolling captions keep a finished line on screen while the next one is spoken, so each
+    cue restates the tail of the one before it and only its suffix is new speech. The
+    repeated part is a prefix of this cue and a suffix of the last, so the longest such
+    overlap is removed and only the new words are kept.
+
+    Example:
+        >>> _strip_carried_over_prefix("for many years", "for many years over how")
+        'over how'
+    """
+    previous_words = previous_text.split()
+    current_words = current_text.split()
+    for size in range(min(len(previous_words), len(current_words)), 0, -1):
+        if previous_words[-size:] == current_words[:size]:
+            return " ".join(current_words[size:])
+    return current_text
 
 
 def _is_redundant(*, previous: TranscriptCue, current: TranscriptCue) -> bool:
