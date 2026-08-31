@@ -301,7 +301,7 @@ took nearly twice as long as in the earlier reference for reasons not establishe
 both runs used the same GPU and the same model, so it is recorded rather than explained,
 and is worth investigating before any further performance claim rests on it.
 
-## 19. Let the reviewer choose the German voice, and hear it first · `PENDING`
+## 19. Let the reviewer choose the German voice, and hear it first · `COMPLETE`
 
 Eight German voices are already known to the code, and none of them is reachable: the voice
 comes from a single global setting that nothing in the product surfaces. Choosing a narrator
@@ -320,6 +320,13 @@ is the most consequential creative decision in a dub, and it is currently made f
 - **Raise the audio quality of the result.** The export is AAC at 192 kbit/s and the
   default voice is the medium model when a high one exists. Both are defensible defaults
   and neither is the best the pipeline can do.
-- Acceptance: a project can be created with a chosen voice, the choice is audible before
-  it is made, the dub uses it, and the quality change is measured rather than assumed.
+Done. The voice is a project property with a migration for existing databases, `GET
+/voices` publishes the catalogue, `GET /voices/{voice}/sample` returns cached audio, and the
+picker with its play button sits beside the URL field.
+
+Quality, measured rather than assumed: the tier in a Piper voice name is a real difference
+in fidelity, not a label. `de_DE-thorsten-high` renders at 22.05 kHz and `de_DE-eva_k-x_low`
+at 16 kHz, which is why the tier is shown in the dropdown. The default voice moves to
+`high` and the export to AAC 256 kbit/s; Piper's 22.05 kHz output remains the ceiling and no
+export setting can lift it.
 

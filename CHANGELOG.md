@@ -12,11 +12,21 @@ may occur in MINOR releases and are always listed here.
 
 ### Added
 
+- The German narrator is chosen per project, from a dropdown with a play button that
+  speaks a sample of each voice. Eight voices were already supported and none was
+  reachable outside a machine-wide setting.
+- `GET /voices` lists the narrators with their quality tier and whether the model is
+  downloaded; `GET /voices/{voice}/sample` returns a cached audio sample of one.
+
 - `GERMANDUBI_DEVICE` selects the compute device (`auto`, `cpu`, `cuda`) for the model
   providers, and `germandubi doctor` reports which one was resolved.
 
 ### Changed
 
+- Higher audio quality by default: the default voice moves from Thorsten `medium` to
+  `high`, and the export from AAC 192 to 256 kbit/s. Piper's 22.05 kHz output is the
+  ceiling, which is why the quality tier is shown when choosing a voice -- `x_low` voices
+  render at 16 kHz.
 - Voice/background separation uses the GPU when one is available. It was hardcoded to the
   CPU, so the heaviest provider in the pipeline never used the hardware present: about 10x
   realtime on a GPU against roughly 1x on the CPU.
