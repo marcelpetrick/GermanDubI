@@ -10,7 +10,18 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Added
+
+- `GERMANDUBI_DEVICE` selects the compute device (`auto`, `cpu`, `cuda`) for the model
+  providers, and `germandubi doctor` reports which one was resolved.
+
 ### Changed
+
+- Voice/background separation uses the GPU when one is available. It was hardcoded to the
+  CPU, so the heaviest provider in the pipeline never used the hardware present: about 10x
+  realtime on a GPU against roughly 1x on the CPU.
+- Narration assembly mixes segments in batches instead of building one filter graph over
+  every segment. Measured on 400 clips: 94.4 s to 33.1 s, with identical output.
 
 - `make install-providers` now installs voice/background separation as well, and a new
   `make setup` takes a clean checkout to a machine that can really dub in one command.

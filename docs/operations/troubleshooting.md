@@ -72,6 +72,18 @@ forced; review them in the browser and shorten the German text.
 captions restate each finished line in the following cue, and those repeats were being
 treated as new speech. Re-run the project to rebuild its transcript.
 
+## A stage sits at 100% CPU and then fails with a time limit
+
+`adelay` into `amix` intermittently deadlocks in FFmpeg n9.0.1: the process spins at full
+CPU and never produces a frame. It reproduces roughly half the time on narration assembly
+graphs, and it is an FFmpeg fault rather than a GermanDubI one -- the same command run by
+hand hangs the same way.
+
+Nothing is lost when it happens. The process runner's timeout kills the stage and the
+worker retries it, and because the deadlock is intermittent the retry usually succeeds. The
+visible symptom is one slow stage, not a failed project. If a stage exhausts its retries,
+re-running the pipeline resumes from the last finished stage.
+
 ## Nothing happens after pressing Create German Dub
 
 The worker is not running. `make dev` starts it alongside the API; if you started only the

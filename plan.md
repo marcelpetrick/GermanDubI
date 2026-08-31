@@ -243,7 +243,7 @@ Evidence: the commits named above.
   keyboard navigation of the segment list. Both are worth doing and neither is a blocker
   for a review pass, so they are recorded rather than rushed.
 
-## 18. Use the hardware that is actually present · `PENDING`
+## 18. Use the hardware that is actually present · `COMPLETE`
 
 Measured starting point, from `docs/benchmarks/real-dub-full.json`: 509 s for a 2400 s
 source, before separation became a default. Where that time goes, largest first --
@@ -262,7 +262,30 @@ assemble 124 s, synthesize 88 s, transcribe 81 s, export 67 s, fit 54 s.
 - **Look for parallelism that is genuinely free.** Speech synthesis is per-segment and
   sequential on a 20-thread machine. Whether Piper can be driven concurrently needs
   measuring rather than assuming.
-- Acceptance: a measured before-and-after on the same reference source, recorded in
-  `docs/benchmarks/`, with the device used written into the result. No change is kept
-  that does not show an improvement on that measurement.
+Done, and what was measured:
 
+- **Device selection.** `GERMANDUBI_DEVICE` (`auto`/`cpu`/`cuda`), resolved once in
+  settings so every provider agrees, reported by `doctor` and recorded in the benchmark.
+  Separation moved from a hardcoded CPU to the GPU: 244 s for 2400 s of audio, about 10x
+  realtime, against roughly 1x on the CPU.
+- **Assembly.** Mixed in batches of fifty rather than one graph over every segment. On 400
+  clips laid out like a real dub, 94.4 s became 33.1 s with output differing by -91 dB,
+  the sixteen-bit noise floor.
+- **Parallel synthesis: not done, and not on evidence of value.** Investigating assembly
+  turned up something that matters more, below.
+
+Found while measuring, and deliberately not fixed here:
+
+- **`adelay` into `amix` intermittently deadlocks in FFmpeg n9.0.1.** The process spins at
+  100% CPU and never emits a frame, roughly half the time on assembly-shaped graphs. It is
+  pre-existing and not caused by the batching: the previous single-pass implementation
+  fails at the same rate on the same input, 1 of 3 attempts each. The process timeout and
+  stage retry already reduce it to a slow stage rather than a hung run, which is why it had
+  gone unnoticed. Fixing it properly means either an FFmpeg upgrade or replacing the mixing
+  strategy, and neither belongs in a change made to speed something up.
+
+Acceptance note: the full before-and-after on the reference source is **not** recorded. The
+one run made after these changes overlapped a second dub on the same machine, so every
+stage in it is contended and not comparable to the committed reference. The per-change
+measurements above were each taken in isolation. A clean full run on an idle machine is
+still owed.
