@@ -110,10 +110,18 @@ class Worker:
         return True
 
     def _execute(self, job: Job) -> None:
-        """Run one job's stage and record the outcome."""
+        """Run one job's stage and record the outcome.
+
+        The stage runs *outside* any write transaction that is already holding the database.
+        Recording that a stage started used to happen inside the same transaction as the
+        stage itself, which took SQLite's write lock before a model had even loaded and held
+        it for the whole stage -- two minutes for transcription of a long source. Every
+        write from the API during that window failed with "database is locked".
+        """
         handler = HANDLERS.get(job.stage)
         started = time.monotonic()
 
+        # A short transaction of its own: announce the stage, then let go.
         with self.unit_of_work() as uow:
             project = uow.projects.get(job.project_id)
             run = uow.jobs.get_run(job.run_id)
@@ -129,6 +137,15 @@ class Worker:
                 )
                 return
 
+            uow.events.append(
+                project.id,
+                "stage_started",
+                {"stage": job.stage.value, "label": job.stage.label},
+                run_id=run.id,
+            )
+        logger.info("[%s] %s", project.id, job.stage.label)
+
+        with self.unit_of_work() as uow:
             context = StageContext(
                 uow=uow,
                 registry=self.registry,
@@ -136,17 +153,13 @@ class Worker:
                 project=project,
                 run=run,
                 job=job,
+                # Progress and cancellation stay on this one connection. Giving them their
+                # own would mean a second connection trying to write while this one holds
+                # the write lock, which is a deadlock the process has with itself.
                 report=lambda fraction, detail: self._report(uow, job, fraction, detail),
                 is_cancelled=lambda: self.stopping or uow.jobs.is_cancelled(job.run_id),
+                release=uow.session.commit,
             )
-
-            uow.events.append(
-                project.id,
-                "stage_started",
-                {"stage": job.stage.value, "label": job.stage.label},
-                run_id=run.id,
-            )
-            logger.info("[%s] %s", project.id, job.stage.label)
 
             try:
                 handler(context)

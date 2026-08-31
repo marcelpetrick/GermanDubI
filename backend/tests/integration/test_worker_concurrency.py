@@ -1,0 +1,142 @@
+"""The worker must not lock the database out while a stage runs.
+
+Adding a second video during a dub returned `500 Internal Server Error` with
+`sqlite3.OperationalError: database is locked`. The worker opened one transaction, wrote a
+`stage_started` event into it -- taking SQLite's write lock -- and only then ran the stage.
+Transcribing a 40-minute source held that lock for 123 seconds, against the API's
+10-second busy timeout.
+"""
+
+from __future__ import annotations
+
+import shutil
+import threading
+import time
+from collections.abc import Iterator
+from pathlib import Path
+
+import pytest
+
+from germandubi.composition import Application, build_application
+from germandubi.config import Settings
+from germandubi.domain.entities.pipeline import Stage
+from germandubi.worker.context import StageContext
+from germandubi.worker.handlers import HANDLERS
+from tests.fixtures.media import make_narration_video
+
+pytestmark = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is required")
+
+VALID_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+SECOND_URL = "https://www.youtube.com/watch?v=Wo0KujQEJ_s"
+
+
+@pytest.fixture
+def application(tmp_path: Path) -> Iterator[Application]:
+    clip = make_narration_video(tmp_path / "clip.mp4", seconds=3)
+    settings = Settings(
+        data_dir=tmp_path / "data",
+        transcription_provider="fake",
+        translation_provider="fake",
+        tts_provider="fake",
+        separation_provider="fake",
+    )
+    wired = build_application(settings, fixture=clip)
+    yield wired
+    wired.dispose()
+
+
+def test_a_project_can_be_created_while_a_stage_is_running(
+    application: Application, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The exact failure: a second URL added during a long stage.
+
+    The stand-in handler blocks the way speech recognition does -- slow work with nothing
+    written until it finishes -- which is when the lock used to be held and is not any more.
+    """
+    running = threading.Event()
+    finish = threading.Event()
+
+    def slow_stage(_context: StageContext) -> None:
+        running.set()
+        assert finish.wait(timeout=30), "the test never released the stage"
+
+    monkeypatch.setitem(HANDLERS, Stage.PROBE, slow_stage)
+
+    first = application.projects.create_from_url(VALID_URL)
+    application.projects.request_analysis(first.id)
+
+    worker = application.worker()
+    thread = threading.Thread(target=worker.run_once, daemon=True)
+    thread.start()
+    assert running.wait(timeout=30), "the stage never started"
+
+    try:
+        started = time.monotonic()
+        second = application.projects.create_from_url(SECOND_URL)
+        elapsed = time.monotonic() - started
+    finally:
+        finish.set()
+        thread.join(timeout=30)
+
+    assert second.id != first.id
+    # It must not merely succeed eventually: waiting out a busy timeout is the symptom.
+    assert elapsed < 5, f"creating a project waited {elapsed:.1f}s on the running stage"
+
+
+def test_progress_from_a_running_stage_does_not_block_readers(
+    application: Application, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A stage that reports progress still leaves the database readable."""
+    reported = threading.Event()
+    finish = threading.Event()
+
+    def reporting_stage(context: StageContext) -> None:
+        context.report(0.5, "halfway")
+        context.checkpoint()
+        reported.set()
+        assert finish.wait(timeout=30), "the test never released the stage"
+
+    monkeypatch.setitem(HANDLERS, Stage.PROBE, reporting_stage)
+
+    project = application.projects.create_from_url(VALID_URL)
+    application.projects.request_analysis(project.id)
+
+    worker = application.worker()
+    thread = threading.Thread(target=worker.run_once, daemon=True)
+    thread.start()
+    assert reported.wait(timeout=30), "the stage never reported"
+
+    try:
+        # A checkpoint commits what the stage has written, so this must see the progress
+        # rather than block on it.
+        listed = application.projects.list_projects()
+    finally:
+        finish.set()
+        thread.join(timeout=30)
+
+    assert any(item.id == project.id for item in listed)
+
+
+def test_a_newly_added_url_is_inspected_before_a_running_dub_continues(
+    application: Application,
+) -> None:
+    """Strict age order put a new project's probe behind fifteen stages of the old one.
+
+    Nothing was broken by that -- the queue was fair -- but pasting a URL did nothing
+    visible for minutes, which a user cannot tell apart from a hang.
+    """
+    first = application.projects.create_from_url(VALID_URL)
+    worker = application.worker()
+    application.projects.request_analysis(first.id)
+    worker.run_until_idle()
+    application.pipeline.start(first.id)
+
+    second = application.projects.create_from_url(SECOND_URL)
+    application.projects.request_analysis(second.id)
+
+    with application.unit_of_work() as uow:
+        claimed = uow.jobs.claim_next(lease_seconds=900)
+
+    assert claimed is not None
+    assert claimed.stage is Stage.PROBE
+    assert str(claimed.project_id) == str(second.id)

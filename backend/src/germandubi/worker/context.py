@@ -42,6 +42,10 @@ class StageContext:
         report: Callback for progress updates, shown on the processing screen.
         is_cancelled: Consulted at checkpoints; a handler that never calls it cannot be
             cancelled, which is a bug in that handler.
+        release: Commits what the stage has written so far and drops the database write
+            lock. Called at every checkpoint, because a stage that writes as it goes would
+            otherwise hold the lock for its whole duration and fail every concurrent write
+            from the API.
     """
 
     uow: UnitOfWork
@@ -52,6 +56,7 @@ class StageContext:
     job: Job
     report: Callable[[float, str | None], None] = field(default=lambda _p, _d: None)
     is_cancelled: Callable[[], bool] = field(default=lambda: False)
+    release: Callable[[], None] = field(default=lambda: None)
 
     # --- workspace ----------------------------------------------------------------------
 
@@ -214,12 +219,18 @@ class StageContext:
         Handlers call this between units of work. A stage that never calls it cannot be
         cancelled, which makes the UI's cancel button a lie.
 
+        It is also where a long stage lets go of the database. Work committed here is work
+        a retry can reuse, which is how the handlers already behave -- they skip segments
+        that already have output -- so releasing early costs nothing and stops a stage that
+        writes as it goes from locking out the rest of the application.
+
         Raises:
             CancelledError: If cancellation was requested.
         """
         if self.is_cancelled():
             msg = f"the {self.job.stage.label.lower()} stage was cancelled"
             raise CancelledError(msg, stage=self.job.stage.value)
+        self.release()
 
     def event(self, kind: str, payload: dict[str, object]) -> None:
         """Append a progress event for the browser.

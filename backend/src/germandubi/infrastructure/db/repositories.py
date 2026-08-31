@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import case, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from germandubi.domain.entities.artifact import Artifact, ArtifactKind, Provenance
@@ -872,6 +872,12 @@ class JobRepository:
         moment = now or datetime.now(UTC)
         self._reclaim_expired_leases(moment)
 
+        # Source inspection first, then oldest first. A probe costs a second or two and is
+        # what someone who just pasted a URL is waiting on; strict age order put it behind
+        # every remaining stage of a dub already running, so the interface did nothing for
+        # minutes and looked hung. A run in progress loses nothing by yielding at a stage
+        # boundary.
+        probe_last = case((JobRow.stage == Stage.PROBE.value, 0), else_=1)
         candidates = self.session.scalars(
             select(JobRow)
             .join(RunRow, RunRow.id == JobRow.run_id)
@@ -879,7 +885,7 @@ class JobRepository:
                 JobRow.status.in_([JobStatus.PENDING.value, JobStatus.QUEUED.value]),
                 RunRow.cancelled.is_(False),
             )
-            .order_by(JobRow.created_at, JobRow.id)
+            .order_by(probe_last, JobRow.created_at, JobRow.id)
         ).all()
 
         for row in candidates:
