@@ -191,7 +191,7 @@ Evidence: the commits named above.
 - Not pushed. Pushing the commits and the tag is the maintainer's decision; the tag
   workflow will then rerun the whole gate and create the public GitHub release.
 
-## 14. Give the workstation a neon identity with real light and dark modes · `PENDING`
+## 14. Give the workstation a neon identity with real light and dark modes · `COMPLETE`
 
 - Retune the existing token set to a neon palette -- pink and cyan, gradient accents, glow
   rather than flat fills. The tokens already exist; the rules stay, the values change.
@@ -202,7 +202,7 @@ Evidence: the commits named above.
 - Acceptance: both themes are legible, the choice persists across reloads, and no text
   falls below its current contrast.
 
-## 15. Let the interface speak the reader's language · `PENDING`
+## 15. Let the interface speak the reader's language · `COMPLETE`
 
 - Offer English, German, Croatian and Mandarin for the interface, chosen in the header and
   remembered, defaulting to the browser's language.
@@ -213,7 +213,7 @@ Evidence: the commits named above.
 - Acceptance: every visible string comes from the catalogue, all four locales are complete,
   and a test proves completeness rather than trusting review.
 
-## 16. Explain the product and credit what it is built on · `PENDING`
+## 16. Explain the product and credit what it is built on · `COMPLETE`
 
 - Add a Help page showing what the pipeline actually does: the sixteen stages, what the
   reviewer can change, and what happens when they change it.
@@ -224,7 +224,7 @@ Evidence: the commits named above.
 - Acceptance: both pages are reachable from every screen and state nothing the repository
   cannot back up.
 
-## 17. Round out the review loop · `PENDING`
+## 17. Round out the review loop · `COMPLETE`
 
 - Compare against what comparable dubbing tools offer and adopt what is genuinely useful
   at this scope, rather than copying feature lists.
@@ -233,4 +233,12 @@ Evidence: the commits named above.
   not. Flagged, unapproved and failed are already in the data.
 - Improve the states around the work: what to do when there are no projects, what a
   degraded environment means, and what each pipeline stage is doing while it runs.
-- Acceptance: reviewing a long project is possible without scrolling through every row.
+- Acceptance met. The segment table filters to flagged, needs-review and failed, and
+  reports how many of the total are shown. The editor follows the filter rather than
+  stranding itself on a hidden row.
+- Also improved the states around the work: an empty project list now says what to do and
+  links to Help, and a degraded environment names the command to run instead of listing
+  tools.
+- Compared against comparable tools, the remaining gaps are a media preview scrubber and
+  keyboard navigation of the segment list. Both are worth doing and neither is a blocker
+  for a review pass, so they are recorded rather than rushed.

@@ -8,10 +8,12 @@ import {
   useHealth,
   useProjects,
 } from '@/hooks/queries';
+import { useT } from '@/i18n/LocaleProvider';
 import { formatDuration } from '@/lib/format';
 
 /** Landing page for starting and reopening dubbing projects. */
 export function HomePage() {
+  const t = useT();
   const [url, setUrl] = useState('');
   const navigate = useNavigate();
   const projects = useProjects();
@@ -29,17 +31,17 @@ export function HomePage() {
   };
 
   const deleteProject = (id: string, title: string) => {
-    if (window.confirm(`Delete “${title}” and all of its generated files?`)) remove.mutate(id);
+    if (window.confirm(t('home.confirmDelete', { title }))) remove.mutate(id);
   };
 
   return (
     <div className="stack">
       <section className="card card--hero">
-        <h1>Turn an English video into a German dub</h1>
-        <p className="muted">Paste a YouTube URL. Every segment stays editable and resumable.</p>
+        <h1>{t('home.title')}</h1>
+        <p className="muted lede">{t('home.subtitle')}</p>
         <form className="source-form" onSubmit={submit}>
           <label className="visually-hidden" htmlFor="source-url">
-            YouTube URL
+            {t('home.urlLabel')}
           </label>
           <input
             id="source-url"
@@ -53,22 +55,32 @@ export function HomePage() {
           />
           <button className="primary" type="submit" disabled={create.isPending}>
             {create.isPending && <span className="spinner" aria-hidden="true" />}
-            Analyze
+            {t('home.analyze')}
           </button>
         </form>
         {create.error && <ErrorAlert error={create.error} />}
         {health.data?.status === 'degraded' && (
           <div className="alert alert--warn" role="status">
-            Missing required tools: {health.data.missing.join(', ')}. Run <code>make doctor</code>.
+            {t('home.degraded')} {t('home.degradedHelp', { command: 'germandubi doctor' })}
           </div>
         )}
       </section>
 
       <section className="card" aria-labelledby="recent-projects">
-        <h2 id="recent-projects">Recent projects</h2>
-        {projects.isPending && <p className="muted">Loading projects…</p>}
+        <h2 id="recent-projects">{t('home.recent')}</h2>
+        {projects.isPending && <p className="muted">{t('home.loading')}</p>}
         {projects.error && <ErrorAlert error={projects.error} />}
-        {projects.data?.length === 0 && <p className="muted">No projects yet.</p>}
+        {projects.data?.length === 0 && (
+          <div className="empty">
+            <p>
+              <strong>{t('home.emptyTitle')}</strong>
+            </p>
+            <p>{t('home.emptyBody')}</p>
+            <p>
+              <Link to="/help">{t('home.newToThis')}</Link>
+            </p>
+          </div>
+        )}
         {projects.data && projects.data.length > 0 && (
           <ul className="project-list">
             {projects.data.map((project) => (
@@ -90,7 +102,7 @@ export function HomePage() {
                     deleteProject(project.id, project.title);
                   }}
                 >
-                  Delete
+                  {t('home.delete')}
                 </button>
               </li>
             ))}

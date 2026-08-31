@@ -1,21 +1,25 @@
 import type { Job, Run } from '@/api/types';
+import { useT } from '@/i18n/LocaleProvider';
 
 /** Persisted pipeline progress, optionally enriched by the latest live event detail. */
 export function PipelineProgress({ run, liveDetail }: { run: Run; liveDetail: string | null }) {
+  const t = useT();
   const percent = Math.round(run.progress * 100);
   return (
     <section className="card" aria-labelledby="processing-heading" aria-live="polite">
       <div className="row section-heading">
         <div>
-          <h2 id="processing-heading">Processing</h2>
-          <p className="muted small">{liveDetail ?? `${String(percent)}% complete`}</p>
+          <h2 id="processing-heading">{t('processing.title')}</h2>
+          <p className="muted small">
+            {liveDetail ?? t('processing.percentComplete', { percent })}
+          </p>
         </div>
         <strong>{percent}%</strong>
       </div>
       <div
         className="progress"
         role="progressbar"
-        aria-label="Dub progress"
+        aria-label={t('processing.progressLabel')}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
