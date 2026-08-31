@@ -10,6 +10,26 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-31
+
+The interface grows up, and four defects that only a real, full-length source could expose
+are fixed. A dub of the reference 40-minute video now takes 509 s on CPU, a 0.21x realtime
+factor, and reads correctly end to end.
+
+### Added
+
+- Light, dark and follow-the-system themes, chosen by the reader and remembered, on a neon
+  palette. The theme is resolved before first paint, so there is no flash on load.
+- The interface is available in English, German, Croatian and Mandarin. This translates the
+  interface only; dubs remain English to German.
+- A Help page explaining the workflow in five steps, listing all sixteen pipeline stages,
+  and answering how long a dub takes, what can be edited, and what leaves the machine.
+- An About page naming the author, the licence, the repository, the third-party tools and
+  their licences, and the providers actually installed, read live from the API.
+- The running version is shown in the header on every screen and links to the build detail.
+- The segment table can be filtered to flagged, needs-review or failed segments, and
+  reports how many of the total are shown.
+
 ### Changed
 
 - A run without a real translation provider, German voice or transcript source now fails
@@ -27,6 +47,22 @@ may occur in MINOR releases and are always listed here.
   finished line in the following cue, and because those cues abut rather than overlap the
   repetition was treated as new speech, so segments read "For many years, archaeologists
   puzzled For many years, archaeologists puzzled over how...".
+- Mixing a full-length video no longer fails. Ducking named every speech run in a single
+  FFmpeg expression, which reached tens of kilobytes on a 40-minute source and was rejected
+  with "Cannot allocate memory"; the ranges are now spread over several chained filters.
+- Word timing estimated for a caption transcript stays inside its cue instead of running
+  past the end and corrupting the order of the cue that follows.
+- The word-order invariant accepts the slight overlaps speech recognizers ordinarily emit,
+  which previously failed segmentation for any long source.
+- Automatic captions are no longer mistaken for manual ones, which made the pipeline prefer
+  unpunctuated text over installed speech recognition.
+- Dubbing a local file no longer fails at the first stage: source inspection always chose
+  the downloader, which cannot inspect a file already on disk.
+- `make install-providers` installs speech recognition as well as translation and speech,
+  which is what the error messages already told users it would do.
+- The browser workflow no longer attaches to a developer's running `make dev` server. It
+  takes its own ports and never reuses a server it did not start, so it tests the
+  deterministic fixture rather than whatever happens to be listening.
 
 ## [0.1.0] - 2026-08-31
 

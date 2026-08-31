@@ -87,6 +87,19 @@ make dev                      # API + Vite dev server + processing worker
 
 Then open the URL printed by the Vite dev server.
 
+## The interface
+
+| | |
+| --- | --- |
+| Themes | Light, dark, or follow the system — chosen in the header and remembered |
+| Languages | English, Deutsch, Hrvatski, 中文. This translates the **interface**; dubs are always English to German |
+| Help | `/help` walks the workflow and lists all sixteen pipeline stages |
+| About | `/about` names the tools, licences, author, repository, and the providers installed right now |
+| Version | Shown in the header on every screen, linking to the build detail |
+
+The segment table filters to flagged, needs-review or failed segments, which is how a
+review pass on a 500-segment dub stays practical.
+
 ---
 
 ## Repository layout
