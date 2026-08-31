@@ -1,26 +1,27 @@
 {
   "source_url": "https://www.youtube.com/watch?v=f3r05guSo1w",
   "mode": "full source",
-  "recorded_at": "2026-08-31T09:52:18+00:00",
+  "recorded_at": "2026-08-31T14:05:48+00:00",
   "host": {
     "platform": "Linux-7.1.9-1-MANJARO-x86_64-with-glibc2.44",
     "python": "3.12.13",
-    "processor": "unknown"
+    "processor": "unknown",
+    "device": "cuda"
   },
   "providers": {
     "transcription": "faster_whisper (asr)",
     "translation": "ArgosTranslationProvider",
     "tts": "PiperTTSProvider",
-    "separation": "none (ducking fallback)"
+    "separation": "DemucsSeparationProvider"
   },
   "source_title": "The Most Insane Roman Legions Ever Created",
   "source_duration_s": 2400.0,
   "processed_duration_s": 2400.0,
-  "total_seconds": 508.6,
-  "realtime_factor": 0.21,
+  "total_seconds": 783.2,
+  "realtime_factor": 0.33,
   "segments": 500,
   "export_path": "benchmark-output/full/german_dub.mkv",
-  "export_bytes": 754139983,
+  "export_bytes": 755510521,
   "export_audio_codec": "aac",
   "export_duration_s": 2399.571,
   "stages": [
@@ -28,91 +29,91 @@
       "stage": "acquire",
       "label": "Downloading media",
       "status": "succeeded",
-      "seconds": 30.915548
+      "seconds": 47.412001
     },
     {
       "stage": "normalize",
       "label": "Extracting audio",
       "status": "succeeded",
-      "seconds": 3.079093
+      "seconds": 3.747341
     },
     {
       "stage": "transcribe",
       "label": "Getting English transcript",
       "status": "succeeded",
-      "seconds": 80.691679
+      "seconds": 152.252497
     },
     {
       "stage": "separate",
       "label": "Separating voice and background",
       "status": "succeeded",
-      "seconds": 0.001755
+      "seconds": 205.49874
     },
     {
       "stage": "align",
       "label": "Aligning word timing",
       "status": "succeeded",
-      "seconds": 0.012652
+      "seconds": 0.024039
     },
     {
       "stage": "segment",
       "label": "Creating dubbing segments",
       "status": "succeeded",
-      "seconds": 0.455668
+      "seconds": 0.905614
     },
     {
       "stage": "translate",
       "label": "Translating to German",
       "status": "succeeded",
-      "seconds": 29.208998
+      "seconds": 34.661447
     },
     {
       "stage": "prosody",
       "label": "Analysing narration",
       "status": "succeeded",
-      "seconds": 26.832081
+      "seconds": 34.302506
     },
     {
       "stage": "synthesize",
       "label": "Synthesizing German speech",
       "status": "succeeded",
-      "seconds": 88.052361
+      "seconds": 109.508007
     },
     {
       "stage": "subtitle",
       "label": "Writing subtitles",
       "status": "succeeded",
-      "seconds": 0.193397
+      "seconds": 0.251753
     },
     {
       "stage": "fit",
       "label": "Fitting speech to timing",
       "status": "succeeded",
-      "seconds": 53.504616
+      "seconds": 62.799097
     },
     {
       "stage": "assemble",
       "label": "Assembling German narration",
       "status": "succeeded",
-      "seconds": 124.275028
+      "seconds": 48.931021
     },
     {
       "stage": "mix",
       "label": "Mixing audio",
       "status": "succeeded",
-      "seconds": 1.188373
+      "seconds": 2.943324
     },
     {
       "stage": "qa",
       "label": "Running quality checks",
       "status": "succeeded",
-      "seconds": 0.240698
+      "seconds": 0.275686
     },
     {
       "stage": "export",
       "label": "Exporting video",
       "status": "succeeded",
-      "seconds": 68.228712
+      "seconds": 77.577694
     }
   ]
 }

@@ -284,11 +284,22 @@ Found while measuring, and deliberately not fixed here:
   gone unnoticed. Fixing it properly means either an FFmpeg upgrade or replacing the mixing
   strategy, and neither belongs in a change made to speed something up.
 
-Acceptance note: the full before-and-after on the reference source is **not** recorded. The
-one run made after these changes overlapped a second dub on the same machine, so every
-stage in it is contended and not comparable to the committed reference. The per-change
-measurements above were each taken in isolation. A clean full run on an idle machine is
-still owed.
+Full before-and-after on the reference source, both on an idle machine
+(`docs/benchmarks/real-dub-full.json`):
+
+| stage | before | after | |
+| --- | --- | --- | --- |
+| assemble | 124.3 s | 48.9 s | 2.5x faster, as predicted |
+| separate | not run | 205.5 s | new work, on the GPU |
+| transcribe | 80.7 s | 152.3 s | slower, unexplained |
+| total | 509 s | 783 s | with separation included |
+
+Read honestly: assembly improved by the predicted amount on real data. The total grew
+because separation now runs at all, which is new work worth 205 s and was previously
+absent -- on the GPU rather than the roughly 2400 s it would cost on the CPU. Transcription
+took nearly twice as long as in the earlier reference for reasons not established here;
+both runs used the same GPU and the same model, so it is recorded rather than explained,
+and is worth investigating before any further performance claim rests on it.
 
 ## 19. Let the reviewer choose the German voice, and hear it first · `PENDING`
 
