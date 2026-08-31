@@ -21,4 +21,11 @@ export GERMANDUBI_TTS_PROVIDER="fake"
 export GERMANDUBI_SEPARATION_PROVIDER="fake"
 export GERMANDUBI_WORKER_POLL_INTERVAL_S="0.05"
 
+# Dedicated ports. The browser workflow must own the server it tests: sharing a
+# developer's `make dev` meant testing real providers and real project data, which fails
+# in a way that looks like a broken test rather than a misconfigured run.
+export GERMANDUBI_PORT="8799"
+export VITE_DEV_PORT="5199"
+export VITE_API_TARGET="http://127.0.0.1:8799"
+
 "$repo_root/scripts/dev"

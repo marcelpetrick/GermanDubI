@@ -14,7 +14,18 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 cd "$repo_root"
-uv run uvicorn germandubi.api.app:create_app --factory --reload --host 127.0.0.1 --port 8756 &
+api_port="${GERMANDUBI_PORT:-8756}"
+
+# Refuse to start on a port someone else owns. Without this the API below fails to bind,
+# the health check below is answered by the *other* server, and everything downstream --
+# including the deterministic browser test -- silently runs against the wrong application.
+if (echo >"/dev/tcp/127.0.0.1/$api_port") 2>/dev/null; then
+  echo "port $api_port is already in use; stop the other server or set GERMANDUBI_PORT" >&2
+  exit 1
+fi
+
+uv run uvicorn germandubi.api.app:create_app --factory --reload \
+  --host 127.0.0.1 --port "$api_port" &
 pids+=("$!")
 uv run germandubi worker &
 pids+=("$!")
@@ -23,19 +34,21 @@ pids+=("$!")
 # request fail intermittently, especially on a cold environment. Wait for the health
 # endpoint before exposing the UI.
 uv run python - <<'PY'
+import os
 import time
 import urllib.error
 import urllib.request
 
 for _ in range(200):
     try:
-        with urllib.request.urlopen("http://127.0.0.1:8756/api/v1/health", timeout=0.25) as response:
+        url = f"http://127.0.0.1:{os.environ.get('GERMANDUBI_PORT', '8756')}/api/v1/health"
+        with urllib.request.urlopen(url, timeout=0.25) as response:
             if response.status == 200:
                 break
     except (OSError, urllib.error.URLError):
         time.sleep(0.1)
 else:
-    raise SystemExit("API did not become ready at http://127.0.0.1:8756")
+    raise SystemExit("the API did not become ready")
 PY
 
 (cd frontend && pnpm run dev) &

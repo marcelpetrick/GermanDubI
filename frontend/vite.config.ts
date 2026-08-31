@@ -15,11 +15,13 @@ export default defineConfig({
   },
   server: {
     host: '127.0.0.1',
-    port: 5173,
+    // Overridable so the deterministic E2E run can take its own ports and never attach to
+    // a developer's `make dev` session. strictPort makes a clash fail loudly.
+    port: Number(process.env.VITE_DEV_PORT ?? 5173),
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8756',
+        target: process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8756',
         changeOrigin: true,
         // Buffering would make progress arrive in one lump at the end of a run.
         configure: (proxy) => {

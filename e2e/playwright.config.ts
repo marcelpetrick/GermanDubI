@@ -10,15 +10,17 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   reporter: process.env.CI ? [["html", { open: "never" }], ["list"]] : "list",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: "http://127.0.0.1:5199",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     ...devices["Desktop Chrome"],
   },
   webServer: {
     command: "../scripts/e2e-server",
-    url: "http://127.0.0.1:5173",
+    url: "http://127.0.0.1:5199",
     timeout: 60_000,
-    reuseExistingServer: !process.env.CI,
+    // Never reuse a server this suite did not start. Reusing one meant a developer's
+    // running `make dev` was tested instead -- real providers, real data, false failures.
+    reuseExistingServer: false,
   },
 });
