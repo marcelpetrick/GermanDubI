@@ -240,6 +240,14 @@ class TestMixing:
         assert toolkit.probe(out).duration_ms > 0
 
 
+class TestAssembly:
+    def test_no_placements_yields_silence_of_the_requested_length(
+        self, toolkit: FFmpegToolkit, tmp_path: Path
+    ) -> None:
+        out = toolkit.concatenate_speech([], tmp_path / "empty.wav", total_ms=5_000)
+        assert toolkit.probe(out).duration_ms == pytest.approx(5_000, abs=100)
+
+
 class TestTimeStretch:
     @pytest.mark.parametrize("factor", [1.1, 0.9])
     def test_changes_duration_in_the_expected_direction(

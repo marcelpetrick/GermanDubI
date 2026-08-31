@@ -163,6 +163,8 @@ module = [
     "piper.*",
     "demucs.*",
     "onnxruntime.*",
+    # Imported only to ask whether a GPU is usable; absent in the default install.
+    "torch.*",
     "setuptools_scm.*",
 ]
 ignore_missing_imports = true

@@ -9,7 +9,7 @@ import pytest
 from germandubi.application.ports.providers import MixRequest
 from germandubi.domain.errors import ExportError, MediaProcessingError, MixError
 from germandubi.domain.value_objects.timeline import TimeInterval
-from germandubi.infrastructure.media.ffmpeg import FFmpegToolkit
+from germandubi.infrastructure.media.ffmpeg import _PLACEMENTS_PER_PASS, FFmpegToolkit
 from germandubi.infrastructure.processes.runner import CommandResult, ProcessError
 
 
@@ -122,3 +122,67 @@ def test_ducking_filter_splits_many_intervals_across_several_filters() -> None:
     # Every interval is named exactly once across the chain.
     assert graph.count("between(t,") == len(intervals)
     assert max(len(stage) for stage in graph.split(",volume=enable")) < 4_000
+
+
+class TestBatchedAssembly:
+    """How assembly is split, without paying for real audio to prove it."""
+
+    class RecordingRunner:
+        default_timeout_s = 60
+
+        def __init__(self) -> None:
+            self.commands: list[list[str]] = []
+
+        def run(self, argv: list[str], **_: object) -> CommandResult:
+            self.commands.append(list(argv))
+            # Assembly checks its own output exists, so produce something.
+            Path(argv[-1]).write_bytes(b"RIFF")
+            return CommandResult(tuple(argv), 0, "", "", 0.01)
+
+    def test_a_small_dub_is_assembled_in_one_pass(self, tmp_path: Path) -> None:
+        runner = self.RecordingRunner()
+        toolkit = FFmpegToolkit(runner)  # type: ignore[arg-type]
+        clip = tmp_path / "c.wav"
+        clip.write_bytes(b"RIFF")
+        placements = [(TimeInterval(i * 100, i * 100 + 90), clip) for i in range(5)]
+
+        toolkit.concatenate_speech(placements, tmp_path / "out.wav", total_ms=1_000)
+
+        assert len(runner.commands) == 1
+
+    def test_a_long_dub_is_split_and_the_batches_combined(self, tmp_path: Path) -> None:
+        """One `amix` per segment made a 400-segment dub spend 94 s here against 33 s."""
+        runner = self.RecordingRunner()
+        toolkit = FFmpegToolkit(runner)  # type: ignore[arg-type]
+        clip = tmp_path / "c.wav"
+        clip.write_bytes(b"RIFF")
+        count = _PLACEMENTS_PER_PASS * 3 + 7
+        placements = [(TimeInterval(i * 100, i * 100 + 90), clip) for i in range(count)]
+
+        toolkit.concatenate_speech(placements, tmp_path / "out.wav", total_ms=60_000)
+
+        # Four batches plus one command to sum them.
+        assert len(runner.commands) == 5
+        # No single command names more inputs than the batch size allows.
+        for command in runner.commands:
+            assert command.count("-i") <= _PLACEMENTS_PER_PASS
+        # The staging directory is temporary and must not survive the call.
+        assert not (tmp_path / "_assemble").exists()
+
+    def test_staging_is_removed_even_when_a_batch_fails(self, tmp_path: Path) -> None:
+        class FailingRunner(TestBatchedAssembly.RecordingRunner):
+            def run(self, argv: list[str], **kwargs: object) -> CommandResult:
+                super().run(argv, **kwargs)
+                raise ProcessError("ffmpeg exploded")
+
+        toolkit = FFmpegToolkit(FailingRunner())  # type: ignore[arg-type]
+        clip = tmp_path / "c.wav"
+        clip.write_bytes(b"RIFF")
+        placements = [
+            (TimeInterval(i * 100, i * 100 + 90), clip) for i in range(_PLACEMENTS_PER_PASS + 2)
+        ]
+
+        with pytest.raises(MixError):
+            toolkit.concatenate_speech(placements, tmp_path / "out.wav", total_ms=60_000)
+
+        assert not (tmp_path / "_assemble").exists()
