@@ -202,3 +202,62 @@ def test_reset_removes_every_project_and_its_workspace(application: Application)
 
 def test_reset_on_an_empty_installation_is_harmless(application: Application) -> None:
     assert application.projects.delete_all() == 0
+
+
+class TestResumability:
+    """`checkpoint()` commits, so a stage must be safe to run again after failing part-way.
+
+    This is the contract that keeps the write lock short. A handler which assumed its
+    writes would roll back would meet its own partial output on the retry, and the pipeline
+    retries every stage twice by default.
+    """
+
+    def test_a_stage_that_fails_after_a_checkpoint_keeps_what_it_committed(
+        self, application: Application, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        project = application.projects.create_from_url(VALID_URL)
+        seen: list[str] = []
+
+        def half_finished(context: StageContext) -> None:
+            context.event("partial_work", {"step": "one"})
+            context.checkpoint()  # commits
+            seen.append("committed")
+            raise RuntimeError("stopped after doing half the work")
+
+        monkeypatch.setitem(HANDLERS, Stage.PROBE, half_finished)
+        application.projects.request_analysis(project.id)
+        application.worker().run_once()
+
+        assert seen == ["committed"]
+        with application.unit_of_work() as uow:
+            kinds = [kind for _sequence, kind, _payload in uow.events.since(project.id, 0)]
+        # Committed before the failure, so it survives: that is what a retry will meet.
+        assert "partial_work" in kinds
+
+    def test_a_resumable_handler_reaches_the_same_result_as_an_uninterrupted_one(
+        self, application: Application, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The pattern every handler must follow: look for your own output first."""
+        produced: list[int] = []
+        attempt = {"count": 0}
+
+        def resumable(context: StageContext) -> None:
+            attempt["count"] += 1
+            for index in range(4):
+                if index in produced:
+                    continue  # already done on the earlier attempt
+                produced.append(index)
+                context.checkpoint()
+                if attempt["count"] == 1 and index == 1:
+                    raise RuntimeError("interrupted half way")
+
+        monkeypatch.setitem(HANDLERS, Stage.PROBE, resumable)
+        project = application.projects.create_from_url(SECOND_URL)
+        application.projects.request_analysis(project.id)
+        worker = application.worker()
+
+        worker.run_once()  # fails after two items, having committed them
+        worker.run_once()  # the retry resumes
+
+        assert produced == [0, 1, 2, 3], "a resumed stage must not redo or skip work"
+        assert attempt["count"] == 2

@@ -219,10 +219,19 @@ class StageContext:
         Handlers call this between units of work. A stage that never calls it cannot be
         cancelled, which makes the UI's cancel button a lie.
 
-        It is also where a long stage lets go of the database. Work committed here is work
-        a retry can reuse, which is how the handlers already behave -- they skip segments
-        that already have output -- so releasing early costs nothing and stops a stage that
-        writes as it goes from locking out the rest of the application.
+        It is also where a long stage lets go of the database, and that carries a
+        requirement every handler must meet.
+
+        **A handler must be safe to run again after stopping part-way.** Committing here
+        means a stage that fails later leaves what it had already written, and the retry
+        will meet that partial work. Handlers satisfy this by looking for their own output
+        before producing it -- speech synthesis skips a segment that already has audio --
+        so a retry resumes rather than duplicating. A handler that assumed its writes would
+        roll back would silently corrupt a project on its second attempt.
+
+        The alternative is holding the write lock for the whole stage, which is what this
+        used to do: two minutes during transcription of a long source, and every write from
+        the API failing with "database is locked" for the duration.
 
         Raises:
             CancelledError: If cancellation was requested.

@@ -222,6 +222,16 @@ network, no YouTube, no multi-gigabyte model**.
 
 ## 7. Working on the pipeline
 
+**A stage handler must be safe to run twice.** `context.checkpoint()` commits what the
+stage has written so far -- that is what stops a long stage from holding the database's
+write lock and locking out the API. The consequence is that a stage which fails part-way
+leaves its earlier work behind, and the retry meets it.
+
+Write handlers accordingly: look for your own output before producing it, the way speech
+synthesis skips a segment that already has audio. A handler that assumes its writes will
+roll back will corrupt a project on its second attempt, and the pipeline retries every
+stage twice by default.
+
 Stages are registered handlers in `worker/handlers/`, wired by the planner into a
 persisted dependency graph. To add or change a stage:
 
