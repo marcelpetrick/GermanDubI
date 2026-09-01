@@ -11,6 +11,7 @@ import {
   useResetEverything,
 } from '@/hooks/queries';
 import { VoicePicker } from '@/features/projects/VoicePicker';
+import type { TranslationKey } from '@/i18n/en';
 import { useT } from '@/i18n/LocaleProvider';
 import { formatDuration } from '@/lib/format';
 
@@ -124,7 +125,7 @@ export function HomePage() {
                   <span className="muted small">{formatDuration(project.duration_ms)}</span>
                 )}
                 <span className={`badge badge--${project.state === 'failed' ? 'danger' : 'ok'}`}>
-                  {project.state}
+                  {t(`state.${project.state}` as TranslationKey)}
                 </span>
                 {BUSY_STATES.has(project.state) && (
                   <button

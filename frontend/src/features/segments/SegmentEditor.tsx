@@ -4,12 +4,16 @@ import { mediaUrl } from '@/api/client';
 import type { Segment } from '@/api/types';
 import { ErrorAlert } from '@/components/ErrorAlert';
 import { useSegmentAction, useUpdateSegment } from '@/hooks/queries';
+import type { TranslationKey } from '@/i18n/en';
+import { useT } from '@/i18n/LocaleProvider';
 import { formatTimestamp } from '@/lib/format';
 
 /** Local editor for one segment; every save creates a backend revision and regeneration run. */
 export function SegmentEditor({ projectId, segment }: { projectId: string; segment: Segment }) {
+  const t = useT();
   const [source, setSource] = useState(segment.source_text);
   const [translation, setTranslation] = useState(segment.translation ?? '');
+  const number = segment.ordinal + 1;
   const update = useUpdateSegment(projectId);
   const action = useSegmentAction(projectId);
   const error = update.error ?? action.error;
@@ -30,22 +34,22 @@ export function SegmentEditor({ projectId, segment }: { projectId: string; segme
   };
 
   return (
-    <aside className="card editor" aria-label={`Edit segment ${String(segment.ordinal + 1)}`}>
+    <aside className="card editor" aria-label={t('segments.editLabel', { number })}>
       <div className="row section-heading">
         <div>
-          <h2>Segment {segment.ordinal + 1}</h2>
+          <h2>{t('editor.title', { number })}</h2>
           <span className="muted small">
             {formatTimestamp(segment.start_ms)}–{formatTimestamp(segment.end_ms)}
           </span>
         </div>
         <span className={`badge badge--${segment.review_state === 'approved' ? 'ok' : 'warn'}`}>
-          {segment.review_state}
+          {t(`review.${segment.review_state}` as TranslationKey)}
         </span>
       </div>
 
       <form onSubmit={saveSource}>
         <div className="editor__field">
-          <label htmlFor={`source-${segment.id}`}>English transcript</label>
+          <label htmlFor={`source-${segment.id}`}>{t('editor.sourceLabel')}</label>
           <textarea
             id={`source-${segment.id}`}
             value={source}
@@ -55,13 +59,13 @@ export function SegmentEditor({ projectId, segment }: { projectId: string; segme
           />
         </div>
         <button type="submit" disabled={update.isPending || source.trim() === segment.source_text}>
-          Save English & regenerate
+          {t('editor.saveSource')}
         </button>
       </form>
 
       <form onSubmit={saveTranslation}>
         <div className="editor__field">
-          <label htmlFor={`translation-${segment.id}`}>German translation</label>
+          <label htmlFor={`translation-${segment.id}`}>{t('editor.translationLabel')}</label>
           <textarea
             id={`translation-${segment.id}`}
             value={translation}
@@ -77,7 +81,7 @@ export function SegmentEditor({ projectId, segment }: { projectId: string; segme
             update.isPending || !translation.trim() || translation.trim() === segment.translation
           }
         >
-          Save German & regenerate
+          {t('editor.saveTranslation')}
         </button>
       </form>
 
@@ -92,7 +96,7 @@ export function SegmentEditor({ projectId, segment }: { projectId: string; segme
             action.mutate({ segmentId: segment.id, action: 'resynthesize' });
           }}
         >
-          Regenerate speech
+          {t('editor.resynthesize')}
         </button>
         {segment.translation_origin !== 'human' && (
           <button
@@ -102,7 +106,7 @@ export function SegmentEditor({ projectId, segment }: { projectId: string; segme
               action.mutate({ segmentId: segment.id, action: 'retranslate' });
             }}
           >
-            Translate again
+            {t('editor.retranslate')}
           </button>
         )}
         <button
@@ -112,7 +116,7 @@ export function SegmentEditor({ projectId, segment }: { projectId: string; segme
             action.mutate({ segmentId: segment.id, action: 'approve' });
           }}
         >
-          Approve
+          {t('editor.approve')}
         </button>
       </div>
       {error && <ErrorAlert error={error} />}

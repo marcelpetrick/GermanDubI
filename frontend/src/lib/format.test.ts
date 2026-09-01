@@ -7,6 +7,7 @@ import {
   formatDuration,
   formatTimestamp,
 } from './format';
+import { CATALOGUES, interpolate, type Translate } from '@/i18n/locales';
 
 describe('formatTimestamp', () => {
   it.each([
@@ -59,11 +60,19 @@ describe('formatBytes', () => {
 });
 
 describe('describeFlag', () => {
+  const english: Translate = (key, values) => interpolate(CATALOGUES.en[key], values);
+  const german: Translate = (key, values) => interpolate(CATALOGUES.de[key], values);
+
   it('translates a known flag into plain words', () => {
-    expect(describeFlag('duration_overrun')).toBe('runs long');
+    expect(describeFlag('duration_overrun', english)).toBe('runs long');
+  });
+
+  it("uses the reader's language", () => {
+    expect(describeFlag('duration_overrun', german)).toBe('zu lang');
   });
 
   it('falls back to the raw flag with underscores removed', () => {
-    expect(describeFlag('some_new_flag')).toBe('some new flag');
+    // A server newer than this bundle can emit a flag the catalogue has never heard of.
+    expect(describeFlag('some_new_flag', english)).toBe('some new flag');
   });
 });

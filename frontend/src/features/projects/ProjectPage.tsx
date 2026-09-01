@@ -1,7 +1,9 @@
 import { Link, useParams } from 'react-router-dom';
 
 import { mediaUrl } from '@/api/client';
+import type { ProjectDetail } from '@/api/types';
 import { ErrorAlert } from '@/components/ErrorAlert';
+import type { TranslationKey } from '@/i18n/en';
 import { useT } from '@/i18n/LocaleProvider';
 import { PipelineProgress } from '@/features/processing/PipelineProgress';
 import { SegmentWorkspace } from '@/features/segments/SegmentWorkspace';
@@ -22,6 +24,7 @@ const ACTIVE_STATES = new Set(['probing', 'processing']);
 
 /** State-aware workspace for one dubbing project. */
 export function ProjectPage() {
+  const t = useT();
   const { projectId } = useParams();
   const project = useProject(projectId);
   const state = project.data?.state;
@@ -35,8 +38,8 @@ export function ProjectPage() {
   const resume = useResumeRun(projectId ?? '');
   const live = useProjectEvents(projectId ?? null, active);
 
-  if (!projectId) return <ErrorAlert error={new Error('The project identifier is missing.')} />;
-  if (project.isPending) return <p className="muted">Loading project…</p>;
+  if (!projectId) return <ErrorAlert error={new Error(t('project.missingId'))} />;
+  if (project.isPending) return <p className="muted">{t('project.loading')}</p>;
   if (project.error) return <ErrorAlert error={project.error} />;
   if (!project.data) return null;
 
@@ -45,8 +48,8 @@ export function ProjectPage() {
 
   return (
     <div className="stack">
-      <nav className="small" aria-label="Breadcrumb">
-        <Link to="/">Projects</Link> / <span>{item.title}</span>
+      <nav className="small" aria-label={t('project.breadcrumb')}>
+        <Link to="/">{t('nav.projects')}</Link> / <span>{item.title}</span>
       </nav>
 
       <section className="card project-header">
@@ -55,21 +58,19 @@ export function ProjectPage() {
           <div>
             <div className="row">
               <h1>{item.title}</h1>
-              <span className={`badge badge--${statusTone(item.state)}`}>{item.state}</span>
+              <span className={`badge badge--${statusTone(item.state)}`}>
+                {t(`state.${item.state}` as TranslationKey)}
+              </span>
             </div>
             <p className="muted source-locator">{item.source_locator}</p>
           </div>
           {item.media && (
             <div className="row small muted">
               <span>{formatDuration(item.media.duration_ms)}</span>
-              {item.media.uploader && <span>by {item.media.uploader}</span>}
-              <span>
-                {item.media.has_english_captions
-                  ? item.media.best_captions_are_automatic
-                    ? 'Automatic English captions'
-                    : 'Manual English captions'
-                  : 'Speech recognition required'}
-              </span>
+              {item.media.uploader && (
+                <span>{t('project.by', { uploader: item.media.uploader })}</span>
+              )}
+              <span>{t(captionsKey(item.media))}</span>
             </div>
           )}
           <ProjectActions
@@ -103,18 +104,20 @@ export function ProjectPage() {
         <section className="card preview" aria-labelledby="preview-heading">
           <div className="row section-heading">
             <div>
-              <h2 id="preview-heading">German preview</h2>
-              <p className="muted small">The export includes German and original audio tracks.</p>
+              <h2 id="preview-heading">{t('project.previewTitle')}</h2>
+              <p className="muted small">{t('project.previewBody')}</p>
             </div>
             <a className="button button--primary" href={mediaUrl.download(projectId)} download>
-              Download export
+              {t('project.downloadExport')}
             </a>
           </div>
           <video controls preload="metadata" src={mediaUrl.export(projectId)}>
             <track kind="captions" />
           </video>
           {artifacts.data && (
-            <p className="muted small">{artifacts.data.length} current artifacts with provenance</p>
+            <p className="muted small">
+              {t('project.artifacts', { count: artifacts.data.length })}
+            </p>
           )}
         </section>
       )}
@@ -208,6 +211,12 @@ function ProjectActions({
     );
   }
   return null;
+}
+
+/** Which caption sentence applies, kept out of the JSX so the ternaries stay readable. */
+function captionsKey(media: NonNullable<ProjectDetail['media']>): TranslationKey {
+  if (!media.has_english_captions) return 'project.captionsNone';
+  return media.best_captions_are_automatic ? 'project.captionsAutomatic' : 'project.captionsManual';
 }
 
 function statusTone(state: string): string {

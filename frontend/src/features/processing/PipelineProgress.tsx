@@ -1,4 +1,6 @@
 import type { Job, Run } from '@/api/types';
+import { CATALOGUES } from '@/i18n/locales';
+import type { TranslationKey } from '@/i18n/en';
 import { useT } from '@/i18n/LocaleProvider';
 
 /** Persisted pipeline progress, optionally enriched by the latest live event detail. */
@@ -35,17 +37,33 @@ export function PipelineProgress({ run, liveDetail }: { run: Run; liveDetail: st
   );
 }
 
+/**
+ * Look a key up only when the catalogue has it.
+ *
+ * Stage identifiers and job statuses come from the server, so an older browser bundle meeting
+ * a newer server would otherwise render the raw key. Falling back to the server's own English
+ * text is worse than a translation and better than `stage.deflicker`.
+ */
+function known(key: string): TranslationKey | null {
+  return key in CATALOGUES.en ? (key as TranslationKey) : null;
+}
+
 function StageRow({ job }: { job: Job }) {
+  const t = useT();
   const running = job.status === 'running';
   const mark =
     job.status === 'succeeded' ? '✓' : job.status === 'failed' ? '!' : running ? '●' : '·';
+  const stageKey = known(`stage.${job.stage}`);
+  const statusKey = known(`jobStatus.${job.status}`);
   return (
     <li className={`stage${running ? ' stage--running' : ''}`}>
       <span className="stage__mark" aria-hidden="true">
         {mark}
       </span>
-      <span>{job.label}</span>
-      <span className="stage__detail">{job.error ?? job.detail ?? job.status}</span>
+      <span>{stageKey ? t(stageKey) : job.label}</span>
+      <span className="stage__detail">
+        {job.error ?? job.detail ?? (statusKey ? t(statusKey) : job.status)}
+      </span>
     </li>
   );
 }

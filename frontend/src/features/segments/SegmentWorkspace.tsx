@@ -159,7 +159,7 @@ function SegmentRow({
           <div className="row flag-list">
             {segment.flags.map((flag) => (
               <span className="badge badge--warn" key={flag}>
-                {describeFlag(flag)}
+                {describeFlag(flag, t)}
               </span>
             ))}
           </div>

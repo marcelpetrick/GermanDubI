@@ -1,5 +1,8 @@
 /** Formatting helpers shared by the segment table and the processing screen. */
 
+import type { TranslationKey } from '@/i18n/en';
+import { CATALOGUES, type Translate } from '@/i18n/locales';
+
 /** Format milliseconds as `M:SS` or `H:MM:SS`, the way a video player does. */
 export function formatTimestamp(milliseconds: number): string {
   const total = Math.max(0, Math.floor(milliseconds / 1000));
@@ -46,13 +49,13 @@ export function formatBytes(bytes: number | null): string {
   return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit] ?? 'B'}`;
 }
 
-/** Turn a snake_case flag into something readable, e.g. `duration_overrun` → `runs long`. */
-export function describeFlag(flag: string): string {
-  const known: Record<string, string> = {
-    duration_overrun: 'runs long',
-    time_stretched: 'time-stretched',
-    synthesis_failed: 'speech failed',
-    low_transcription_confidence: 'uncertain transcript',
-  };
-  return known[flag] ?? flag.replace(/_/g, ' ');
+/**
+ * Turn a snake_case flag into something readable, in the reader's language.
+ *
+ * A flag the catalogue does not know still has to render: a server newer than the browser
+ * bundle can emit one, and `duration overrun` beats an empty badge.
+ */
+export function describeFlag(flag: string, t: Translate): string {
+  const key = `flag.${flag}`;
+  return key in CATALOGUES.en ? t(key as TranslationKey) : flag.replace(/_/g, ' ');
 }
