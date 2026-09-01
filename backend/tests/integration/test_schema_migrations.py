@@ -8,6 +8,11 @@ with "table already exists", and an existing one never received a new column at 
 
 from __future__ import annotations
 
+import subprocess
+import sys
+import textwrap
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -106,3 +111,70 @@ def test_every_core_table_is_created_by_migrations(tmp_path: Path, table: str) -
     database.migrate()
     assert table in set(inspect(database.engine).get_table_names())
     database.dispose()
+
+
+#: How many processes race for the first migration. Two reproduced the defect only
+#: sometimes even behind a barrier; six makes the loser reliable.
+_RACERS = 6
+
+
+def test_two_processes_can_migrate_one_new_database_at_once(tmp_path: Path) -> None:
+    """The API and the worker start together and both migrate.
+
+    On a database that does not exist yet, neither finds an `alembic_version` table to
+    contend on, so both ran the first migration and the loser died with "table events
+    already exists". In CI that killed the API at startup and the browser suite failed with
+    "the API did not become ready", which points nowhere near a migration.
+
+    Real processes, not threads: the defect is between processes, and the fix is an advisory
+    file lock that threads in one process would not exercise.
+
+    They wait on a shared file before migrating, so the race is entered on purpose rather
+    than hoped for. Without that barrier this reproduced about one run in three, which is
+    a guard that would pass while broken more often than not.
+    """
+    url = f"sqlite+pysqlite:///{tmp_path / 'shared.db'}"
+    barrier = tmp_path / "go"
+    script = textwrap.dedent(
+        f"""
+        import time
+        from pathlib import Path
+
+        from germandubi.infrastructure.db.session import create_database
+
+        # Import and connect first, then line up: the point of contention is the migration,
+        # not the interpreter start-up that would otherwise stagger these by a second.
+        database = create_database({url!r})
+        while not Path({str(barrier)!r}).exists():
+            time.sleep(0.01)
+        database.migrate()
+        database.engine.dispose()
+        """
+    )
+
+    with ThreadPoolExecutor(max_workers=_RACERS) as pool:
+        results = [
+            pool.submit(
+                subprocess.run,
+                [sys.executable, "-c", script],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+            for _ in range(_RACERS)
+        ]
+        time.sleep(2.0)  # let every process reach the barrier
+        barrier.write_text("go", encoding="utf-8")
+        finished = [future.result() for future in results]
+
+    for outcome in finished:
+        assert outcome.returncode == 0, outcome.stderr
+
+    database = create_database(url)
+    try:
+        tables = set(inspect(database.engine).get_table_names())
+    finally:
+        database.engine.dispose()
+    assert "events" in tables
+    assert "alembic_version" in tables

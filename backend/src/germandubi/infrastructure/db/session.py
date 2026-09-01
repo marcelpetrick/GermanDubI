@@ -7,6 +7,7 @@ worker. They are applied here, once, rather than hoped for.
 
 from __future__ import annotations
 
+import fcntl
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -100,11 +101,49 @@ class Database:
         A database this application created before migrations owned the schema has tables
         but no version. It is stamped at the base revision and then upgraded, which is safe
         because each migration checks whether its change is already present.
+
+        Migrating is serialized across processes. The API and the worker start together and
+        both migrate, and on a database that does not exist yet neither finds an
+        ``alembic_version`` table to contend on -- so both ran the first migration and the
+        loser failed with "table events already exists". SQLite gives Alembic nothing to
+        coordinate with here; an advisory lock beside the database file is the coordination.
         """
-        config = self._alembic_config()
-        if self._needs_stamping():
-            command.stamp(config, _BASE_REVISION)
-        command.upgrade(config, "head")
+        with self._migration_lock():
+            config = self._alembic_config()
+            if self._needs_stamping():
+                command.stamp(config, _BASE_REVISION)
+            command.upgrade(config, "head")
+
+    @contextmanager
+    def _migration_lock(self) -> Iterator[None]:
+        """Hold the right to migrate this database, waiting for whoever else has it.
+
+        Blocking, unlike the worker slot: the second process must not give up, it must wait
+        and then find the schema already at head, which ``upgrade`` treats as a no-op.
+
+        Only file-backed SQLite needs this. An in-memory database is private to its process,
+        and a real server has its own transactional DDL.
+        """
+        path = self._lock_path()
+        if path is None:
+            yield
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+    def _lock_path(self) -> Path | None:
+        """Return the lock file beside the database, or ``None`` when locking is pointless."""
+        url = self.engine.url
+        if not url.drivername.startswith("sqlite") or not url.database:
+            return None
+        if url.database == ":memory:":
+            return None
+        return Path(url.database).with_suffix(".migrate.lock")
 
     def _alembic_config(self) -> Config:
         """Return an Alembic config pointed at this database."""

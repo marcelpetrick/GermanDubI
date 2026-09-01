@@ -91,6 +91,10 @@ fixed.
   quietly writing into the same workspace.
 - A newly added URL is now inspected before the running dub continues, instead of queueing
   behind every one of its remaining stages.
+- Starting the API and the worker together against a database that does not exist yet no
+  longer fails with "table events already exists". Both migrate on start-up, and on an
+  empty database neither found an `alembic_version` table to contend on, so both ran the
+  first migration and one lost.
 
 ## [0.2.0] - 2026-08-31
 
