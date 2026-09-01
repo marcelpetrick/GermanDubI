@@ -18,6 +18,7 @@ import shutil
 import threading
 import time
 from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,7 @@ from germandubi.composition import Application, build_application
 from germandubi.config import Settings
 from germandubi.domain.entities.pipeline import Stage
 from germandubi.domain.errors import ResourceError
+from germandubi.domain.value_objects.identifiers import JobId
 from germandubi.worker.context import StageContext
 from germandubi.worker.handlers import HANDLERS
 from tests.fixtures.media import make_narration_video
@@ -465,15 +467,22 @@ class TestSingleWorker:
         minutes, so the lease has to mean "still alive" rather than "expected to be quick".
         """
         project = application.projects.create_from_url(VALID_URL)
-        leases: list[object] = []
+        leases: list[datetime] = []
+
+        def record_lease() -> None:
+            with application.unit_of_work() as uow:
+                expires = uow.jobs.get_job(job_id[0]).lease_expires_at
+            assert expires is not None, "a claimed job always holds a lease"
+            leases.append(expires)
+
+        job_id: list[JobId] = []
 
         def slow(context: StageContext) -> None:
-            with application.unit_of_work() as uow:
-                leases.append(uow.jobs.get_job(context.job.id).lease_expires_at)
+            job_id.append(context.job.id)
+            record_lease()
             time.sleep(1.1)
             context.checkpoint()  # renews
-            with application.unit_of_work() as uow:
-                leases.append(uow.jobs.get_job(context.job.id).lease_expires_at)
+            record_lease()
 
         monkeypatch.setitem(HANDLERS, Stage.PROBE, slow)
         application.projects.request_analysis(project.id)

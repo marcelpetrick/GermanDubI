@@ -929,7 +929,7 @@ class JobRepository:
         """
         ordered: list[ProjectId] = []
         for row in self._runnable_in_claim_order():
-            project_id = ProjectId(row.project_id)
+            project_id = ProjectId(Ulid(row.project_id))
             if project_id not in ordered:
                 ordered.append(project_id)
         return ordered
