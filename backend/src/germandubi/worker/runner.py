@@ -289,9 +289,25 @@ class Worker:
         uow.jobs.renew_lease(job.id, lease_seconds=self.settings.job_lease_seconds)
         uow.session.commit()
 
-    @staticmethod
-    def _report(uow: UnitOfWork, job: Job, fraction: float, detail: str | None) -> None:
-        """Persist a progress update so the browser sees it."""
+    def _report(self, uow: UnitOfWork, job: Job, fraction: float, detail: str | None) -> None:
+        """Persist a progress update so the browser sees it, then let go of the database.
+
+        This commits rather than flushing, and that is the whole point. A flush takes
+        SQLite's write lock and keeps it until the transaction ends, so a stage that
+        announced "using faster-whisper" and then spent two minutes recognising speech held
+        the lock for those two minutes. Every write from the API during that window --
+        adding a second video, most visibly -- waited out the 10-second busy timeout and
+        failed with "database is locked", reported to the browser as a bare 500.
+
+        Committing here also makes progress *visible*: an uncommitted write is invisible to
+        the API's connection, so the progress bar only moved at checkpoints even though the
+        stage was reporting all along.
+
+        Like a checkpoint, this means a stage that fails later leaves what it had already
+        written. That is the resumability contract in :meth:`StageContext.checkpoint`, which
+        every handler has to meet regardless, because reporting progress and checkpointing
+        are interleaved throughout the pipeline.
+        """
         uow.jobs.save_job(job.with_progress(fraction, detail))
         uow.events.append(
             job.project_id,
@@ -299,7 +315,7 @@ class Worker:
             {"stage": job.stage.value, "progress": round(fraction, 4), "detail": detail},
             run_id=job.run_id,
         )
-        uow.flush()
+        self._release(uow, job)
 
     def _finish_cancelled(self, uow: UnitOfWork, job: Job, exc: CancelledError) -> None:
         """Record that a stage stopped because cancellation was requested."""

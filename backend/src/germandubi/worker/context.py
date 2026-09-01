@@ -39,7 +39,9 @@ class StageContext:
         project: The project being processed.
         run: The run this stage belongs to.
         job: The job being executed.
-        report: Callback for progress updates, shown on the processing screen.
+        report: Callback for progress updates, shown on the processing screen. Like a
+            checkpoint it commits, so reporting progress never leaves the write lock held
+            across the work that follows it.
         is_cancelled: Consulted at checkpoints; a handler that never calls it cannot be
             cancelled, which is a bug in that handler.
         release: Commits what the stage has written so far and drops the database write
@@ -207,6 +209,12 @@ class StageContext:
     def progress(self, fraction: float, detail: str | None = None) -> None:
         """Report progress for the processing screen.
 
+        This commits, for the same reason :meth:`checkpoint` does, and the resumability
+        requirement documented there applies here too. Announcing a step and *then* doing it
+        is the natural way to write a handler -- ``progress(0.1, "using faster-whisper")``
+        followed by two minutes of recognition -- and if that report only flushed, those two
+        minutes would be spent holding SQLite's write lock with every API write failing.
+
         Args:
             fraction: Completion in ``[0, 1]``.
             detail: A short note, e.g. ``124 / 192 segments``.
@@ -231,7 +239,9 @@ class StageContext:
 
         The alternative is holding the write lock for the whole stage, which is what this
         used to do: two minutes during transcription of a long source, and every write from
-        the API failing with "database is locked" for the duration.
+        the API failing with "database is locked" for the duration. :meth:`progress`
+        commits for the same reason, so a handler cannot dodge the contract by reporting
+        instead of checkpointing.
 
         Raises:
             CancelledError: If cancellation was requested.

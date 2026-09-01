@@ -5,6 +5,11 @@ Adding a second video during a dub returned `500 Internal Server Error` with
 `stage_started` event into it -- taking SQLite's write lock -- and only then ran the stage.
 Transcribing a 40-minute source held that lock for 123 seconds, against the API's
 10-second busy timeout.
+
+It then came back in a second form. Moving the stage out of that transaction was not
+enough, because reporting progress *flushed*: a handler that announces "using
+faster-whisper" and then recognises speech took the write lock with the announcement and
+held it for the recognition. Both shapes are covered below.
 """
 
 from __future__ import annotations
@@ -116,6 +121,90 @@ def test_progress_from_a_running_stage_does_not_block_readers(
         thread.join(timeout=30)
 
     assert any(item.id == project.id for item in listed)
+
+
+def test_a_project_can_be_created_while_a_stage_that_reported_progress_runs(
+    application: Application, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Announcing a step and then doing it must not hold the write lock for the doing.
+
+    This is the shape of every real handler and the second time this defect appeared.
+    `handle_transcribe` reports "using faster-whisper" and only then recognises speech;
+    reporting used to flush rather than commit, so the write lock was taken by the
+    announcement and held for the two minutes that followed. Adding a second video during
+    that window waited out the busy timeout and failed with a bare 500.
+
+    Deliberately no checkpoint: a stage inside one long model call has nowhere to put one,
+    which is why the release cannot be left to the checkpoint.
+    """
+    reported = threading.Event()
+    finish = threading.Event()
+
+    def announce_then_work(context: StageContext) -> None:
+        context.progress(0.1, "using faster-whisper (small)")
+        reported.set()
+        assert finish.wait(timeout=30), "the test never released the stage"
+
+    monkeypatch.setitem(HANDLERS, Stage.PROBE, announce_then_work)
+
+    first = application.projects.create_from_url(VALID_URL)
+    application.projects.request_analysis(first.id)
+
+    worker = application.worker()
+    thread = threading.Thread(target=worker.run_once, daemon=True)
+    thread.start()
+    assert reported.wait(timeout=30), "the stage never reported progress"
+
+    try:
+        started = time.monotonic()
+        second = application.projects.create_from_url(SECOND_URL)
+        elapsed = time.monotonic() - started
+    finally:
+        finish.set()
+        thread.join(timeout=30)
+
+    assert second.id != first.id
+    assert elapsed < 5, f"creating a project waited {elapsed:.1f}s behind a progress report"
+
+
+def test_progress_is_visible_to_another_connection_before_the_stage_ends(
+    application: Application, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An uncommitted progress report is invisible, so the bar did not move.
+
+    The same flush that held the lock also kept the update inside the worker's transaction,
+    where the API could not read it. The processing screen only advanced at checkpoints.
+    """
+    reported = threading.Event()
+    finish = threading.Event()
+
+    def announce_then_work(context: StageContext) -> None:
+        context.progress(0.42, "halfway through the model")
+        reported.set()
+        assert finish.wait(timeout=30), "the test never released the stage"
+
+    monkeypatch.setitem(HANDLERS, Stage.PROBE, announce_then_work)
+
+    project = application.projects.create_from_url(VALID_URL)
+    application.projects.request_analysis(project.id)
+
+    worker = application.worker()
+    thread = threading.Thread(target=worker.run_once, daemon=True)
+    thread.start()
+    assert reported.wait(timeout=30), "the stage never reported progress"
+
+    try:
+        with application.unit_of_work() as uow:
+            details = [
+                payload.get("detail")
+                for _sequence, kind, payload in uow.events.since(project.id, 0)
+                if kind == "stage_progress"
+            ]
+    finally:
+        finish.set()
+        thread.join(timeout=30)
+
+    assert "halfway through the model" in details
 
 
 def test_a_newly_added_url_is_inspected_before_a_running_dub_continues(
