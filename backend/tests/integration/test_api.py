@@ -505,3 +505,58 @@ class TestVoices:
         created = client.post(url("/projects"), json={"url": VALID_URL})
 
         assert created.status_code == 201, created.text
+
+
+class TestUnexpectedFailures:
+    """What the browser is shown when something the application did not anticipate breaks.
+
+    A user hit this for real: adding a second video during a dub returned 500 and the
+    browser said "something went wrong. Check the server log for details." -- lower case,
+    and silent about which log and where.
+    """
+
+    def test_the_generic_error_names_a_reference_and_the_log(
+        self, tmp_path: Path, clip: Path
+    ) -> None:
+        settings = Settings(data_dir=tmp_path / "data", log_file=tmp_path / "logs" / "server.log")
+        wired = build_application(settings, fixture=clip)
+        api = create_app(settings, application=wired)
+
+        @api.get(f"{API_PREFIX}/boom")
+        async def boom() -> None:
+            msg = "an unanticipated failure"
+            raise RuntimeError(msg)
+
+        try:
+            with TestClient(api, raise_server_exceptions=False) as client:
+                response = client.get(f"{API_PREFIX}/boom")
+        finally:
+            wired.dispose()
+
+        body = response.json()
+        assert response.status_code == 500
+        assert body["code"] == "internal_error"
+        # A sentence, not a fragment: it is read by a person, not a log parser.
+        assert body["message"] == "Something went wrong. The server log has the details."
+        assert body["details"]["log_file"] == str(tmp_path / "logs" / "server.log")
+        # The reference is what lets a reader find their own failure in a shared log.
+        assert len(body["details"]["reference"]) == 8
+
+    def test_the_reference_differs_between_failures(self, tmp_path: Path, clip: Path) -> None:
+        settings = Settings(data_dir=tmp_path / "data")
+        wired = build_application(settings, fixture=clip)
+        api = create_app(settings, application=wired)
+
+        @api.get(f"{API_PREFIX}/boom")
+        async def boom() -> None:
+            msg = "an unanticipated failure"
+            raise RuntimeError(msg)
+
+        try:
+            with TestClient(api, raise_server_exceptions=False) as client:
+                first = client.get(f"{API_PREFIX}/boom").json()
+                second = client.get(f"{API_PREFIX}/boom").json()
+        finally:
+            wired.dispose()
+
+        assert first["details"]["reference"] != second["details"]["reference"]

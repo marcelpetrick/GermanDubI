@@ -8,11 +8,13 @@ the client can do about the failure, not from where in the code it happened.
 from __future__ import annotations
 
 import logging
+import secrets
 from typing import Final
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from germandubi.config import Settings
 from germandubi.domain.errors import (
     CancelledError,
     ConfigurationError,
@@ -49,12 +51,23 @@ def _status_for(error: GermanDubIError) -> int:
     return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-def install_error_handlers(app: FastAPI) -> None:
+def _reference() -> str:
+    """Return a short identifier tying a message on screen to a line in the log.
+
+    "Check the server log" is only actionable if the reader can find *their* failure in it.
+    Eight hex characters are enough to grep for and short enough to read out or retype.
+    """
+    return secrets.token_hex(4)
+
+
+def install_error_handlers(app: FastAPI, settings: Settings) -> None:
     """Register the application's error handlers.
 
     Args:
         app: The FastAPI application.
+        settings: Settings, for the log location named in an unexpected error.
     """
+    log_file = settings.resolved_log_file
 
     @app.exception_handler(GermanDubIError)
     async def handle_known_error(_request: Request, exc: Exception) -> JSONResponse:
@@ -72,13 +85,23 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_unexpected_error(_request: Request, exc: Exception) -> JSONResponse:
-        """Return a generic error, without leaking internals to the browser."""
-        logger.exception("unexpected error handling a request", exc_info=exc)
+        """Return a generic error, without leaking internals to the browser.
+
+        The traceback stays on the server -- it can name paths and configuration -- but the
+        reference does not, so the reader can point at the exact line that describes their
+        failure. Where the log is is part of the answer: a message that says "check the
+        server log" and does not say where is not a message, it is a shrug.
+        """
+        reference = _reference()
+        logger.exception("unexpected error handling a request [%s]", reference, exc_info=exc)
+        details: dict[str, str] = {"reference": reference}
+        if log_file is not None:
+            details["log_file"] = str(log_file)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "code": "internal_error",
-                "message": "something went wrong. Check the server log for details.",
-                "details": {},
+                "message": "Something went wrong. The server log has the details.",
+                "details": details,
             },
         )

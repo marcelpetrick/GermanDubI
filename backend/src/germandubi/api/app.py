@@ -118,7 +118,7 @@ def create_app(
         expose_headers=["content-range", "accept-ranges", "content-length"],
     )
 
-    install_error_handlers(app)
+    install_error_handlers(app, resolved)
 
     for router in (
         meta.router,

@@ -70,6 +70,9 @@ def test_doctor_reports_tools_and_provider_privacy(
     assert "External tools" in result.stdout
     assert "Providers" in result.stdout
     assert "Ready to dub" in result.stdout
+    # This is the command a user is told to run when something breaks, and the log is the
+    # next thing they will be asked for, so it names where the log is.
+    assert "Server log:" in result.stdout
 
 
 def test_doctor_refuses_to_report_readiness_without_a_translator_or_voice(

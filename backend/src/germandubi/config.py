@@ -135,6 +135,21 @@ class Settings(BaseSettings):
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
     log_format: Literal["text", "json"] = Field(default="text")
+    log_file: Path | None = Field(
+        default=None,
+        description=(
+            "Where the server log is written. Defaults to a rotating file inside data_dir. "
+            "Set GERMANDUBI_LOG_FILE to 'none' to log only to the console."
+        ),
+    )
+    log_max_bytes: int = Field(
+        default=5_000_000,
+        gt=0,
+        description="Size at which the log file rotates.",
+    )
+    log_backup_count: int = Field(
+        default=3, ge=0, description="How many rotated log files to keep."
+    )
 
     @field_validator("data_dir")
     @classmethod
@@ -147,6 +162,14 @@ class Settings(BaseSettings):
     def _expand_optional(cls, value: Path | None) -> Path | None:
         """Resolve an optional configured path."""
         return value.expanduser().resolve() if value is not None else None
+
+    @field_validator("log_file")
+    @classmethod
+    def _expand_log_file(cls, value: Path | None) -> Path | None:
+        """Resolve the log file, leaving the ``none`` sentinel alone for the property."""
+        if value is None or value.name.lower() in {"none", "off"}:
+            return value
+        return value.expanduser().resolve()
 
     @property
     def projects_dir(self) -> Path:
@@ -177,6 +200,24 @@ class Settings(BaseSettings):
         return self.data_dir / "models"
 
     @property
+    def logs_dir(self) -> Path:
+        """Return the directory holding the server log."""
+        return self.data_dir / "logs"
+
+    @property
+    def resolved_log_file(self) -> Path | None:
+        """Return the file the server log is written to, or ``None`` for console only.
+
+        A console-only log is fine while a terminal is watching it and useless afterwards.
+        The error a user reports is almost always one they have already scrolled past, so
+        the log has to outlive the terminal and live somewhere nameable -- the message in
+        the browser names this path.
+        """
+        if self.log_file is not None:
+            return None if self.log_file.name.lower() in {"none", "off"} else self.log_file
+        return self.logs_dir / "germandubi.log"
+
+    @property
     def resolved_database_url(self) -> str:
         """Return the SQLAlchemy URL, defaulting to SQLite inside the data directory."""
         if self.database_url:
@@ -185,7 +226,7 @@ class Settings(BaseSettings):
 
     def ensure_directories(self) -> None:
         """Create the data directories if they do not exist."""
-        for directory in (self.data_dir, self.projects_dir, self.models_dir):
+        for directory in (self.data_dir, self.projects_dir, self.models_dir, self.logs_dir):
             directory.mkdir(parents=True, exist_ok=True)
 
 

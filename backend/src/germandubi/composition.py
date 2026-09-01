@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from germandubi.application.services.pipeline import PipelineService
@@ -29,25 +30,62 @@ logger = logging.getLogger(__name__)
 
 
 def configure_logging(settings: Settings) -> None:
-    """Set up application logging.
+    """Set up application logging, on the console and in a file.
+
+    The console is where a developer watches it; the file is what an error message can name.
+    A user who is told "check the server log" and has already closed or scrolled past the
+    terminal has nowhere to look, so the log outlives the terminal and lives at a fixed,
+    printable path.
 
     Args:
-        settings: Application settings naming the level and format.
+        settings: Application settings naming the level, format and destination.
     """
-    logging.basicConfig(
-        level=settings.log_level,
-        format=(
+    formatter = logging.Formatter(
+        fmt=(
             '{"time":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s",'
             '"message":"%(message)s"}'
             if settings.log_format == "json"
             else "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
         ),
         datefmt="%H:%M:%S",
-        force=True,
     )
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    file_handler = _file_handler(settings)
+    if file_handler is not None:
+        handlers.append(file_handler)
+    for handler in handlers:
+        handler.setFormatter(formatter)
+
+    logging.basicConfig(level=settings.log_level, handlers=handlers, force=True)
     # These libraries log every request or tokenization at INFO, drowning our own output.
     for noisy in ("httpx", "sqlalchemy.engine", "argostranslate", "urllib3"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
+def _file_handler(settings: Settings) -> logging.Handler | None:
+    """Return the rotating file handler, or ``None`` when the log cannot be written.
+
+    The file log rotates because an unbounded one on a workstation eventually becomes the
+    largest thing in the data directory. A destination that cannot be opened -- a read-only
+    volume, a full disk -- degrades to console-only logging rather than stopping the server:
+    an unwritable log is a nuisance, not a reason to refuse to dub anything.
+    """
+    destination = settings.resolved_log_file
+    if destination is None:
+        return None
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        return RotatingFileHandler(
+            destination,
+            maxBytes=settings.log_max_bytes,
+            backupCount=settings.log_backup_count,
+            encoding="utf-8",
+        )
+    except OSError:
+        logging.getLogger(__name__).warning(
+            "could not open the log file %s; logging to the console only", destination
+        )
+        return None
 
 
 @dataclass(frozen=True, slots=True)

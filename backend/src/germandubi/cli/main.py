@@ -82,6 +82,10 @@ def doctor() -> None:
     console.print(f"\nCompute:      [cyan]{device}[/]")
     console.print(f"Project data: [cyan]{report.data_dir}[/]")
     console.print(f"Writable:     {'[green]yes[/]' if report.writable else '[red]no[/]'}")
+    # Printed here because this is the command people are told to run when something is
+    # wrong, and the log is the next thing they will be asked for.
+    log_file = settings.resolved_log_file
+    console.print(f"Server log:   [cyan]{log_file or 'console only'}[/]")
 
     application.dispose()
 
