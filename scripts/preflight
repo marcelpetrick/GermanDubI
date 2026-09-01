@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Everything that must already be on this machine before GermanDubI can install itself.
+#
+# One implementation, called by `make setup` and by ./localPipeline.sh. A checkout that
+# passes this and then runs `make setup` ends up with a working installation; without it,
+# a missing ffmpeg or a Node from two years ago surfaces later as something that reads like
+# a bug in this project.
+#
+# Deliberately short. Anything that can be installed for the user is a dependency in
+# pyproject.toml or package.json, not a line here -- yt-dlp and its JavaScript challenge
+# solver used to be listed as things to install by hand, which is how one of them ended up
+# missing.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+if [[ -t 1 ]]; then
+  red=$'\033[31m' dim=$'\033[2m' reset=$'\033[0m'
+else
+  red='' dim='' reset=''
+fi
+
+fail=0
+missing=()
+for tool in git uv node corepack ffmpeg ffprobe; do
+  command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
+done
+if ((${#missing[@]})); then
+  echo "${red}missing: ${missing[*]}${reset}" >&2
+  echo "See the Requirements table in README.md. On Debian/Ubuntu, ffmpeg brings ffprobe." >&2
+  fail=1
+fi
+
+# Too old a Node is a hard failure, not a warning. The frontend test stack pulls undici 8
+# through jsdom, which calls an API older runtimes do not have: on Node 20 every frontend
+# test file fails to load with "markAsUncloneable is not a function", which reads as a
+# broken test suite rather than a wrong runtime.
+if command -v node >/dev/null 2>&1; then
+  required_node_major="$(sed -n 's/.*"node": ">=\([0-9]*\).*/\1/p' e2e/package.json | head -1)"
+  actual_node_major="$(node --version | sed 's/^v\([0-9]*\).*/\1/')"
+  if [[ -n "$required_node_major" ]] && ((actual_node_major < required_node_major)); then
+    echo "${red}Node ${actual_node_major} is too old; this project needs Node ${required_node_major}.${reset}" >&2
+    echo "The pinned version is in .node-version. With fnm: fnm use; with nvm: nvm use" >&2
+    fail=1
+  fi
+fi
+
+((fail == 0)) || exit 1
+
+echo "    python  $(cat .python-version) (pinned)  uv $(uv --version | awk '{print $2}')"
+echo "    node    $(node --version)"
+echo "    ffmpeg  $(ffmpeg -version | head -1 | awk '{print $3}')"
+
+# yt-dlp needs a JavaScript runtime to solve YouTube's challenge before it is given any
+# formats. Node satisfies it and is required above, so this only ever fires on a machine
+# where something odd has happened to PATH between the two checks.
+if ! command -v deno >/dev/null 2>&1 && ! command -v node >/dev/null 2>&1; then
+  echo "${dim}    note: no JavaScript runtime; YouTube sources will look unavailable${reset}"
+fi
+
+# corepack provisions the pnpm version pinned in package.json; calling pnpm without it can
+# silently use a different, unpinned pnpm from the host.
+corepack enable pnpm >/dev/null 2>&1 ||
+  echo "${dim}    note: could not enable corepack pnpm; using pnpm from PATH${reset}"

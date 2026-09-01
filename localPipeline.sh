@@ -78,6 +78,48 @@ stage_done() {
   echo "${dim}    ${current_stage} took ${elapsed}s${reset}"
 }
 
+# --------------------------------------------------------------------------- providers
+# The gate installs exactly the locked default set, which means `uv sync` *uninstalls* any
+# optional provider extra that was there. Left alone, running the gate turns a machine that
+# could dub into one that cannot, silently -- it caught this project's own maintainer twice,
+# and being documented in three places was evidence of the surprise rather than a fix.
+#
+# So: note what is installed before the sync, and put it back on the way out. Restoring
+# happens on every exit path, including a failed gate and Ctrl-C, because a gate that fails
+# is exactly when someone is least likely to notice their providers are gone.
+#
+# The gate itself still runs against the lean set. That is the point of it: the deterministic
+# fakes are what make the run reproducible, and a machine with the extras installed must not
+# pass a gate that a clean checkout would fail.
+declare -A extra_of=(
+  [faster-whisper]=asr
+  [argostranslate]=translate
+  [piper-tts]=tts
+  [demucs]=separation
+)
+providers_to_restore=()
+
+note_installed_providers() {
+  local installed dist
+  installed="$(uv pip list --format=freeze 2>/dev/null || true)"
+  for dist in "${!extra_of[@]}"; do
+    if grep -q "^${dist}==" <<<"$installed"; then
+      providers_to_restore+=("--extra" "${extra_of[$dist]}")
+    fi
+  done
+}
+
+restore_providers() {
+  ((${#providers_to_restore[@]})) || return 0
+  echo
+  echo "${bold}==> Restoring the provider extras this gate removed${reset}"
+  if uv sync --locked --all-groups "${providers_to_restore[@]}"; then
+    echo "${dim}    the machine can dub again${reset}"
+  else
+    echo "${red}    could not restore them; run: make install-providers${reset}" >&2
+  fi
+}
+
 # --------------------------------------------------------------------------- cleanup
 # Every exit path tears the smoke-test server down, including Ctrl-C and a failed gate.
 server_pid=""
@@ -91,6 +133,7 @@ cleanup() {
     wait "$server_pid" 2>/dev/null || true
   fi
   [[ -n "$smoke_dir" && -d "$smoke_dir" ]] && rm -rf "$smoke_dir"
+  restore_providers
 
   echo
   if ((status == 0)); then
@@ -109,50 +152,20 @@ trap cleanup EXIT INT TERM
 
 # --------------------------------------------------------------------------- prerequisites
 stage "Checking prerequisites"
-
-missing=()
-for tool in git uv node corepack ffmpeg ffprobe; do
-  command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
-done
-if ((${#missing[@]})); then
-  echo "${red}missing required tools: ${missing[*]}${reset}" >&2
-  echo "See the Requirements table in README.md." >&2
-  exit 1
-fi
-
-# yt-dlp is required to process a real source but not to pass the deterministic gate, so
-# its absence is a warning rather than a failure.
-command -v yt-dlp >/dev/null 2>&1 ||
-  echo "${dim}    note: yt-dlp is absent; real sources cannot be downloaded${reset}"
-
-pinned_python="$(cat .python-version)"
-echo "    python  ${pinned_python} (pinned)  uv $(uv --version | awk '{print $2}')"
-echo "    node    $(node --version)"
-echo "    ffmpeg  $(ffmpeg -version | head -1 | awk '{print $3}')"
-
-# Too old a Node is a hard failure, not a warning. The frontend test stack pulls undici 8
-# through jsdom, which calls an API that older runtimes do not have: on Node 20 every
-# frontend test file fails to load with "markAsUncloneable is not a function", which reads
-# as a broken test suite rather than a wrong runtime. Fail early and say so.
-required_node_major="$(sed -n 's/.*"node": ">=\([0-9]*\).*/\1/p' e2e/package.json | head -1)"
-actual_node_major="$(node --version | sed 's/^v\([0-9]*\).*/\1/')"
-if [[ -n "$required_node_major" ]] && ((actual_node_major < required_node_major)); then
-  echo "${red}Node ${actual_node_major} is too old; this project needs Node ${required_node_major}.${reset}" >&2
-  echo "The pinned version is in .node-version. With fnm: fnm use; with nvm: nvm use" >&2
-  exit 1
-fi
-
-# corepack provisions the pnpm version pinned in package.json; calling pnpm without it
-# can silently use a different, unpinned pnpm from the host.
-corepack enable pnpm >/dev/null 2>&1 ||
-  echo "${dim}    note: could not enable corepack pnpm; using pnpm from PATH${reset}"
+# The same script `make setup` runs, so a machine that can install this project is exactly
+# a machine that can run its gate. Two copies of this list would drift.
+./scripts/preflight
 stage_done
 
 # --------------------------------------------------------------------------- setup
 stage "Locked dependencies"
+note_installed_providers
 # --locked fails rather than silently resolving something new, so a stale lockfile is a
 # pipeline failure instead of an unreproducible pass.
 uv sync --locked --all-groups
+if ((${#providers_to_restore[@]})); then
+  echo "${dim}    provider extras removed for the run; they are restored at the end${reset}"
+fi
 (cd frontend && pnpm install --frozen-lockfile)
 (cd e2e && pnpm install --frozen-lockfile)
 stage_done

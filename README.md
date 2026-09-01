@@ -51,24 +51,30 @@ See [`CHANGELOG.md`](CHANGELOG.md) for what exists today.
 
 ## Requirements
 
+Four things must already be on the machine. Everything else -- Python itself, `yt-dlp`, its
+JavaScript challenge solver, the recognition, translation, speech and separation stacks --
+is installed for you by `make setup`.
+
 | Requirement | Notes |
 | --- | --- |
 | Linux | Primary and only supported host for `0.x` |
-| Python (see `pyproject.toml`) | Managed by [`uv`](https://docs.astral.sh/uv/) |
-| Node.js 24 with `corepack` | Pinned in `.node-version`; `pnpm` is provisioned by corepack |
-| `ffmpeg` / `ffprobe` | Media inspection, extraction, muxing |
-| `yt-dlp` | Source acquisition |
-| A JavaScript runtime (`deno` or `node`) | YouTube requires a solved JS challenge before it releases formats; without one, available videos are reported as unavailable |
+| [`uv`](https://docs.astral.sh/uv/) | Provisions the pinned Python and every Python dependency |
+| Node.js 24 with `corepack` | Pinned in `.node-version`; `pnpm` comes from corepack. Also the JavaScript runtime `yt-dlp` needs to solve YouTube's challenge |
+| `ffmpeg` / `ffprobe` | Media inspection, extraction, muxing. Your package manager has them |
+
+`make preflight` checks all four and says what is missing; `make setup` runs it first, so a
+missing one is named up front rather than surfacing later as something that looks like a bug
+in this project.
 
 Run `germandubi doctor` at any time to check the environment. It reports "Ready to dub"
 only when a real translator and a real German voice are installed -- FFmpeg alone is not
 enough to produce German, and a run without them is refused rather than filled in with
 placeholder audio.
 
-> **The provider stacks are easy to lose.** `uv sync --locked`, which both `make install`
-> and `./localPipeline.sh` run, installs exactly the locked default set and removes the
-> extras — the gate runs against deterministic fakes and does not need them. Re-run
-> `make install-providers` afterwards.
+> **`make install` removes the provider stacks.** `uv sync --locked` installs exactly the
+> locked default set, and the extras are not in it. Re-run `make install-providers`
+> afterwards. `./localPipeline.sh` removes them too — the gate runs against deterministic
+> fakes on purpose — but it restores what it found when it exits.
 
 ---
 
@@ -77,15 +83,16 @@ placeholder audio.
 ```bash
 git clone https://github.com/marcelpetrick/GermanDubI.git
 cd GermanDubI
-
-corepack enable pnpm          # frontend package manager
-make setup                    # everything: dependencies, all real providers, hooks
-
-./localPipeline.sh            # the complete gate, exactly as CI runs it
-make dev                      # API + Vite dev server + processing worker
+make setup     # checks the four prerequisites, then installs everything and reports
+make dev       # API + Vite dev server + processing worker
 ```
 
-Then open the URL printed by the Vite dev server.
+Then open the URL printed by the Vite dev server. `make setup` ends with a `doctor` report;
+if it says "Ready to dub", paste a YouTube URL and press Analyze.
+
+```bash
+./localPipeline.sh            # the complete gate, exactly as CI runs it
+```
 
 ## The interface
 

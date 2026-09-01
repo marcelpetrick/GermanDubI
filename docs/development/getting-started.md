@@ -1,17 +1,23 @@
 # Development workflow
 
-Install `uv`, FFmpeg and `yt-dlp`, plus the runtimes pinned in `.python-version` and
-`.node-version` (Python 3.12 and Node 24). `corepack` provisions `pnpm`. Then run:
+Four things must be on the machine already: `uv`, Node 24 with `corepack`, and
+`ffmpeg`/`ffprobe`. `uv` provisions the Python pinned in `.python-version`; corepack
+provisions `pnpm`; everything else -- including `yt-dlp` and the JavaScript challenge solver
+it needs -- is a declared dependency and is installed for you.
 
 ```bash
-make install
+make setup          # preflight, dependencies, every real provider, hooks, then `doctor`
 make check          # fast inner loop: lint, types, tests
 make dev
 ```
 
-An older Node appears to work and then fails obscurely: the frontend test stack needs an
-API that Node 20 does not have, so every test file fails to load. `./localPipeline.sh`
-checks this before doing anything else.
+`make preflight` is the check on its own. Both `make setup` and `./localPipeline.sh` run it
+first, from one script, so a machine that can install this project is exactly a machine that
+can run its gate.
+
+An older Node appears to work and then fails obscurely: the frontend test stack needs an API
+that Node 20 does not have, so every test file fails to load. Preflight catches it and says
+so.
 
 Open `http://127.0.0.1:5173`. `scripts/dev` starts the API and worker first, waits for API
 health, then starts Vite. `Ctrl-C` stops all three processes.
@@ -21,13 +27,15 @@ Run `make doctor` to see the exact tools and providers available. Real translati
 stacks are optional:
 
 ```bash
-make setup              # dependencies, every real provider, hooks, then `doctor`
 make install-providers  # just the providers, if the rest is already there
 make test-real
 ```
 
-Neither the gate nor CI installs them, so `uv sync --locked` removes them again. Reinstall
-with `make install-providers` after running the pipeline.
+Neither the gate nor CI installs them: both run against deterministic fakes, and a machine
+with the real stacks must not pass a gate a clean checkout would fail. The gate therefore
+removes them for the duration -- and restores whatever it found when it exits, so running it
+does not leave you unable to dub. `make install` has no such courtesy; reinstall after it
+with `make install-providers`.
 
 They are not optional in practice: without a translator and a German voice the pipeline
 refuses to run rather than producing placeholder output, and `germandubi doctor` will say

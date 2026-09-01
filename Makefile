@@ -17,6 +17,10 @@ help: ## Show this help
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 # --------------------------------------------------------------------------- setup
+.PHONY: preflight
+preflight: ## Check the tools that must already be on this machine
+	@./scripts/preflight
+
 .PHONY: install
 install: ## Lean install: no real providers. This is what CI and the gate use.
 	$(UV) sync --locked --all-groups
@@ -28,7 +32,7 @@ install-providers: ## Add every real provider: recognition, translation, speech,
 	$(UV) sync --locked --all-groups --extra asr --extra translate --extra tts --extra separation
 
 .PHONY: setup
-setup: install install-providers hooks ## Clean checkout to a machine that can really dub
+setup: preflight install install-providers hooks ## Clean checkout to a machine that can really dub
 	@$(RUN) germandubi doctor
 
 .PHONY: hooks

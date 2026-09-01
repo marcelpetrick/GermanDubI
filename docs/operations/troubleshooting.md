@@ -35,8 +35,10 @@ make install-providers      # recognition, translation, German speech and separa
 germandubi doctor           # confirm before starting a long run
 ```
 
-Note that `uv sync --locked` -- run by `make install` and by `./localPipeline.sh` -- removes
-the optional extras again, so reinstall them after running the gate.
+Note that `uv sync --locked` -- run by `make install` -- removes the optional extras again,
+so reinstall them afterwards. `./localPipeline.sh` also removes them, because the gate runs
+against deterministic fakes on purpose, but it notices what was there and puts it back when
+it exits.
 
 ## The dub sounds wrong
 
@@ -163,12 +165,15 @@ this reappears, a new generated path needs adding to `frontend/.prettierignore`.
 **`uv sync --locked` fails.** The lockfile does not match `pyproject.toml`. Run
 `uv lock` and commit the result.
 
-**Real providers disappear after running the gate.** `uv sync --locked` installs exactly
-the locked default set, which excludes the optional extras. Reinstall them:
+**Real providers disappear after `make install`.** `uv sync --locked` installs exactly the
+locked default set, which excludes the optional extras. Reinstall them:
 
 ```bash
 make install-providers
 ```
+
+`./localPipeline.sh` restores them itself, on every exit path including a failed run and
+Ctrl-C. If that restore fails it says so and names this command.
 
 ## Where the data is
 
