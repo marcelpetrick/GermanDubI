@@ -21,8 +21,19 @@ may occur in MINOR releases and are always listed here.
 - `GERMANDUBI_DEVICE` selects the compute device (`auto`, `cpu`, `cuda`) for the model
   providers, and `germandubi doctor` reports which one was resolved.
 
+### Added
+
+- Stop a project from the list or from its own page. Cancelling now terminates the tool
+  actually running, rather than waiting for a stage to reach its next checkpoint.
+- Delete everything: one action that cancels anything running and removes every project
+  and all generated files. It asks first, because it cannot be undone.
+- Every action explains what it does on hover, in all four interface languages.
+
 ### Fixed
 
+- Cancelling a run never stopped the external process doing the work. The process runner
+  was created without its cancellation callback, so a stage inside a long ffmpeg or Demucs
+  call ignored the request entirely.
 - Adding a video while another is being dubbed no longer fails with "database is locked".
   The worker held SQLite's write lock for the entire duration of a stage -- two minutes
   while transcribing a long source -- so any write from the API during that window failed.

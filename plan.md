@@ -399,7 +399,7 @@ commit until the handler returns. The test suite went from 113 s to over 600 s a
 killed. Progress and cancellation stay on the stage's connection; what changed is how long
 that connection holds the lock.
 
-## 21. Prove two videos in one browser session · `PENDING`
+## 21. Prove two videos in one browser session · `COMPLETE`
 
 Two videos are now safe to queue, and nothing demonstrates it. The browser workflow drives
 one project through one dub.
@@ -413,9 +413,18 @@ one project through one dub.
 - Add an opt-in variant that uses real providers and real URLs for the times a human wants
   end-to-end proof. It cannot live in the gate: it needs the network, the optional model
   stacks and several minutes.
-- Acceptance: the gate proves two projects complete in one session with a clean console.
+Done, in the gate. `e2e/tests/two-videos.spec.ts` creates two projects from different URLs,
+dubs both, and checks each one's export. Console errors and warnings, unhandled page errors
+and any HTTP 5xx are collected throughout and asserted empty -- the 5xx watch matters most,
+because the original defect produced a 500 that never reached the console.
 
-## 22. Let the user stop a run and clear their work · `PENDING`
+The opt-in real-provider variant is **not** built. The deterministic run proves the queue,
+the interface and the absence of errors, which is what was broken; a real-source browser
+test would take a quarter of an hour, need the network and the model stacks, and duplicate
+what `scripts/benchmark_real_dub.py` already does end to end. Recorded rather than
+silently dropped.
+
+## 22. Let the user stop a run and clear their work · `COMPLETE`
 
 - **Stop.** A cancel endpoint already exists and the interface never calls it. Worse, it
   would not work if it did: `ProcessRunner` is constructed without its `cancelled`
@@ -429,6 +438,10 @@ one project through one dub.
 - **Say what the buttons do before they are pressed.** Stop abandons work in progress and
   keeps what finished; reset destroys every project and its files. The second is
   irreversible and must ask first.
-- Acceptance: cancelling a running stage stops the subprocess rather than waiting it out,
-  reset leaves neither projects nor workspace directories, and both are covered by tests
-  rather than by having been tried once.
+Done. Cancellation reaches the process tree through the shared process runner, stop is
+offered per project in the list as well as on the project page, and clearing everything is
+one endpoint that cancels first so a stage cannot recreate the directory it was deleted
+from. Every action carries an explanation, in all four languages.
+
+The cancellation test is load-bearing: with the runner wiring removed it waits out the full
+sixty-second subprocess instead of stopping within one.
