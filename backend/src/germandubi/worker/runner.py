@@ -8,10 +8,13 @@ whose inputs are unchanged reuses the previous artifact instead of redoing the w
 
 from __future__ import annotations
 
+import fcntl
 import logging
+import os
 import signal
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from types import FrameType
 from typing import Final
@@ -20,7 +23,7 @@ from germandubi.application.services.unit_of_work import UnitOfWork, UnitOfWorkF
 from germandubi.config import Settings
 from germandubi.domain.entities.pipeline import Job, JobStatus
 from germandubi.domain.entities.project import ProjectState
-from germandubi.domain.errors import CancelledError, GermanDubIError
+from germandubi.domain.errors import CancelledError, GermanDubIError, ResourceError
 from germandubi.infrastructure.providers.registry import ProviderRegistry
 from germandubi.worker.context import StageContext
 from germandubi.worker.handlers import HANDLERS
@@ -71,6 +74,40 @@ class Worker:
 
         signal.signal(signal.SIGINT, stop)
         signal.signal(signal.SIGTERM, stop)
+
+    @contextmanager
+    def exclusive(self) -> Iterator[None]:
+        """Hold the only worker slot for this data directory, or refuse to start.
+
+        Renewing leases keeps a long stage from *looking* abandoned, but it cannot make two
+        workers safe: they would claim different jobs of the same run, write into the same
+        workspace, and neither would know. One worker per data directory is the model the
+        rest of the system is built on, so it is enforced rather than assumed.
+
+        The lock is an exclusive flock on a file in the data directory. It is released when
+        the process exits for any reason, including a crash, so a killed worker does not
+        lock its successor out.
+
+        Raises:
+            ResourceError: If another worker already holds the slot.
+        """
+        self.settings.ensure_directories()
+        path = self.settings.data_dir / "worker.lock"
+        handle = path.open("w")
+        try:
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as error:
+                msg = (
+                    f"another worker is already running for {self.settings.data_dir}. "
+                    f"Only one may process a project at a time; stop the other first."
+                )
+                raise ResourceError(msg, data_dir=str(self.settings.data_dir)) from error
+            handle.write(f"{os.getpid()}\n")
+            handle.flush()
+            yield
+        finally:
+            handle.close()
 
     def run_forever(self) -> None:
         """Claim and execute jobs until asked to stop."""
@@ -213,7 +250,7 @@ class Worker:
                 # the write lock, which is a deadlock the process has with itself.
                 report=lambda fraction, detail: self._report(uow, job, fraction, detail),
                 is_cancelled=cancelled,
-                release=uow.session.commit,
+                release=lambda: self._release(uow, job),
             )
 
             try:
@@ -241,6 +278,16 @@ class Worker:
             logger.info("[%s] %s finished in %.1fs", project.id, job.stage.label, elapsed)
 
     # --- outcomes -----------------------------------------------------------------------
+
+    def _release(self, uow: UnitOfWork, job: Job) -> None:
+        """Commit what the stage has written, and prove it is still alive.
+
+        Renewing the lease here rather than only at claim time is what stops a stage that
+        legitimately runs longer than the lease from looking abandoned: separation of a
+        long source takes minutes, against a lease measured in the same minutes.
+        """
+        uow.jobs.renew_lease(job.id, lease_seconds=self.settings.job_lease_seconds)
+        uow.session.commit()
 
     @staticmethod
     def _report(uow: UnitOfWork, job: Job, fraction: float, detail: str | None) -> None:

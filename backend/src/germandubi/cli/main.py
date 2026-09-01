@@ -16,7 +16,7 @@ from germandubi.composition import build_application, configure_logging
 from germandubi.config import Settings, get_settings
 from germandubi.domain.entities.artifact import ArtifactKind
 from germandubi.domain.entities.project import QualityProfile
-from germandubi.domain.errors import GermanDubIError
+from germandubi.domain.errors import GermanDubIError, ResourceError
 from germandubi.domain.value_objects.identifiers import ProjectId, Ulid
 from germandubi.version import build_info
 
@@ -137,7 +137,13 @@ def worker(
 
     process.install_signal_handlers()
     try:
-        process.run_forever()
+        # One worker per data directory. Two would claim different jobs of the same run and
+        # write into the same workspace without either knowing.
+        with process.exclusive():
+            process.run_forever()
+    except ResourceError as error:
+        application.dispose()
+        _fail(error.message)
     finally:
         application.dispose()
 

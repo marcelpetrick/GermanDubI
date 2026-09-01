@@ -20,6 +20,7 @@ import pytest
 from germandubi.composition import Application, build_application
 from germandubi.config import Settings
 from germandubi.domain.entities.pipeline import Stage
+from germandubi.domain.errors import ResourceError
 from germandubi.worker.context import StageContext
 from germandubi.worker.handlers import HANDLERS
 from tests.fixtures.media import make_narration_video
@@ -261,3 +262,54 @@ class TestResumability:
 
         assert produced == [0, 1, 2, 3], "a resumed stage must not redo or skip work"
         assert attempt["count"] == 2
+
+
+class TestSingleWorker:
+    """One worker per data directory, and a long stage that is not mistaken for a dead one."""
+
+    def test_a_second_worker_is_refused(self, application: Application) -> None:
+        """Two workers would claim different jobs of one run and share a workspace."""
+        first = application.worker()
+        second = application.worker()
+
+        with (
+            first.exclusive(),
+            pytest.raises(ResourceError, match="another worker is already running"),
+            second.exclusive(),
+        ):
+            pass
+
+    def test_the_slot_is_released_when_the_holder_finishes(self, application: Application) -> None:
+        worker = application.worker()
+        with worker.exclusive():
+            pass
+
+        # A crashed worker must not lock its successor out; flock releases on close.
+        with worker.exclusive():
+            pass
+
+    def test_a_checkpoint_pushes_the_lease_out(
+        self, application: Application, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A stage legitimately longer than its lease must not be reclaimed underneath it.
+
+        Separation of a long source takes minutes, against a lease measured in the same
+        minutes, so the lease has to mean "still alive" rather than "expected to be quick".
+        """
+        project = application.projects.create_from_url(VALID_URL)
+        leases: list[object] = []
+
+        def slow(context: StageContext) -> None:
+            with application.unit_of_work() as uow:
+                leases.append(uow.jobs.get_job(context.job.id).lease_expires_at)
+            time.sleep(1.1)
+            context.checkpoint()  # renews
+            with application.unit_of_work() as uow:
+                leases.append(uow.jobs.get_job(context.job.id).lease_expires_at)
+
+        monkeypatch.setitem(HANDLERS, Stage.PROBE, slow)
+        application.projects.request_analysis(project.id)
+        application.worker().run_once()
+
+        assert len(leases) == 2
+        assert leases[1] > leases[0], "the checkpoint should have extended the lease"

@@ -900,6 +900,20 @@ class JobRepository:
             return claimed
         return None
 
+    def renew_lease(self, job_id: JobId, *, lease_seconds: int) -> None:
+        """Push a running job's lease out, so long work is not reclaimed underneath it.
+
+        A stage that outlives its lease looks abandoned, and an abandoned job is requeued.
+        Renewing as the stage makes progress keeps the lease a statement about liveness
+        rather than about how long the work was expected to take.
+        """
+        expires = datetime.now(UTC) + timedelta(seconds=lease_seconds)
+        self.session.execute(
+            update(JobRow)
+            .where(JobRow.id == str(job_id), JobRow.status == JobStatus.RUNNING.value)
+            .values(lease_expires_at=expires)
+        )
+
     def _reclaim_expired_leases(self, now: datetime) -> None:
         """Return jobs whose lease expired to the queue so they can be retried."""
         stale = self.session.scalars(
