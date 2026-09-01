@@ -23,6 +23,8 @@ German dub while every intermediate stage stays inspectable and reproducible.
 
 **Note: project is generated with AI.**
 
+![GermanDubI project dashboard in the dark theme](media/DubI_currentState.png)
+
 ---
 
 ## What it does
