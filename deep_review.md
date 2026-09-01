@@ -49,15 +49,15 @@ in good shape and the review found nothing to say about them.
   `ProviderRegistry.probe()` and `prosody()` both check `settings.transcription_provider == "fake"`, so selecting a fake transcript provider silently changes two unrelated ports. It works, and the deterministic E2E depends on it, but the coupling is invisible from the setting's name and will surprise whoever changes it next.
   *Do:* give each port its own setting (`probe_provider`, `prosody_provider`) defaulting to `auto`, and have `scripts/e2e-server` set them explicitly. Alternatively introduce one `deterministic_providers` flag that means what the E2E actually wants.
 
-* [ ] **[Medium] No ADR records the concurrency and transaction model.**
+* [x] **[Medium] No ADR records the concurrency and transaction model.** — *Fixed.*
   The rule that a stage runs outside any open write transaction is now load-bearing — it is the difference between a working application and `database is locked` — and it lives only in a commit message and a section of `c4.md`. ADRs exist for smaller decisions (a separate worker, SSE over WebSocket).
-  *Do:* write `docs/adr/0012-short-transactions-around-stages.md` covering the decision, the rejected alternative (a second connection for progress, which deadlocks), and the consequence that handlers must be resumable. The material is in `c4.md` already; it needs the ADR's status and context framing.
+  *Done:* written, and it earned its place — the rule was broken a second time between the review and the ADR (see "Found since this review"). It records both regressions, the rejected second-connection alternative with the measurement that killed it, and the resumability consequence. `c4.md` links to it and gains a table of what is shared between projects and how they are kept apart.
 
 ## Testing
 
-* [ ] **[High] The real-provider tests are marked, excluded by default, and run nowhere.**
+* [x] **[High] The real-provider tests are marked, excluded by default, and run nowhere.** — *Fixed.*
   `pytest.ini_options` deselects `-m real_provider`, `make test-real` exists, and no workflow or script ever calls it. Three tests carry the marker, so the only automated check that a real model produces anything at all is `scripts/benchmark_real_dub.py`, which is also run by hand. Every gate in the repository passes against fakes.
-  *Do:* add a scheduled workflow (weekly is enough) that installs the provider extras and runs `make test-real`, allowed to fail without blocking `main`. It will catch upstream breakage — exactly the class of failure the yt-dlp incident was — before a user does.
+  *Done:* `.github/workflows/providers.yml` runs weekly and on demand. It installs FFmpeg, a Deno runtime for yt-dlp's JavaScript challenge, and every provider extra; reports the environment with `germandubi doctor`; runs `make test-real`; and dubs a 60-second excerpt of a real source end to end, uploading the measurement. It gates nothing, on purpose: what it catches is upstream breakage, which arrives on its own schedule and which a contributor cannot have caused.
 
 * [ ] **[Medium] The frontend has no coverage measurement and roughly a third of its components have tests.**
   Five test files cover fourteen components. The backend enforces 95.1% and the frontend enforces nothing, so the untested half is invisible rather than merely untested. `HelpPage`, `AboutPage`, `VoicePicker`, `PipelineProgress` and `SegmentWorkspace` have no direct tests.
@@ -77,9 +77,9 @@ in good shape and the review found nothing to say about them.
 
 ## Operations and supply chain
 
-* [ ] **[High] Nothing scans dependencies for known vulnerabilities.**
+* [x] **[High] Nothing scans dependencies for known vulnerabilities.** — *Fixed.*
   Neither workflow runs `pip-audit`, `osv-scanner`, or npm's audit, and the project pulls a large transitive surface — torch, spacy, stanza, onnxruntime and their dependencies. A GPL-licensed local tool still ships code that parses untrusted media.
-  *Do:* add `uv run pip-audit` and `pnpm audit --audit-level=high` to CI as a separate non-blocking job first, then make it blocking once the baseline is clean. Dependabot or Renovate would also close the gap between "pinned" and "pinned and maintained".
+  *Done:* `.github/workflows/audit.yml`, on every push and pull request and daily at 05:23 — a disclosure does not wait for the next commit. `pip-audit` runs against the *exported lockfile* rather than the installed environment, because this project's own package is installed editable and is not on PyPI, which `pip-audit` reports as an error that neither `--strict` nor `--skip-editable` can get past. The default install is audited strictly and blocks: it is clean today, and it is what every user gets. The provider extras are audited too but reported rather than enforced — torch is held at 2.2.2 by a `numpy<2` constraint from the separation stack, so those findings cannot be closed by bumping a pin here, and a permanently red gate teaches people to ignore it. Both `pnpm audit --audit-level=high` runs are blocking and clean.
 
 * [ ] **[Medium] Released artifacts carry no provenance or signature.**
   `release.yml` builds a wheel and an sdist and uploads them. Anyone downloading has no way to verify they came from this repository and this commit, which matters more for a GPL tool people are invited to self-host.
@@ -95,19 +95,49 @@ in good shape and the review found nothing to say about them.
 
 ## Interface
 
-* [ ] **[Medium] Translation is half finished, and nothing detects the half that is missing.**
+* [x] **[Medium] Translation is half finished, and nothing detects the half that is missing.** — *Fixed.*
   `SegmentEditor` and `ErrorAlert` contain no `useT` at all, and `ProjectPage` still has hardcoded English — "Loading project…", "German preview", "The export includes German and original audio tracks." A reader who selects Croatian gets a mixture, which is worse than English throughout because it looks broken rather than untranslated.
-  *Do:* finish the two components and the remaining `ProjectPage` strings, then add a lint rule (`eslint-plugin-i18next` or a custom rule) that fails on literal text in JSX so the next English string cannot be added silently.
+  *Done:* both components, the eleven `ProjectPage` strings, and more than the finding listed — project states, job statuses, stage names and segment flags were all rendering the raw value the server sends. `ErrorAlert` now translates a heading from the error's stable code and keeps the server's own sentence underneath as the diagnostic; mirroring the backend's whole message catalogue in the browser would drift within a release. The guard is a test rather than a convention: it parses every component with the TypeScript compiler and fails on JSX text and on translated attributes written as literals, naming file, line and text. Stage and status keys are looked up defensively, so an older bundle against a newer server falls back to the server's English label instead of rendering `stage.deflicker`.
 
 * [ ] **[Low] Voice previews cannot be stopped once started.**
   `VoicePicker` creates an `Audio` element, disables the button while it plays, and offers no way to stop it. A voice sample is short, so this is a small annoyance rather than a fault — but selecting a different voice while one is playing leaves the previous sample playing over the new selection.
   *Do:* turn the button into play/stop, pause the current audio on unmount and on voice change, and keep the element in a ref rather than creating a new one per press.
 
-* [ ] **[Low] Queue position is invisible while a second project waits.**
+* [x] **[Low] Queue position is invisible while a second project waits.** — *Fixed.*
   Source inspection is prioritised so a newly added URL is analysed quickly, but once a dub is running the second project's own dub waits behind roughly fifteen stages with nothing on screen explaining the wait. The interface shows a project that is "ready" and apparently idle.
-  *Do:* expose the queued job count and position from the pipeline service and show "waiting for another project to finish" with the position. The data is already in the jobs table; only the endpoint and the label are missing.
+  *Done:* `RunProgress` carries `queue_position` and `queue_length`, and the processing screen says "Waiting for another project to finish" with the position when more than one is queued. The position comes from the same `_runnable_in_claim_order` the worker claims through, shared deliberately: a position derived from a second, similar query would be a position in a queue nobody works from, and the page would confidently show the wrong wait.
 
 ---
+
+## Found since this review
+
+Two defects the review did not catch, found by a user adding a second video during a
+40-minute dub and getting `500` three times. Both are fixed; both are recorded here because
+the review said the concurrency work was done, and it was not.
+
+* [x] **[High] Reporting progress took the write lock and held it for the work that followed.**
+  The review's third High finding moved the *stage* out of the job's transaction, which was
+  correct and insufficient. `_report` still ended in `session.flush()`, and a handler that
+  announces what it is about to do and then does it — `progress(0.1, "using faster-whisper")`
+  followed by two minutes of recognition — took the lock with the announcement. Every API
+  write in that window failed with "database is locked". The same flush also kept the update
+  inside the worker's transaction where the API could not read it, so the progress bar stood
+  still between checkpoints.
+  *Done:* `_report` commits and renews the lease. Two tests fail against the previous code:
+  one creates a project while a stage that reported progress and has no checkpoint is
+  running, one reads the progress from another connection before the stage ends.
+  *Lesson:* the rule was known and written down, and was broken anyway by the smallest line
+  in the handler. It needed a test at the level the defect appears at, not a docstring.
+
+* [x] **[Medium] A create that failed left its project workspace on disk.**
+  The workspace directory is made inside the database transaction. The filesystem does not
+  roll back, so each failed click left an orphan directory with no row referring to it —
+  invisible in the interface, not removed by "delete everything", accounted for by nothing.
+  Three accumulated in one session.
+  *Done:* the create removes the directory if the transaction does not complete, through the
+  artifact store rather than a second transaction, because the failure being recovered from
+  is often the database itself. This is the same class as the open `delete_all` finding
+  above, which remains.
 
 ## Suggested order
 
@@ -116,5 +146,7 @@ inconvenience: schema ownership, the resumability contract, and the lease. The d
 scan is High for a different reason — it is the only finding here that someone outside this
 repository could exploit, and it is an afternoon's work.
 
-Nothing in this list is urgent enough to hold a release. The application works, the gate is
-honest, and every finding above is a known gap rather than a surprise.
+All five High findings are now closed, along with the concurrency ADR, the translation gap
+and the invisible queue. What remains is nine Medium and three Low findings, none urgent
+enough to hold a release: the application works, the gate is honest, and every finding above
+is a known gap rather than a surprise.

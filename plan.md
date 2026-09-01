@@ -445,3 +445,52 @@ from. Every action carries an explanation, in all four languages.
 
 The cancellation test is load-bearing: with the runner wiring removed it waits out the full
 sixty-second subprocess instead of stopping within one.
+
+## 23. Make a second video safe, visible, and explicable · `COMPLETE`
+
+Raised by a real session: a 40-minute dub was running, a second URL was pasted, and the
+browser answered "something went wrong. Check the server log for details." Three times.
+
+Four separate faults, found by reading the evidence rather than guessing. The recorded
+events showed a progress report at 11:15:20 and then nothing until the run was cancelled at
+11:17:34, and the data directory held three project workspaces with no matching database
+rows -- one per click.
+
+- **The write lock was held for the length of the work.** Moving the stage out of the job's
+  transaction had been done already; what had not was progress reporting, which ended in a
+  flush. `handle_transcribe` announces "using faster-whisper" and only then recognises
+  speech, so the lock was taken by the announcement and held for the two minutes that
+  followed. Every API write in that window waited out the 10-second busy timeout and
+  failed. Reporting now commits and renews the lease, exactly as a checkpoint does. Two
+  tests, both failing against the previous code: one creates a project while a stage that
+  reported progress and has no checkpoint is running, one asserts a second connection can
+  read the progress before the stage ends -- because the same flush also made the progress
+  bar stand still.
+- **A failed create left its workspace behind.** The directory is made inside the database
+  transaction and the filesystem does not roll back, so each failure left an orphan that
+  nothing accounted for and "delete everything" did not remove. The create now undoes it,
+  through the artifact store rather than another transaction, because the failure being
+  recovered from is often the database itself.
+- **The message was a shrug.** Lower case, and it named a log that did not exist: output
+  went to the stderr of whichever terminal started the server. There is now a rotating file
+  at `<data_dir>/logs/germandubi.log`, every unexpected error carries an eight-character
+  reference logged with its traceback, and the error body carries both the reference and
+  the path. `germandubi doctor`, the help page and the troubleshooting guide name the same
+  path -- the help page reads it from the running server rather than hardcoding a guess.
+- **The wait was invisible.** A project queued behind another showed a bar at zero with no
+  running stage, which is indistinguishable from a hang. `RunProgress` now carries
+  `queue_position` and `queue_length`, computed from the same claim order the worker
+  follows -- a second, similar query would be a position in a queue nobody works from.
+
+The isolation model itself was already right and is now written down: one worker under an
+exclusive `flock`, one workspace per project, short write transactions, one claim order,
+one lease per job. `docs/adr/0012-short-transactions-around-stages.md` records it with the
+rejected alternative, and `c4.md` has a table of what is shared and how projects are kept
+apart.
+
+Also in this step, because the same session made it obvious: the interface was half
+translated. `SegmentEditor` and `ErrorAlert` used no catalogue at all, `ProjectPage` had
+eleven hardcoded strings, and every status badge, stage name and segment flag rendered the
+raw value the server sends. All four languages are now complete, and a test parses every
+component with the TypeScript compiler and fails on JSX text written as a literal, so the
+next English string cannot be added silently.

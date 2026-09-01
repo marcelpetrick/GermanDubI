@@ -222,15 +222,24 @@ network, no YouTube, no multi-gigabyte model**.
 
 ## 7. Working on the pipeline
 
-**A stage handler must be safe to run twice.** `context.checkpoint()` commits what the
-stage has written so far -- that is what stops a long stage from holding the database's
-write lock and locking out the API. The consequence is that a stage which fails part-way
-leaves its earlier work behind, and the retry meets it.
+**A stage handler must be safe to run twice.** `context.checkpoint()` and
+`context.progress()` both commit what the stage has written so far -- that is what stops a
+long stage from holding the database's write lock and locking out the API. The consequence
+is that a stage which fails part-way leaves its earlier work behind, and the retry meets it.
 
 Write handlers accordingly: look for your own output before producing it, the way speech
 synthesis skips a segment that already has audio. A handler that assumes its writes will
 roll back will corrupt a project on its second attempt, and the pipeline retries every
 stage twice by default.
+
+**Nothing may hold a database transaction across work.** Not a model call, not a
+subprocess, not a sleep. This rule was known, written down, and broken anyway -- twice, both
+times shipping a 500 to a user who added a second video. The second time it was
+`session.flush()` at the end of progress reporting, three characters of intent in the most
+innocuous line of the handler. `docs/adr/0012-short-transactions-around-stages.md` has the
+whole history, including the alternative that deadlocks. If you add a write path that runs
+before something slow, add a test that starts the slow thing and asserts a concurrent write
+does not wait: a rule that only lives in a docstring is one you will break.
 
 Stages are registered handlers in `worker/handlers/`, wired by the planner into a
 persisted dependency graph. To add or change a stage:
