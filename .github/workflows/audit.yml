@@ -1,0 +1,77 @@
+name: Dependency audit
+
+# Pinning is not maintenance. Every version in this repository is exact, which makes builds
+# reproducible and does nothing whatsoever about a vulnerability disclosed after the pin was
+# written. This is the part that notices.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # A disclosure does not wait for the next commit.
+    - cron: "23 5 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+
+      # The resolved lockfile, not the installed environment: this project's own package is
+      # installed editable and is not on PyPI, which pip-audit reports as an error it cannot
+      # skip. Exporting also means the audit needs no provider stack installed to run.
+      - name: Export the resolved dependencies
+        run: |
+          uv export --format requirements-txt --no-emit-project --no-dev \
+            --quiet --output-file default.txt
+          uv export --format requirements-txt --no-emit-project --no-dev --all-extras \
+            --quiet --output-file extras.txt
+
+      # What every user gets, and what the wheel declares. Blocking.
+      - name: Audit the default install
+        run: uv run --with pip-audit pip-audit --strict --progress-spinner off -r default.txt
+
+      # The optional provider stacks, which drag in torch and its transitive surface. Held
+      # back by a numpy<2 constraint from the separation stack, so this reports findings that
+      # cannot be fixed by bumping a pin here -- it is a standing report, not a gate, and it
+      # is read rather than enforced. Making it blocking would only teach people to ignore a
+      # red build.
+      - name: Audit the provider extras
+        continue-on-error: true
+        run: uv run --with pip-audit pip-audit --progress-spinner off -r extras.txt
+
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Install
+        run: |
+          cd frontend && pnpm install --frozen-lockfile
+          cd ../e2e && pnpm install --frozen-lockfile
+
+      - name: Audit frontend dependencies
+        run: cd frontend && pnpm audit --audit-level=high
+
+      - name: Audit end-to-end dependencies
+        run: cd e2e && pnpm audit --audit-level=high

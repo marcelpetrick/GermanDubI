@@ -1,0 +1,66 @@
+name: Real providers
+
+# Every gate in this repository runs against deterministic fakes, which is right for a
+# pull request and proves nothing about the models. This is the counterpart: it installs
+# the real provider stacks and exercises them.
+#
+# It is scheduled rather than triggered by a push, and it does not gate anything. What it
+# catches is upstream breakage -- a model host changing, a source site changing, a new
+# release of a provider regressing -- which arrives on its own schedule rather than ours,
+# and which a contributor cannot have caused.
+on:
+  schedule:
+    # Weekly. More often costs model downloads for a class of failure that is not sudden.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: providers
+  cancel-in-progress: false
+
+jobs:
+  real-providers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+
+      # yt-dlp cannot get formats from YouTube without solving a JavaScript challenge, and
+      # needs a runtime to do it. Without this the failure reads "This video is not
+      # available", which points nowhere near the cause.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install every real provider
+        run: make install-providers
+
+      - name: Report the environment
+        run: uv run germandubi doctor
+
+      - name: Run the real-provider tests
+        run: make test-real
+
+      - name: Dub a real source end to end
+        # Bounded to an excerpt: this is a check that the pipeline still produces German
+        # from a real video, not a benchmark. Timings from a shared runner mean nothing.
+        run: ./scripts/benchmark_real_dub.py --excerpt-seconds 60
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: real-provider-measurement
+          path: docs/benchmarks/real-dub.json
+          retention-days: 30
