@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from germandubi.api.app import API_PREFIX, create_app
+from germandubi.application.services.projects import ProjectService
 from germandubi.composition import Application, build_application
 from germandubi.config import Settings
 from tests.fixtures.media import make_narration_video
@@ -513,23 +514,29 @@ class TestUnexpectedFailures:
     A user hit this for real: adding a second video during a dub returned 500 and the
     browser said "something went wrong. Check the server log for details." -- lower case,
     and silent about which log and where.
+
+    The failure is injected into a real endpoint rather than a route added for the test. A
+    test route is appended after the single-page-app catch-all and never matches once the
+    frontend has been built, which makes the test pass or fail depending on whether someone
+    ran the build.
     """
 
+    @staticmethod
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        msg = "an unanticipated failure"
+        raise RuntimeError(msg)
+
     def test_the_generic_error_names_a_reference_and_the_log(
-        self, tmp_path: Path, clip: Path
+        self, tmp_path: Path, clip: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         settings = Settings(data_dir=tmp_path / "data", log_file=tmp_path / "logs" / "server.log")
         wired = build_application(settings, fixture=clip)
         api = create_app(settings, application=wired)
-
-        @api.get(f"{API_PREFIX}/boom")
-        async def boom() -> None:
-            msg = "an unanticipated failure"
-            raise RuntimeError(msg)
+        monkeypatch.setattr(ProjectService, "list_projects", self._boom)
 
         try:
             with TestClient(api, raise_server_exceptions=False) as client:
-                response = client.get(f"{API_PREFIX}/boom")
+                response = client.get(f"{API_PREFIX}/projects")
         finally:
             wired.dispose()
 
@@ -542,20 +549,18 @@ class TestUnexpectedFailures:
         # The reference is what lets a reader find their own failure in a shared log.
         assert len(body["details"]["reference"]) == 8
 
-    def test_the_reference_differs_between_failures(self, tmp_path: Path, clip: Path) -> None:
+    def test_the_reference_differs_between_failures(
+        self, tmp_path: Path, clip: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         settings = Settings(data_dir=tmp_path / "data")
         wired = build_application(settings, fixture=clip)
         api = create_app(settings, application=wired)
-
-        @api.get(f"{API_PREFIX}/boom")
-        async def boom() -> None:
-            msg = "an unanticipated failure"
-            raise RuntimeError(msg)
+        monkeypatch.setattr(ProjectService, "list_projects", self._boom)
 
         try:
             with TestClient(api, raise_server_exceptions=False) as client:
-                first = client.get(f"{API_PREFIX}/boom").json()
-                second = client.get(f"{API_PREFIX}/boom").json()
+                first = client.get(f"{API_PREFIX}/projects").json()
+                second = client.get(f"{API_PREFIX}/projects").json()
         finally:
             wired.dispose()
 
