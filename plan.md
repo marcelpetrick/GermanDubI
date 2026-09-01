@@ -494,3 +494,34 @@ eleven hardcoded strings, and every status badge, stage name and segment flag re
 raw value the server sends. All four languages are now complete, and a test parses every
 component with the TypeScript compiler and fails on JSX text written as a literal, so the
 next English string cannot be added silently.
+
+## 24. Bootstrap in one command, and survive a delete mid-dub · `COMPLETE`
+
+Two more faults from the same session, both reported by watching it happen rather than by
+reading code.
+
+- **The worker died and took everything with it.** A 40-minute separation was running when
+  the project was deleted; the stage finished, wrote its artifact row for a project that no
+  longer existed, and SQLite refused with a foreign-key violation. That poisoned the
+  session, so recording the failure raised in turn, and the exception left `run_once`, left
+  `run_forever`, and ended the process. Every other project then sat in "probing"
+  indefinitely — which reads as a broken probe stage and was an absent worker. Reachable
+  only *because* step 23 stopped the worker holding the write lock: the delete would
+  previously have failed with "database is locked". Three fixes, because one is not enough:
+  a run that no longer exists counts as cancelled (so a delete stops the subprocess rather
+  than letting it write 400 MB into a deleted directory), a stage's outcome is recorded on a
+  fresh transaction, and the loop carries on after an unexpected error.
+- **A clean clone did not reliably become a working installation.** `make setup` installed
+  without checking that the four host prerequisites were there, so a missing `ffmpeg` or a
+  Node from two years ago surfaced much later as something that looked like a bug here. And
+  the README listed `yt-dlp` and "a JavaScript runtime" as manual prerequisites when both
+  are already provided — which is how one of them came to be missing in the first place.
+  `scripts/preflight` is now the single check, run by `make setup` and by the gate.
+- **The gate disabled the product it was testing.** `uv sync --locked` uninstalled the
+  provider extras every run, so "run the gate, then dub something" left a machine that could
+  not dub. It now restores what it found, on every exit path including a failed run and
+  Ctrl-C. The gate still runs lean: a machine with the real stacks must not pass a gate a
+  clean checkout would fail.
+
+Verified the way the claim is made: cloned the repository into an empty directory, ran
+`make setup`, and read the closing `doctor` report — "Ready to dub".

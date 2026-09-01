@@ -85,9 +85,9 @@ in good shape and the review found nothing to say about them.
   `release.yml` builds a wheel and an sdist and uploads them. Anyone downloading has no way to verify they came from this repository and this commit, which matters more for a GPL tool people are invited to self-host.
   *Do:* add `actions/attest-build-provenance` after the build step and publish the attestation with the release. It needs `id-token: write` and about five lines.
 
-* [ ] **[Medium] The gate silently removes the providers needed to use the product.**
+* [x] **[Medium] The gate silently removes the providers needed to use the product.** — *Fixed.*
   `uv sync --locked` in `localPipeline.sh` uninstalls the optional extras every run, so the sequence "run the gate, then dub something" leaves a machine that cannot dub. It is documented in three places, which is itself the evidence that it surprises people — it caught this project's own maintainer twice during development.
-  *Do:* have the pipeline detect that the extras were present before the sync and restore them at the end, or print a closing line naming `make install-providers` when it removed them. The gate should not leave the machine less capable than it found it.
+  *Done:* the first of the two. The gate lists the installed provider distributions before `uv sync`, and restores exactly those extras on the way out — on every exit path, including a failed run and Ctrl-C, which is when nobody is looking. It still runs against the lean set, because a machine with the real stacks must not pass a gate a clean checkout would fail. Alongside it, `scripts/preflight` became the one implementation of the prerequisite check, shared by `make setup` and the gate, and the README stopped listing `yt-dlp` and "a JavaScript runtime" as manual prerequisites — both are already provided, and listing them as manual is how one of them came to be missing. Verified by cloning into an empty directory and running `make setup`, which ends at "Ready to dub".
 
 * [ ] **[Low] The wheel smoke test only checks that the CLI reports a version.**
   `release.yml` installs the built wheel and runs `germandubi version`. That proves the package imports and the entry point is wired; it would not catch a missing template, an unpackaged migration, or a broken static bundle.
@@ -139,6 +139,23 @@ the review said the concurrency work was done, and it was not.
   is often the database itself. This is the same class as the open `delete_all` finding
   above, which remains.
 
+* [x] **[High] Deleting a project while its stage ran killed the worker process.**
+  Separation of a 40-minute source was running; the project was deleted; the stage finished
+  and tried to write its artifact row for a project that no longer existed. SQLite refused
+  with a foreign-key violation, which left the session unusable, and recording "this job
+  failed" went through that same session and raised `PendingRollbackError`. Nothing caught
+  it, so the worker process ended. Every other project then sat in "probing" indefinitely,
+  which reads as a broken probe stage and was an absent worker.
+  *Done:* a run that no longer exists counts as cancelled, so a delete stops the work
+  promptly and terminates the subprocess rather than letting it finish and write 400 MB into
+  a directory that was just removed. A stage's outcome is recorded on a transaction of its
+  own, so a poisoned session cannot take down the recording of the failure it caused. And
+  the worker loop carries on after an unexpected error instead of exiting, because one bad
+  job must never stop processing everything silently.
+  *Lesson:* the same one, again. Removing the write-lock defect is what made this reachable
+  — the delete would previously have failed with "database is locked". A fix that removes
+  one failure mode exposes the next.
+
 ## Suggested order
 
 The first three High findings are the ones that can produce wrong state rather than
@@ -146,7 +163,11 @@ inconvenience: schema ownership, the resumability contract, and the lease. The d
 scan is High for a different reason — it is the only finding here that someone outside this
 repository could exploit, and it is an afternoon's work.
 
-All five High findings are now closed, along with the concurrency ADR, the translation gap
-and the invisible queue. What remains is nine Medium and three Low findings, none urgent
-enough to hold a release: the application works, the gate is honest, and every finding above
-is a known gap rather than a surprise.
+All five High findings are now closed, along with the concurrency ADR, the translation gap,
+the invisible queue and the gate that disabled the product it was testing. What remains is
+eight Medium and three Low findings, none urgent enough to hold a release: the application
+works, the gate is honest, and every finding above is a known gap rather than a surprise.
+
+The three defects under "found since this review" are the more interesting result. All three
+were in code this review had just declared sound, and each was exposed by the fix before it.
+That is an argument for the tests that accompany them rather than for more review.
