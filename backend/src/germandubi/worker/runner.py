@@ -23,7 +23,12 @@ from germandubi.application.services.unit_of_work import UnitOfWork, UnitOfWorkF
 from germandubi.config import Settings
 from germandubi.domain.entities.pipeline import Job, JobStatus
 from germandubi.domain.entities.project import ProjectState
-from germandubi.domain.errors import CancelledError, GermanDubIError, ResourceError
+from germandubi.domain.errors import (
+    CancelledError,
+    GermanDubIError,
+    NotFoundError,
+    ResourceError,
+)
 from germandubi.infrastructure.providers.registry import ProviderRegistry
 from germandubi.worker.context import StageContext
 from germandubi.worker.handlers import HANDLERS
@@ -40,6 +45,21 @@ _CANCELLATION_POLL_S: Final = 0.5
 def _NEVER_CANCELLED() -> bool:  # noqa: N802 - used as a sentinel callable
     """The process runner's resting state: nothing to cancel."""
     return False
+
+
+@dataclass(frozen=True, slots=True)
+class _Outcome:
+    """How a stage ended, decided inside its transaction and written outside it.
+
+    Attributes:
+        cancelled: The cancellation, when the stage stopped because it was asked to.
+        error: The message to record, when the stage failed.
+        code: The stable error code for that message.
+    """
+
+    cancelled: CancelledError | None = None
+    error: str = ""
+    code: str = "internal_error"
 
 
 @dataclass
@@ -110,11 +130,25 @@ class Worker:
             handle.close()
 
     def run_forever(self) -> None:
-        """Claim and execute jobs until asked to stop."""
+        """Claim and execute jobs until asked to stop.
+
+        One job's failure must never end the loop. A worker that exits on an unexpected
+        error stops processing everything, silently -- the interface goes on showing a
+        project as "probing" for as long as anyone is willing to wait, because the thing
+        that would have moved it is no longer running. That happened: an integrity error
+        from a stage whose project had just been deleted propagated out of here and killed
+        the process.
+
+        `Exception`, not `BaseException`: Ctrl-C and a shutdown signal must still stop it.
+        """
         logger.info("worker started; polling for work")
         idle_since: float | None = None
         while not self.stopping:
-            executed = self.run_once()
+            try:
+                executed = self.run_once()
+            except Exception:
+                logger.exception("the worker hit an unexpected error; carrying on")
+                executed = False
             if executed:
                 idle_since = None
                 continue
@@ -233,49 +267,83 @@ class Worker:
             self.registry.runner.cancelled = _NEVER_CANCELLED
 
     def _run_stage(self, job: Job, cancelled: Callable[[], bool], started: float) -> None:
-        """Execute the stage itself, with the outcome recorded in one short transaction."""
+        """Execute the stage, then record what happened in a transaction of its own.
+
+        The outcome is deliberately *not* written through the stage's own unit of work. A
+        stage can fail by poisoning its session -- an integrity error during flush leaves it
+        in a state where every further statement raises ``PendingRollbackError`` -- and
+        recording "this job failed" through that same session then fails too, which took the
+        whole worker process down with it. The stage transaction is closed first, then the
+        outcome is written on a clean one.
+        """
         handler = HANDLERS[job.stage]
-        with self.unit_of_work() as uow:
-            project = uow.projects.get(job.project_id)
-            run = uow.jobs.get_run(job.run_id)
-            context = StageContext(
-                uow=uow,
-                registry=self.registry,
-                settings=self.settings,
-                project=project,
-                run=run,
-                job=job,
-                # Progress and cancellation stay on this one connection. Giving them their
-                # own would mean a second connection trying to write while this one holds
-                # the write lock, which is a deadlock the process has with itself.
-                report=lambda fraction, detail: self._report(uow, job, fraction, detail),
-                is_cancelled=cancelled,
-                release=lambda: self._release(uow, job),
-            )
-
-            try:
+        outcome: _Outcome
+        try:
+            with self.unit_of_work() as uow:
+                project = uow.projects.get(job.project_id)
+                run = uow.jobs.get_run(job.run_id)
+                context = StageContext(
+                    uow=uow,
+                    registry=self.registry,
+                    settings=self.settings,
+                    project=project,
+                    run=run,
+                    job=job,
+                    # Progress and cancellation stay on this one connection. Giving them
+                    # their own would mean a second connection trying to write while this
+                    # one holds the write lock, which is a deadlock the process has with
+                    # itself.
+                    report=lambda fraction, detail: self._report(uow, job, fraction, detail),
+                    is_cancelled=cancelled,
+                    release=lambda: self._release(uow, job),
+                )
                 handler(context)
-            except CancelledError as exc:
-                self._finish_cancelled(uow, job, exc)
-                return
-            except GermanDubIError as exc:
-                self._finish_failed(uow, job, exc.message, code=exc.code)
-                return
-            except Exception as exc:
-                logger.exception("stage %s raised an unexpected error", job.stage)
-                self._finish_failed(uow, job, f"unexpected error: {exc}", code="internal_error")
-                return
 
-            elapsed = time.monotonic() - started
-            uow.jobs.save_job(job.transition_to(JobStatus.SUCCEEDED))
-            uow.events.append(
-                project.id,
-                "stage_finished",
-                {"stage": job.stage.value, "seconds": round(elapsed, 2)},
-                run_id=run.id,
-            )
-            self._finish_run_if_complete(uow, job)
-            logger.info("[%s] %s finished in %.1fs", project.id, job.stage.label, elapsed)
+                elapsed = time.monotonic() - started
+                uow.jobs.save_job(job.transition_to(JobStatus.SUCCEEDED))
+                uow.events.append(
+                    project.id,
+                    "stage_finished",
+                    {"stage": job.stage.value, "seconds": round(elapsed, 2)},
+                    run_id=run.id,
+                )
+                self._finish_run_if_complete(uow, job)
+                logger.info("[%s] %s finished in %.1fs", project.id, job.stage.label, elapsed)
+        except CancelledError as exc:
+            outcome = _Outcome(cancelled=exc)
+        except NotFoundError:
+            # The project was deleted while its stage was running. Nothing to record: the
+            # run and its jobs went with it. Not an error, and certainly not a crash.
+            logger.info("project %s disappeared while %s ran", job.project_id, job.stage)
+            return
+        except GermanDubIError as exc:
+            outcome = _Outcome(error=exc.message, code=exc.code)
+        except Exception as exc:
+            logger.exception("stage %s raised an unexpected error", job.stage)
+            outcome = _Outcome(error=f"unexpected error: {exc}", code="internal_error")
+        else:
+            return
+
+        self._record_outcome(job, outcome)
+
+    def _record_outcome(self, job: Job, outcome: _Outcome) -> None:
+        """Write a failed or cancelled stage's outcome on a transaction of its own.
+
+        Tolerates the job having vanished: deleting a project cascades to its runs and jobs,
+        so a stage interrupted by a delete has nothing left to write to.
+        """
+        try:
+            with self.unit_of_work() as uow:
+                if outcome.cancelled is not None:
+                    self._finish_cancelled(uow, job, outcome.cancelled)
+                else:
+                    self._finish_failed(uow, job, outcome.error, code=outcome.code)
+        except NotFoundError:
+            logger.info("project %s disappeared while %s ran", job.project_id, job.stage)
+        except Exception:
+            # Last line of defence. Failing to record a failure must not stop the worker
+            # from picking up the next job; the lease expires and the job is retried.
+            logger.exception("could not record the outcome of stage %s", job.stage)
 
     # --- outcomes -----------------------------------------------------------------------
 

@@ -1029,15 +1029,28 @@ class JobRepository:
         self.session.execute(update(RunRow).values(cancelled=True))
 
     def is_cancelled(self, run_id: RunId) -> bool:
-        """Return whether cancellation has been requested for a run.
+        """Return whether a run should stop.
+
+        A run that no longer exists counts as cancelled. Deleting a project cascades its runs
+        and jobs away while the worker may be minutes into a stage, and the only sensible
+        answer to "should this keep going" is no. Reading it as "not cancelled" let the stage
+        run to completion and then try to write an artifact for a project that was gone,
+        which SQLite refuses with a foreign-key violation.
+
+        This is also what makes a delete stop the work promptly: the cancellation probe is
+        wired into the process runner, so the FFmpeg or Demucs process actually running is
+        terminated rather than left to finish.
 
         Args:
             run_id: The run.
 
         Returns:
-            Whether the run is cancelled.
+            Whether the run is cancelled or gone.
         """
-        return bool(self.session.scalar(select(RunRow.cancelled).where(RunRow.id == str(run_id))))
+        cancelled = self.session.execute(
+            select(RunRow.cancelled).where(RunRow.id == str(run_id))
+        ).one_or_none()
+        return cancelled is None or bool(cancelled[0])
 
 
 def _job_to_row(job: Job) -> JobRow:

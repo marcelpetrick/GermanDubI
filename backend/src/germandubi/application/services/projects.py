@@ -162,6 +162,12 @@ class ProjectService:
     def delete(self, project_id: ProjectId) -> None:
         """Delete a project, its database rows and its workspace.
 
+        A project can be deleted while the worker is minutes into a stage for it. That is
+        handled where it has to be -- the run disappearing counts as a cancellation, so the
+        worker stops promptly and writes nothing for a project that is gone -- rather than
+        by cancelling here first, which would set a flag on a row this same operation is
+        about to delete.
+
         Args:
             project_id: The project.
 

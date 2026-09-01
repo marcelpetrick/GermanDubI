@@ -375,6 +375,121 @@ class TestTheQueue:
         assert [str(item) for item in waiting] == [str(second.id), str(first.id)]
 
 
+class TestAProjectDeletedMidStage:
+    """Deleting a project while the worker is inside its stage.
+
+    This took the worker process down. Separation of a 40-minute source ran for minutes; the
+    project was deleted from the interface; the stage finished and tried to write an artifact
+    row for a project that no longer existed, which SQLite refused with a foreign-key
+    violation. Recording "this job failed" then went through the same, now-poisoned session
+    and raised `PendingRollbackError`, which propagated out of the loop and killed the
+    process. Every other project sat in "probing" forever, because the thing that would have
+    moved them was gone.
+
+    It became reachable only once the worker stopped holding the write lock across a stage:
+    before that the delete would have failed with "database is locked" instead.
+    """
+
+    def test_the_worker_survives_and_says_what_happened(
+        self, application: Application, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        running = threading.Event()
+        deleted = threading.Event()
+
+        def stage_that_outlives_its_project(context: StageContext) -> None:
+            running.set()
+            assert deleted.wait(timeout=30), "the test never deleted the project"
+            # What the real handler does at the end of separation: publish an artifact.
+            context.event("wrote_something", {"after": "the project was deleted"})
+
+        project = application.projects.create_from_url(VALID_URL)
+        application.projects.request_analysis(project.id)
+        monkeypatch.setitem(HANDLERS, Stage.PROBE, stage_that_outlives_its_project)
+
+        worker = application.worker()
+        thread = threading.Thread(target=worker.run_once, daemon=True)
+        thread.start()
+        assert running.wait(timeout=30), "the stage never started"
+
+        application.projects.delete(project.id)
+        deleted.set()
+        thread.join(timeout=30)
+
+        assert not thread.is_alive(), "the worker did not finish the job"
+        assert application.projects.list_projects() == []
+
+    def test_the_loop_carries_on_when_a_job_raises_out_of_run_once(
+        self, application: Application, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An exception escaping `run_once` must not end the loop.
+
+        A worker that exits stops processing everything, and nothing says so: projects sit
+        in "probing" for as long as anyone is willing to wait.
+        """
+        worker = application.worker()
+        calls = {"count": 0}
+
+        def sometimes_explodes() -> bool:
+            calls["count"] += 1
+            if calls["count"] == 1:
+                msg = "an error no one anticipated"
+                raise RuntimeError(msg)
+            worker.stopping = True
+            return False
+
+        monkeypatch.setattr(worker, "run_once", sometimes_explodes)
+
+        worker.run_forever()  # must return, not raise
+
+        assert calls["count"] == 2, "the loop should have carried on past the failure"
+
+    def test_a_run_that_no_longer_exists_counts_as_cancelled(
+        self, application: Application
+    ) -> None:
+        """This is what stops a stage promptly when its project is deleted under it."""
+        project = application.projects.create_from_url(VALID_URL)
+        application.projects.request_analysis(project.id)
+        with application.unit_of_work() as uow:
+            run = uow.jobs.latest_run(project.id)
+        assert run is not None
+
+        with application.unit_of_work() as uow:
+            assert uow.jobs.is_cancelled(run.id) is False
+
+        application.projects.delete(project.id)
+
+        with application.unit_of_work() as uow:
+            assert uow.jobs.is_cancelled(run.id) is True
+
+    def test_a_deleted_project_stops_the_stage_it_was_running(
+        self, application: Application, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The stage must notice, rather than run on and write for a project that is gone."""
+        running = threading.Event()
+        stopped_early = threading.Event()
+
+        def long_stage(context: StageContext) -> None:
+            running.set()
+            for _ in range(300):  # 30 seconds if nothing interrupts it
+                context.checkpoint()
+                time.sleep(0.1)
+            stopped_early.clear()
+
+        monkeypatch.setitem(HANDLERS, Stage.PROBE, long_stage)
+        project = application.projects.create_from_url(VALID_URL)
+        application.projects.request_analysis(project.id)
+
+        worker = application.worker()
+        thread = threading.Thread(target=worker.run_once, daemon=True)
+        thread.start()
+        assert running.wait(timeout=30), "the stage never started"
+
+        application.projects.delete(project.id)
+        thread.join(timeout=15)
+
+        assert not thread.is_alive(), "deleting the project did not stop its stage"
+
+
 class TestResumability:
     """`checkpoint()` commits, so a stage must be safe to run again after failing part-way.
 
