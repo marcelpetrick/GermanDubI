@@ -112,7 +112,7 @@ def build_application(
 
     database = create_database(resolved.resolved_database_url)
     if create_schema:
-        database.create_all()
+        database.migrate()
 
     store = ArtifactStore(resolved.projects_dir)
     unit_of_work = UnitOfWorkFactory(database, store)

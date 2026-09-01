@@ -20,9 +20,22 @@ branch_labels = None
 depends_on = None
 
 
+def _has_column(table: str, column: str) -> bool:
+    """Return whether a column is already present.
+
+    A database created before migrations owned the schema is stamped at the base revision
+    and then upgraded, so a migration can meet a change that is already there. Checking
+    first is what makes that safe.
+    """
+    inspector = sa.inspect(op.get_bind())
+    return any(existing["name"] == column for existing in inspector.get_columns(table))
+
+
 def upgrade() -> None:
-    op.add_column("projects", sa.Column("voice", sa.String(length=64), nullable=True))
+    if not _has_column("projects", "voice"):
+        op.add_column("projects", sa.Column("voice", sa.String(length=64), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column("projects", "voice")
+    if _has_column("projects", "voice"):
+        op.drop_column("projects", "voice")

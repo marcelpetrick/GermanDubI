@@ -83,7 +83,7 @@ fallback_version = "0.0.0"
 where = ["backend/src"]
 
 [tool.setuptools.package-data]
-germandubi = ["py.typed", "**/*.sql", "alembic.ini", "**/*.mako"]
+germandubi = ["py.typed", "**/*.sql", "**/alembic.ini", "**/*.mako"]
 
 # --------------------------------------------------------------------------------------
 # Ruff

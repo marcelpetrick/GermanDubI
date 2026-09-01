@@ -16,15 +16,23 @@ from germandubi.infrastructure.db.models import Base
 
 config = context.config
 
-if config.config_file_name is not None:
+# `fileConfig` reconfigures logging for the whole process. That is what the `alembic` CLI
+# wants and the opposite of what the application wants: migrations run at startup, and
+# rebuilding the root logger there would silently discard the configuration the application
+# just installed. In-process callers pass `configure_logger=False`.
+if config.config_file_name is not None and config.attributes.get("configure_logger", True):
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
-_settings = get_settings()
-# A first-run migration must not fail merely because the data directory is not there yet.
-_settings.ensure_directories()
-config.set_main_option("sqlalchemy.url", _settings.resolved_database_url)
+# A caller running migrations in-process sets the URL on the config, which is how the
+# application migrates the database it is about to open and how a test migrates a
+# throwaway one. Only fall back to settings when nobody said, which is the `alembic` CLI.
+if not config.get_main_option("sqlalchemy.url", None):
+    _settings = get_settings()
+    # A first-run migration must not fail merely because the data directory is not there yet.
+    _settings.ensure_directories()
+    config.set_main_option("sqlalchemy.url", _settings.resolved_database_url)
 
 
 def run_migrations_offline() -> None:

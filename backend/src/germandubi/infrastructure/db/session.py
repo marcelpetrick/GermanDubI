@@ -11,12 +11,20 @@ import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
-from sqlalchemy import Engine, create_engine, event
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import Engine, create_engine, event, inspect
 from sqlalchemy.orm import Session, sessionmaker
 
 from germandubi.infrastructure.db.models import Base
+
+#: The first migration. A database that predates Alembic is stamped here before upgrading.
+_BASE_REVISION: Final = "11505ca091a8"
+_PACKAGE_ROOT: Final = Path(__file__).resolve().parents[1]
+_MIGRATIONS: Final = _PACKAGE_ROOT / "db" / "migrations"
+_ALEMBIC_INI: Final = _PACKAGE_ROOT / "db" / "alembic.ini"
 
 __all__ = ["Database", "create_database"]
 
@@ -79,11 +87,48 @@ class Database:
         finally:
             session.close()
 
-    def create_all(self) -> None:
-        """Create every table.
+    def migrate(self) -> None:
+        """Bring the database to the current schema.
 
-        Used by tests and by first start. Production schema changes go through Alembic;
-        see ``docs/development/migrations.md``.
+        Migrations are the only thing that creates or changes the schema. The alternative
+        -- ``metadata.create_all`` for new databases and Alembic for existing ones -- gives
+        the schema two owners: a fresh database is never stamped, so the first migration
+        against it fails with "table already exists", and an existing one never receives a
+        new column at all. That is not hypothetical; it is what happened when ``voice`` was
+        added to projects.
+
+        A database this application created before migrations owned the schema has tables
+        but no version. It is stamped at the base revision and then upgraded, which is safe
+        because each migration checks whether its change is already present.
+        """
+        config = self._alembic_config()
+        if self._needs_stamping():
+            command.stamp(config, _BASE_REVISION)
+        command.upgrade(config, "head")
+
+    def _alembic_config(self) -> Config:
+        """Return an Alembic config pointed at this database."""
+        config = Config(str(_ALEMBIC_INI))
+        config.set_main_option("script_location", str(_MIGRATIONS))
+        config.set_main_option(
+            "sqlalchemy.url", self.engine.url.render_as_string(hide_password=False)
+        )
+        # Leave the application's logging alone; see the note in the migration environment.
+        config.attributes["configure_logger"] = False
+        return config
+
+    def _needs_stamping(self) -> bool:
+        """Return whether this is a pre-Alembic database that already has tables."""
+        inspector = inspect(self.engine)
+        tables = set(inspector.get_table_names())
+        return bool(tables) and "alembic_version" not in tables
+
+    def create_all(self) -> None:
+        """Create every table directly from the models, without migrations.
+
+        For tests that want a schema in microseconds rather than a migration run. Anything
+        that ships uses :meth:`migrate`; a test asserts the two agree, so this staying fast
+        cannot let the two definitions drift apart.
         """
         Base.metadata.create_all(self.engine)
 

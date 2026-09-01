@@ -19,9 +19,9 @@ in good shape and the review found nothing to say about them.
 
 ## Correctness and data safety
 
-* [ ] **[High] The schema is created two different ways, and only one of them is used.**
+* [x] **[High] The schema is created two different ways, and only one of them is used.** — *Fixed.*
   `composition.py:115` calls `database.create_all()`, while `backend/src/germandubi/infrastructure/db/migrations/` holds Alembic migrations that nothing runs automatically. A fresh install gets its schema from SQLAlchemy metadata and is never stamped, so `alembic upgrade head` on it fails with "table already exists"; an existing install never receives new columns at all. This was hit for real when `projects.voice` was added — the fix required `alembic stamp` followed by `upgrade`, which no user would guess.
-  *Do:* pick one owner of the schema. The straightforward option is to run migrations at startup (`alembic upgrade head` against the configured URL) and delete `create_all`, stamping existing databases once on first run by detecting the `projects` table without an `alembic_version` row. Add a test that creates a database at the previous revision and upgrades it.
+  *Done:* migrations are the only owner. `Database.migrate()` runs `upgrade head` against the database being opened, and startup calls it instead of `create_all`. A database that predates Alembic is stamped at the base revision and upgraded, which is safe because each migration now checks whether its change is already present. `create_all` survives for tests that want a schema in 5 ms rather than 78 ms, and a drift test asserts the two produce identical columns so they cannot diverge again. Migrations no longer reconfigure the application's logging.
 
 * [ ] **[High] `checkpoint()` now commits, and no handler documents that it must tolerate this.**
   Committing mid-stage is what keeps the write lock short (`worker/context.py`), but it also means a stage that fails halfway leaves partial results behind. The synthesis handler happens to cope, because it skips segments that already have output; nothing states that as a requirement, and the next handler written will not know it.
