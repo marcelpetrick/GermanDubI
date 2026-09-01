@@ -140,3 +140,65 @@ def test_a_newly_added_url_is_inspected_before_a_running_dub_continues(
     assert claimed is not None
     assert claimed.stage is Stage.PROBE
     assert str(claimed.project_id) == str(second.id)
+
+
+def test_cancelling_terminates_the_running_subprocess(application: Application) -> None:
+    """Stop must reach the tool doing the work, not just the loop around it.
+
+    `ProcessRunner` was constructed without its `cancelled` callback, so cancelling never
+    terminated the ffmpeg, yt-dlp or Demucs process actually running. A stage would notice
+    only at its next checkpoint, and one that spends minutes inside a single external call
+    has no checkpoint to reach.
+    """
+    project = application.projects.create_from_url(VALID_URL)
+    application.projects.request_analysis(project.id)
+
+    with application.unit_of_work() as uow:
+        run = uow.jobs.latest_run(project.id)
+    assert run is not None
+
+    worker = application.worker()
+    # The worker wires the probe when it starts a stage; drive one job so that happens.
+    started = threading.Event()
+
+    def slow_stage(context: StageContext) -> None:
+        started.set()
+        # A long external command, exactly what cancellation has to interrupt.
+        context.registry.runner.run(["sleep", "60"], timeout_s=120)
+
+    original = HANDLERS[Stage.PROBE]
+    HANDLERS[Stage.PROBE] = slow_stage
+    try:
+        thread = threading.Thread(target=worker.run_once, daemon=True)
+        thread.start()
+        assert started.wait(timeout=30), "the stage never started"
+        time.sleep(1)  # let the subprocess actually start
+
+        application.pipeline.cancel_latest(project.id)
+
+        # Without cancellation reaching the process this waits the full 60 seconds.
+        thread.join(timeout=25)
+        assert not thread.is_alive(), "cancelling did not stop the running subprocess"
+    finally:
+        HANDLERS[Stage.PROBE] = original
+
+
+def test_reset_removes_every_project_and_its_workspace(application: Application) -> None:
+    first = application.projects.create_from_url(VALID_URL)
+    second = application.projects.create_from_url(SECOND_URL)
+    workspaces = [
+        application.store.workspace(first.id),
+        application.store.workspace(second.id),
+    ]
+    assert all(path.exists() for path in workspaces)
+
+    removed = application.projects.delete_all()
+
+    assert removed == 2
+    assert application.projects.list_projects() == []
+    # Files, not just rows: a clear that leaves workspaces behind frees nothing.
+    assert not any(path.exists() for path in workspaces)
+
+
+def test_reset_on_an_empty_installation_is_harmless(application: Application) -> None:
+    assert application.projects.delete_all() == 0

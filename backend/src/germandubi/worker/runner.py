@@ -11,8 +11,10 @@ from __future__ import annotations
 import logging
 import signal
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from types import FrameType
+from typing import Final
 
 from germandubi.application.services.unit_of_work import UnitOfWork, UnitOfWorkFactory
 from germandubi.config import Settings
@@ -26,6 +28,10 @@ from germandubi.worker.handlers import HANDLERS
 __all__ = ["Worker"]
 
 logger = logging.getLogger(__name__)
+
+#: How often the cancellation probe may hit the database while a subprocess runs. Frequent
+#: enough that a stop feels immediate, rare enough that polling costs nothing.
+_CANCELLATION_POLL_S: Final = 0.5
 
 
 @dataclass
@@ -109,6 +115,34 @@ class Worker:
         self._execute(claimed)
         return True
 
+    def _cancellation_probe(self, job: Job) -> Callable[[], bool]:
+        """Return a check for "has this run been cancelled", safe to poll.
+
+        Read on its own connection, for two reasons. The stage's transaction holds a
+        snapshot from before the cancellation was written, so asking it would answer "no"
+        until that transaction commits. And a reader never blocks on a writer under WAL,
+        which is what makes a second connection safe here where a second *writer* is not:
+        giving progress reporting its own connection deadlocked the process against itself.
+
+        Throttled, because the process runner polls this while a subprocess runs and a
+        query every tenth of a second buys nothing.
+        """
+        last = [0.0]
+        cached = [False]
+
+        def cancelled() -> bool:
+            if self.stopping or cached[0]:
+                return True
+            now = time.monotonic()
+            if now - last[0] < _CANCELLATION_POLL_S:
+                return cached[0]
+            last[0] = now
+            with self.unit_of_work() as uow:
+                cached[0] = uow.jobs.is_cancelled(job.run_id)
+            return cached[0]
+
+        return cancelled
+
     def _execute(self, job: Job) -> None:
         """Run one job's stage and record the outcome.
 
@@ -145,6 +179,12 @@ class Worker:
             )
         logger.info("[%s] %s", project.id, job.stage.label)
 
+        cancelled = self._cancellation_probe(job)
+        # Cancelling must reach the process actually doing the work. Without this a stop is
+        # only noticed at the next checkpoint, and a stage that spends minutes inside one
+        # FFmpeg or Demucs call has no checkpoint to reach.
+        self.registry.runner.cancelled = cancelled
+
         with self.unit_of_work() as uow:
             context = StageContext(
                 uow=uow,
@@ -157,7 +197,7 @@ class Worker:
                 # own would mean a second connection trying to write while this one holds
                 # the write lock, which is a deadlock the process has with itself.
                 report=lambda fraction, detail: self._report(uow, job, fraction, detail),
-                is_cancelled=lambda: self.stopping or uow.jobs.is_cancelled(job.run_id),
+                is_cancelled=cancelled,
                 release=uow.session.commit,
             )
 

@@ -78,6 +78,23 @@ export function useCreateAndAnalyzeProject() {
   });
 }
 
+export function useCancelProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.cancelProject(id),
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+}
+
+export function useResetEverything() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.deleteAllProjects(),
+    // Everything the cache held is gone, so nothing selective would be honest here.
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+}
+
 export function useDeleteProject() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -183,6 +183,26 @@ class PipelineService:
                 return None
             return RunProgress(run, uow.jobs.jobs_for_run(run.id))
 
+    def cancel_latest(self, project_id: ProjectId) -> bool:
+        """Cancel whatever this project is currently doing.
+
+        The project list shows work in progress but not which run is doing it, and asking
+        the browser to fetch a run id before it can press stop is a round trip for
+        something the server already knows.
+
+        Args:
+            project_id: The project to stop.
+
+        Returns:
+            Whether there was a run to cancel.
+        """
+        with self.unit_of_work() as uow:
+            run = uow.jobs.latest_run(project_id)
+            if run is None:
+                return False
+        self.cancel(run.id)
+        return True
+
     def cancel(self, run_id: RunId) -> None:
         """Request cancellation of a run.
 

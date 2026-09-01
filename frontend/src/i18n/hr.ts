@@ -31,12 +31,36 @@ export const hr: Catalogue = {
   'home.degradedHelp': 'Pokreni {command} da vidiš što nedostaje.',
   'home.newToThis': 'Prvi put ovdje? Pročitaj kako obrada teče.',
 
+  'home.stop': 'Zaustavi',
+  'home.stopHint':
+    'Odmah zaustavlja ovu sinkronizaciju. Dovršeni koraci ostaju i možeš nastaviti kasnije.',
+  'home.reset': 'Obriši sve',
+  'home.resetHint':
+    'Uklanja sve projekte i sve stvorene datoteke s ovog računala. To se ne može poništiti.',
+  'home.confirmReset':
+    'Obrisati svih {count} projekata i sve datoteke koje su stvorili? To se ne može poništiti.',
+  'home.resetDone': 'Sve je obrisano.',
+  'home.deleteHint': 'Obriši ovaj projekt i njegove datoteke.',
+  'home.busy': 'u tijeku',
+
   'voice.label': 'Njemački pripovjedač',
   'voice.play': 'Poslušaj glas',
   'voice.loading': 'Učitavanje…',
   'voice.notDownloaded': 'preuzima se pri prvoj upotrebi',
   'voice.hint': 'Odaberi glas i poslušaj ga prije početka.',
   'voice.sampleFailed': 'Uzorak se nije mogao reproducirati. Glas se možda još preuzima.',
+
+  'project.analyze': 'Analiziraj izvor',
+  'project.analyzeHint': 'Čita naslov, trajanje i titlove izvora bez preuzimanja.',
+  'project.start': 'Napravi njemačku sinkronizaciju',
+  'project.startHint': 'Pokreće cijelu obradu. Možeš je zaustaviti kad god i nastaviti kasnije.',
+  'project.cancel': 'Zaustavi obradu',
+  'project.cancelHint':
+    'Zaustavlja na sljedećoj sigurnoj točki i prekida alat koji trenutno radi. Dovršeni koraci ostaju.',
+  'project.resume': 'Nastavi nedovršeno',
+  'project.resumeHint': 'Nastavlja od zadnjeg dovršenog koraka.',
+  'project.download': 'Preuzmi',
+  'project.downloadHint': 'Sinkronizirani video, s izvornim zvukom kao drugom stazom.',
 
   'processing.title': 'Obrada',
   'processing.percentComplete': '{percent} % dovršeno',

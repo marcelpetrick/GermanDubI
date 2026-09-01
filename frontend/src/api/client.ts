@@ -82,6 +82,8 @@ export const api = {
       body: JSON.stringify(voice ? { url, voice } : { url }),
     }),
   deleteProject: (id: string) => request<undefined>(`/projects/${id}`, { method: 'DELETE' }),
+  deleteAllProjects: () => request<undefined>('/projects', { method: 'DELETE' }),
+  cancelProject: (id: string) => request<undefined>(`/projects/${id}/cancel`, { method: 'POST' }),
   analyzeProject: (id: string) => request<Run>(`/projects/${id}/analyze`, { method: 'POST' }),
 
   startRun: (id: string) =>

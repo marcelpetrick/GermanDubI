@@ -112,6 +112,46 @@ async def get_project(project_id: ProjectIdDep, projects: ProjectsDep) -> Projec
     return ProjectDetail.of(projects.get(project_id))
 
 
+@router.post(
+    "/{project_id}/cancel",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Stop this project",
+    description=(
+        "Stops whatever this project is currently doing. Work already finished is kept and "
+        "the run can be resumed later."
+    ),
+    responses=_ERRORS,
+    operation_id="cancelProject",
+)
+async def cancel_project(project_id: ProjectIdDep, pipeline: PipelineDep) -> None:
+    """Cancel the project's most recent run.
+
+    Args:
+        project_id: The project.
+        pipeline: The pipeline service.
+    """
+    pipeline.cancel_latest(project_id)
+
+
+@router.delete(
+    "",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete every project",
+    description=(
+        "Cancels anything still running, then deletes every project and its workspace. "
+        "This cannot be undone."
+    ),
+    operation_id="deleteAllProjects",
+)
+async def delete_all_projects(projects: ProjectsDep) -> None:
+    """Clear every project and its files.
+
+    Args:
+        projects: The project service.
+    """
+    projects.delete_all()
+
+
 @router.delete(
     "/{project_id}",
     status_code=status.HTTP_204_NO_CONTENT,

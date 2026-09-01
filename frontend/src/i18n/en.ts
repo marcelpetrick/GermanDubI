@@ -37,12 +37,35 @@ export const en = {
   'home.degradedHelp': 'Run {command} to see what is missing.',
   'home.newToThis': 'New here? Read how the pipeline works.',
 
+  'home.stop': 'Stop',
+  'home.stopHint': 'Stop this dub now. Finished stages are kept and you can resume later.',
+  'home.reset': 'Delete everything',
+  'home.resetHint':
+    'Removes every project and all generated files from this machine. This cannot be undone.',
+  'home.confirmReset':
+    'Delete all {count} project(s) and every file they produced? This cannot be undone.',
+  'home.resetDone': 'Everything was deleted.',
+  'home.deleteHint': 'Delete this project and its files.',
+  'home.busy': 'working',
+
   'voice.label': 'German narrator',
   'voice.play': 'Hear this voice',
   'voice.loading': 'Loading…',
   'voice.notDownloaded': 'downloads on first use',
   'voice.hint': 'Pick a voice, then press play to hear it before you start.',
   'voice.sampleFailed': 'That sample could not be played. The voice may still be downloading.',
+
+  'project.analyze': 'Analyze source',
+  'project.analyzeHint': "Reads the source's title, length and captions without downloading it.",
+  'project.start': 'Create German dub',
+  'project.startHint': 'Runs the whole pipeline. You can stop it at any time and resume later.',
+  'project.cancel': 'Stop processing',
+  'project.cancelHint':
+    'Stops at the next safe point and terminates the tool currently running. Finished stages are kept.',
+  'project.resume': 'Resume unfinished work',
+  'project.resumeHint': 'Continues from the last stage that finished.',
+  'project.download': 'Download',
+  'project.downloadHint': 'The dubbed video, with the original audio kept as a second track.',
 
   'processing.title': 'Processing',
   'processing.percentComplete': '{percent}% complete',

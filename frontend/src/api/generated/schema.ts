@@ -82,7 +82,11 @@ export interface paths {
          * @description Creates a dubbing project from a YouTube URL or a local file. The URL is validated against a host allowlist before anything is stored or downloaded.
          */
         post: operations["createProject"];
-        delete?: never;
+        /**
+         * Delete every project
+         * @description Cancels anything still running, then deletes every project and its workspace. This cannot be undone.
+         */
+        delete: operations["deleteAllProjects"];
         options?: never;
         head?: never;
         patch?: never;
@@ -117,6 +121,26 @@ export interface paths {
          * @description Deletes the project and everything in its workspace. This cannot be undone.
          */
         delete: operations["deleteProject"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop this project
+         * @description Stops whatever this project is currently doing. Work already finished is kept and the run can be resumed later.
+         */
+        post: operations["cancelProject"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1304,6 +1328,24 @@ export interface operations {
             };
         };
     };
+    deleteAllProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getProject: {
         parameters: {
             query?: never;
@@ -1370,6 +1412,55 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description No such project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The project is in the wrong state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The request was not acceptable. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancelProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description No such project. */
             404: {

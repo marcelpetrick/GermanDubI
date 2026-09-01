@@ -972,6 +972,14 @@ class JobRepository:
             .values(status=JobStatus.CANCEL_REQUESTED.value)
         )
 
+    def cancel_all(self) -> None:
+        """Mark every run cancelled.
+
+        Used when clearing all work: a stage still running would otherwise recreate the
+        workspace directory it is writing into, moments after it was deleted.
+        """
+        self.session.execute(update(RunRow).values(cancelled=True))
+
     def is_cancelled(self, run_id: RunId) -> bool:
         """Return whether cancellation has been requested for a run.
 

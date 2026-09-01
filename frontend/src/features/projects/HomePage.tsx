@@ -3,14 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { ErrorAlert } from '@/components/ErrorAlert';
 import {
+  useCancelProject,
   useCreateAndAnalyzeProject,
   useDeleteProject,
   useHealth,
   useProjects,
+  useResetEverything,
 } from '@/hooks/queries';
 import { VoicePicker } from '@/features/projects/VoicePicker';
 import { useT } from '@/i18n/LocaleProvider';
 import { formatDuration } from '@/lib/format';
+
+/** States in which a project is doing work that can be stopped. */
+const BUSY_STATES = new Set(['probing', 'processing']);
 
 /** Landing page for starting and reopening dubbing projects. */
 export function HomePage() {
@@ -22,6 +27,8 @@ export function HomePage() {
   const health = useHealth();
   const create = useCreateAndAnalyzeProject();
   const remove = useDeleteProject();
+  const stop = useCancelProject();
+  const reset = useResetEverything();
 
   const submit = (event: SyntheticEvent<HTMLFormElement, SubmitEvent>) => {
     event.preventDefault();
@@ -31,6 +38,12 @@ export function HomePage() {
       { url: source, voice },
       { onSuccess: (project) => void navigate(`/projects/${project.id}`) },
     );
+  };
+
+  const resetEverything = () => {
+    const count = projects.data?.length ?? 0;
+    if (count === 0) return;
+    if (window.confirm(t('home.confirmReset', { count }))) reset.mutate();
   };
 
   const deleteProject = (id: string, title: string) => {
@@ -71,7 +84,23 @@ export function HomePage() {
       </section>
 
       <section className="card" aria-labelledby="recent-projects">
-        <h2 id="recent-projects">{t('home.recent')}</h2>
+        <div className="row section-heading">
+          <h2 id="recent-projects">{t('home.recent')}</h2>
+          {projects.data && projects.data.length > 0 && (
+            <button
+              className="link danger"
+              type="button"
+              title={t('home.resetHint')}
+              disabled={reset.isPending}
+              onClick={resetEverything}
+            >
+              {t('home.reset')}
+            </button>
+          )}
+        </div>
+        {reset.error && <ErrorAlert error={reset.error} />}
+        {stop.error && <ErrorAlert error={stop.error} />}
+        <p className="muted small">{t('home.resetHint')}</p>
         {projects.isPending && <p className="muted">{t('home.loading')}</p>}
         {projects.error && <ErrorAlert error={projects.error} />}
         {projects.data?.length === 0 && (
@@ -98,9 +127,23 @@ export function HomePage() {
                 <span className={`badge badge--${project.state === 'failed' ? 'danger' : 'ok'}`}>
                   {project.state}
                 </span>
+                {BUSY_STATES.has(project.state) && (
+                  <button
+                    className="link"
+                    type="button"
+                    title={t('home.stopHint')}
+                    disabled={stop.isPending}
+                    onClick={() => {
+                      stop.mutate(project.id);
+                    }}
+                  >
+                    {t('home.stop')}
+                  </button>
+                )}
                 <button
                   className="link danger"
                   type="button"
+                  title={t('home.deleteHint')}
                   disabled={remove.isPending}
                   onClick={() => {
                     deleteProject(project.id, project.title);

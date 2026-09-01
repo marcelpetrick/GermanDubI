@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { mediaUrl } from '@/api/client';
 import { ErrorAlert } from '@/components/ErrorAlert';
+import { useT } from '@/i18n/LocaleProvider';
 import { PipelineProgress } from '@/features/processing/PipelineProgress';
 import { SegmentWorkspace } from '@/features/segments/SegmentWorkspace';
 import {
@@ -149,17 +150,28 @@ function ProjectActions({
   onCancel: (runId: string) => void;
   onResume: () => void;
 }) {
+  const t = useT();
   if (state === 'new') {
     return (
-      <button className="primary" disabled={pending} onClick={onAnalyze}>
-        Analyze source
+      <button
+        className="primary"
+        disabled={pending}
+        title={t('project.analyzeHint')}
+        onClick={onAnalyze}
+      >
+        {t('project.analyze')}
       </button>
     );
   }
   if (state === 'ready') {
     return (
-      <button className="primary" disabled={pending} onClick={onStart}>
-        Create German dub
+      <button
+        className="primary"
+        disabled={pending}
+        title={t('project.startHint')}
+        onClick={onStart}
+      >
+        {t('project.start')}
       </button>
     );
   }
@@ -167,25 +179,31 @@ function ProjectActions({
     return (
       <button
         disabled={pending}
+        title={t('project.cancelHint')}
         onClick={() => {
           onCancel(runId);
         }}
       >
-        Cancel processing
+        {t('project.cancel')}
       </button>
     );
   }
   if (state === 'failed' || state === 'cancelled') {
     return (
-      <button className="primary" disabled={pending} onClick={onResume}>
-        Resume unfinished work
+      <button
+        className="primary"
+        disabled={pending}
+        title={t('project.resumeHint')}
+        onClick={onResume}
+      >
+        {t('project.resume')}
       </button>
     );
   }
   if (state === 'complete') {
     return (
-      <a className="button" href={mediaUrl.download(projectId)}>
-        Download
+      <a className="button" href={mediaUrl.download(projectId)} title={t('project.downloadHint')}>
+        {t('project.download')}
       </a>
     );
   }

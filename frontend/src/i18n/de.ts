@@ -33,6 +33,18 @@ export const de: Catalogue = {
   'home.degradedHelp': 'Führe {command} aus, um zu sehen, was fehlt.',
   'home.newToThis': 'Neu hier? Lies, wie die Verarbeitung abläuft.',
 
+  'home.stop': 'Anhalten',
+  'home.stopHint':
+    'Hält diese Synchronisation jetzt an. Fertige Stufen bleiben erhalten und du kannst später fortsetzen.',
+  'home.reset': 'Alles löschen',
+  'home.resetHint':
+    'Entfernt alle Projekte und sämtliche erzeugten Dateien von diesem Rechner. Das lässt sich nicht rückgängig machen.',
+  'home.confirmReset':
+    'Alle {count} Projekte und alle daraus erzeugten Dateien löschen? Das lässt sich nicht rückgängig machen.',
+  'home.resetDone': 'Alles wurde gelöscht.',
+  'home.deleteHint': 'Dieses Projekt und seine Dateien löschen.',
+  'home.busy': 'läuft',
+
   'voice.label': 'Deutsche Erzählstimme',
   'voice.play': 'Stimme anhören',
   'voice.loading': 'Lädt…',
@@ -40,6 +52,19 @@ export const de: Catalogue = {
   'voice.hint': 'Wähle eine Stimme und höre sie ab, bevor du startest.',
   'voice.sampleFailed':
     'Die Hörprobe konnte nicht abgespielt werden. Die Stimme wird vielleicht noch geladen.',
+
+  'project.analyze': 'Quelle analysieren',
+  'project.analyzeHint': 'Liest Titel, Länge und Untertitel der Quelle, ohne sie herunterzuladen.',
+  'project.start': 'Deutsche Synchronfassung erstellen',
+  'project.startHint':
+    'Führt die gesamte Verarbeitung aus. Du kannst jederzeit anhalten und später fortsetzen.',
+  'project.cancel': 'Verarbeitung anhalten',
+  'project.cancelHint':
+    'Hält am nächsten sicheren Punkt an und beendet das gerade laufende Werkzeug. Fertige Stufen bleiben erhalten.',
+  'project.resume': 'Unfertige Arbeit fortsetzen',
+  'project.resumeHint': 'Setzt bei der zuletzt abgeschlossenen Stufe fort.',
+  'project.download': 'Herunterladen',
+  'project.downloadHint': 'Das synchronisierte Video, mit dem Originalton als zweiter Spur.',
 
   'processing.title': 'Verarbeitung',
   'processing.percentComplete': '{percent} % abgeschlossen',

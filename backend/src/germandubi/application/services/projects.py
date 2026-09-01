@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Final
 
 from germandubi.application.services.unit_of_work import UnitOfWorkFactory
 from germandubi.domain.entities.pipeline import Job, PipelineRun, Stage
@@ -21,6 +22,9 @@ from germandubi.version import build_info
 __all__ = ["ProjectService"]
 
 logger = logging.getLogger(__name__)
+
+#: Upper bound when clearing everything; far above any plausible local project count.
+_ALL_PROJECTS: Final = 10_000
 
 
 class ProjectService:
@@ -140,6 +144,28 @@ class ProjectService:
             uow.projects.delete(project_id)
             uow.store.delete_workspace(project_id)
         logger.info("deleted project %s", project_id)
+
+    def delete_all(self) -> int:
+        """Delete every project, its rows and its workspace.
+
+        One operation rather than a loop of deletes driven from the browser: a clear that
+        stops halfway would leave workspace directories with no project pointing at them,
+        and nothing would ever collect them.
+
+        A run in progress is cancelled first. Deleting a project the worker is still
+        writing into would otherwise recreate its directory moments later.
+
+        Returns:
+            How many projects were removed.
+        """
+        with self.unit_of_work() as uow:
+            projects = uow.projects.list_all(limit=_ALL_PROJECTS, offset=0)
+            uow.jobs.cancel_all()
+            for project in projects:
+                uow.projects.delete(project.id)
+                uow.store.delete_workspace(project.id)
+        logger.info("deleted %d project(s) and their workspaces", len(projects))
+        return len(projects)
 
     def set_quality(self, project_id: ProjectId, quality: QualityProfile) -> Project:
         """Change a project's quality profile.
