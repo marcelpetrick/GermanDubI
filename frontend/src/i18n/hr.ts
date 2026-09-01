@@ -132,6 +132,14 @@ export const hr: Catalogue = {
   'help.editTitle': 'Što možeš mijenjati',
   'help.editBody':
     'Njemački tekst bilo kojeg isječka. Sve nakon tvoje izmjene se preračunava, a sve prije ostaje netaknuto: ispravak imena pri kraju ne transkribira video ponovno.',
+  'help.queueTitle': 'Dodavanje drugog videa',
+  'help.queueBody':
+    'URL možeš zalijepiti u bilo kojem trenutku, i dok sinkronizacija traje. Obrađuje se jedan video, ostali čekaju svoj red, pa se ništa ne otima o računalo i svaki projekt zadržava vlastite datoteke. Projekt koji čeka to piše na svojoj stranici, zajedno s mjestom u redu. Provjera izvora ima prednost, pa se tek zalijepljeni URL analizira u nekoliko sekundi, a ne tek nakon završetka sinkronizacije.',
+  'help.logTitle': 'Kad nešto pođe po zlu',
+  'help.logBody':
+    'Poslužitelj vodi zapisnik. Neočekivana pogreška prikazuje oznaku; potraži je u zapisniku i ondje je cijeli tijek, uključujući ono što su alati ispisali. Zapisnik ostaje i nakon zatvaranja terminala.',
+  'help.logAt': 'Na ovom računalu zapisnik je na {path}.',
+  'help.logInTerminal': 'Ovaj poslužitelj piše samo u terminal, pa taj prozor drži otvorenim.',
   'help.privacyTitle': 'Što napušta tvoje računalo',
   'help.privacyBody':
     'Poveznica na izvor, kako bi se video mogao dohvatiti. Ništa drugo. Prepoznavanje, prijevod i govor rade lokalno, a pružatelj koji bi slao zvuk drugamo nikad se ne bira bez tvojeg dopuštenja.',

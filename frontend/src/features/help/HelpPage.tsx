@@ -3,6 +3,7 @@
 import { Link } from 'react-router-dom';
 
 import type { Stage } from '@/api/types';
+import { useHealth } from '@/hooks/queries';
 import type { TranslationKey } from '@/i18n/en';
 import { useT } from '@/i18n/LocaleProvider';
 
@@ -45,6 +46,7 @@ const STEPS: readonly { title: TranslationKey; body: TranslationKey }[] = [
 
 export function HelpPage() {
   const t = useT();
+  const health = useHealth();
 
   return (
     <div className="stack">
@@ -94,6 +96,25 @@ export function HelpPage() {
         <section className="card prose" aria-labelledby="timing">
           <h2 id="timing">{t('help.timingTitle')}</h2>
           <p>{t('help.timingBody')}</p>
+        </section>
+      </div>
+
+      <div className="split-even">
+        <section className="card prose" aria-labelledby="queue">
+          <h2 id="queue">{t('help.queueTitle')}</h2>
+          <p>{t('help.queueBody')}</p>
+        </section>
+        <section className="card prose" aria-labelledby="log">
+          <h2 id="log">{t('help.logTitle')}</h2>
+          <p>{t('help.logBody')}</p>
+          {/* The path is read from the running server rather than written here: it honours
+              XDG_DATA_HOME and GERMANDUBI_LOG_FILE, so a hardcoded example would be wrong
+              on exactly the machines whose owner needs it most. */}
+          <p className="mono small">
+            {health.data?.log_file
+              ? t('help.logAt', { path: health.data.log_file })
+              : t('help.logInTerminal')}
+          </p>
         </section>
       </div>
 

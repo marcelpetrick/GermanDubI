@@ -91,9 +91,39 @@ the second video starts once the first finishes -- except for inspecting the sou
 jumps the queue so a newly pasted URL is analysed within a stage or two rather than after
 the whole dub.
 
-Versions before 0.2.1 returned `500 Internal Server Error` with `database is locked` here.
-The worker held the database for the length of every stage. Upgrading is the fix; there is
-no setting that helps.
+The second project's page says where it stands: "Waiting for another project to finish",
+with its position when more than one is queued. The position is read from the same ordering
+the worker claims in, so it is the real wait rather than a guess.
+
+Versions before 0.2.1 returned `500 Internal Server Error` here, twice for different
+reasons. The worker first held the database for the length of every stage; then, after that
+was fixed, reporting progress took the write lock and held it for the work that followed --
+"using faster-whisper" was announced, and the lock stayed taken for the two minutes of
+recognition. Both are fixed. Upgrading is the answer; no setting helps.
+
+If it recurs, the log names the failure. See below.
+
+## Where the server log is
+
+```
+~/.local/share/germandubi/logs/germandubi.log
+```
+
+`make doctor` prints the exact path, which honours `XDG_DATA_HOME` and
+`GERMANDUBI_DATA_DIR`. It rotates at 5 MB and keeps three older files, and it is written in
+addition to the console, so a failure survives closing the terminal.
+
+An unexpected failure in the browser shows a reference like `Reference a1b2c3d4` along with
+this path. Find the failure by that reference:
+
+```bash
+grep -A 40 a1b2c3d4 ~/.local/share/germandubi/logs/germandubi.log
+```
+
+Set `GERMANDUBI_LOG_FILE` to write it elsewhere, or to `none` for console-only logging.
+`GERMANDUBI_LOG_LEVEL=DEBUG` turns up the detail. A destination that cannot be written --
+a read-only volume, a full disk -- falls back to the console rather than stopping the
+server.
 
 ## Stopping a run, and clearing everything
 

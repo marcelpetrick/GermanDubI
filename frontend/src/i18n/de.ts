@@ -136,6 +136,14 @@ export const de: Catalogue = {
   'help.editTitle': 'Was du ändern kannst',
   'help.editBody':
     'Den deutschen Text jedes Segments. Alles nach deiner Änderung wird neu berechnet, alles davor bleibt unberührt: einen Namen am Ende zu korrigieren transkribiert nicht das ganze Video neu.',
+  'help.queueTitle': 'Ein zweites Video hinzufügen',
+  'help.queueBody':
+    'Du kannst jederzeit eine weitere URL einfügen, auch während ein Dub läuft. Es wird immer nur ein Video verarbeitet, die übrigen warten. So konkurriert nichts um die Maschine, und jedes Projekt behält seine eigenen Dateien. Ein wartendes Projekt sagt das auf seiner Seite, samt Platz in der Warteschlange. Das Prüfen einer Quelle wird vorgezogen, damit eine gerade eingefügte URL in Sekunden analysiert wird und nicht erst nach dem Dub.',
+  'help.logTitle': 'Wenn etwas schiefgeht',
+  'help.logBody':
+    'Der Server führt ein Log. Ein unerwarteter Fehler zeigt eine Kennung; suche im Log danach, und dort steht der ganze Vorgang, einschließlich der Ausgaben der Werkzeuge. Das Log überlebt das Schließen des Terminals.',
+  'help.logAt': 'Auf diesem Rechner liegt das Log unter {path}.',
+  'help.logInTerminal': 'Dieser Server schreibt nur ins Terminal, lass dieses Fenster also offen.',
   'help.privacyTitle': 'Was diesen Rechner verlässt',
   'help.privacyBody':
     'Der Link zur Quelle, damit das Video geladen werden kann. Sonst nichts. Erkennung, Übersetzung und Sprachsynthese laufen lokal, und ein Anbieter, der Audio nach außen geben würde, wird ohne deine Erlaubnis nie ausgewählt.',

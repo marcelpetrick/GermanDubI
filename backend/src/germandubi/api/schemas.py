@@ -68,6 +68,13 @@ class HealthResponse(BaseModel):
     missing: list[str] = Field(description="Required tools that are absent.")
     data_dir: str = Field(description="Where project data is stored.")
     writable: bool = Field(description="Whether that directory can be written to.")
+    log_file: str | None = Field(
+        default=None,
+        description=(
+            "The server log this process writes, so the interface can point a user at it "
+            "by name. Null when logging goes to the console only."
+        ),
+    )
 
 
 class ProviderStatus(BaseModel):

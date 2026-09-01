@@ -55,12 +55,16 @@ async def get_health(app: AppDep) -> HealthResponse:
         Tool availability and the data directory's writability.
     """
     report = app.registry.report()
+    log_file = app.settings.resolved_log_file
     return HealthResponse(
         status="ok" if report.can_dub and report.writable else "degraded",
         tools=report.tools,
         missing=report.missing_required,
         data_dir=str(report.data_dir),
         writable=report.writable,
+        # Named here so the help page can tell a reader where to look before anything has
+        # gone wrong, rather than only in the message shown once it has.
+        log_file=str(log_file) if log_file else None,
     )
 
 

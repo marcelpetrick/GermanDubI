@@ -136,6 +136,14 @@ export const en = {
   'help.editTitle': 'What you can change',
   'help.editBody':
     'The German text of any segment. Everything downstream of your edit is recomputed and nothing upstream is touched, so correcting a name near the end does not re-transcribe the video.',
+  'help.queueTitle': 'Adding a second video',
+  'help.queueBody':
+    'You can paste another URL at any time, including while a dub is running. One video is processed at a time and the rest wait their turn, so nothing competes for the machine and each project keeps its own files. A waiting project says so on its own page, with its position in the queue. Inspecting a source jumps ahead of a running dub, so a URL you have just pasted is analysed in seconds rather than after the dub finishes.',
+  'help.logTitle': 'When something goes wrong',
+  'help.logBody':
+    'The server keeps a log. An unexpected failure shows a reference; search the log for it and the full story is there, including whatever the tools printed. The log survives closing the terminal.',
+  'help.logAt': 'On this machine the log is at {path}.',
+  'help.logInTerminal': 'This server logs to its terminal only, so keep that window open.',
   'help.privacyTitle': 'What leaves your machine',
   'help.privacyBody':
     'The source URL, so the video can be fetched. Nothing else. Recognition, translation and speech all run locally, and a provider that would send audio elsewhere is never selected unless you allow it.',

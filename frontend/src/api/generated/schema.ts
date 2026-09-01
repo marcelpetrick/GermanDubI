@@ -781,6 +781,11 @@ export interface components {
              * @description Whether that directory can be written to.
              */
             writable: boolean;
+            /**
+             * Log File
+             * @description The server log this process writes, so the interface can point a user at it by name. Null when logging goes to the console only.
+             */
+            log_file?: string | null;
         };
         /**
          * JobDetail
