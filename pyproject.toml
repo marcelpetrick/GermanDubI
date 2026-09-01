@@ -32,6 +32,11 @@ dependencies = [
     "typer==0.27.2",
     "uvicorn[standard]==0.52.4",
     "yt-dlp==2026.8.19",
+    # YouTube asks for a solved JavaScript challenge before it will hand over formats.
+    # Without this solver yt-dlp reports "This video is not available" for videos that are
+    # plainly available, which is indistinguishable from a removed video. It also needs a
+    # JavaScript runtime on PATH; see the README requirements.
+    "yt-dlp-ejs==0.8.0",
 ]
 
 [project.optional-dependencies]

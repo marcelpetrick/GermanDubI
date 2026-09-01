@@ -58,6 +58,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for what exists today.
 | Node.js 24 with `corepack` | Pinned in `.node-version`; `pnpm` is provisioned by corepack |
 | `ffmpeg` / `ffprobe` | Media inspection, extraction, muxing |
 | `yt-dlp` | Source acquisition |
+| A JavaScript runtime (`deno` or `node`) | YouTube requires a solved JS challenge before it releases formats; without one, available videos are reported as unavailable |
 
 Run `germandubi doctor` at any time to check the environment. It reports "Ready to dub"
 only when a real translator and a real German voice are installed -- FFmpeg alone is not

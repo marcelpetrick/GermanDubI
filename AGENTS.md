@@ -84,6 +84,35 @@ Every generated artifact records: application version, provider id, model id, in
 content hash, configuration hash, and creation time. If you add a generation step, you add
 its provenance.
 
+### 2.9 A working version beats a newer one
+
+Dependencies are pinned to exact versions and normally kept at the latest stable release.
+When a newer release breaks something that works, pin back to the version that works. A
+dependency exists to do a job; a release that stops doing it is not an upgrade.
+
+Three things go with the pin, and none is optional:
+
+- **A comment at the pin** naming what broke, with a case that reproduces it. A bare
+  downgrade is indistinguishable from neglect six months later, and the next person
+  updating dependencies will undo it.
+- **Verification that the older version is otherwise sound.** Check the cases the newer one
+  handled before assuming the downgrade is free.
+- **An intention to move forward.** Holding back is temporary, especially for anything
+  tracking a moving target such as a site downloader, where staying behind eventually
+  breaks more than it fixes.
+
+The order matters, too: **diagnose before pinning back.** A downgrade that "fixes" the
+symptom without explaining it usually means the cause is somewhere else, and the pin then
+outlives the problem it was meant to solve while nobody dares remove it.
+
+Worked example, including the mistake. A video failed to download and the obvious suspect
+was the newest `yt-dlp`: the previous release handled it. That comparison was wrong,
+because the two versions were also two different installations. The same version failed in
+one and worked in the other. The actual cause was a missing optional dependency -- YouTube
+requires a solved JavaScript challenge, and without `yt-dlp-ejs` and a JS runtime the
+downloader reports "This video is not available" for a video that plainly is. Pinning back
+would have hidden that and lost six weeks of upstream fixes for nothing.
+
 ---
 
 ## 3. Versioning — how each commit gets a version

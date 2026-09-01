@@ -132,6 +132,17 @@ def _explain(message: str) -> str:
         ("confirm your age", "the video is age-restricted and cannot be processed"),
         ("sign in", "the source requires signing in, which this version does not do"),
         ("not available in your country", "the video is blocked in this region"),
+        # Ambiguous on purpose. A removed video says this, and so does a working one when
+        # no JavaScript runtime is available to solve YouTube's challenge -- the same words
+        # for a fault in the source and a fault in this installation, so the message names
+        # both and points at the command that tells them apart.
+        (
+            "this video is not available",
+            (
+                "the video is unavailable. If it plays in a browser, this machine may be "
+                "missing the JavaScript runtime YouTube requires; run `germandubi doctor`"
+            ),
+        ),
         ("unable to download webpage", "the source site could not be reached"),
     )
     for needle, explanation in known:

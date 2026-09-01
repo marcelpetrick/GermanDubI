@@ -42,6 +42,9 @@ from germandubi.domain.errors import GermanDubIError, ProviderUnavailableError
 #: is exactly the case GermanDubI targets first.
 REFERENCE_URL = "https://www.youtube.com/watch?v=f3r05guSo1w"
 
+#: Pause before retrying an upstream hiccup, multiplied by the attempt number.
+_RETRY_PAUSE_S = 5
+
 
 @dataclass(frozen=True)
 class StageTiming:
@@ -193,7 +196,7 @@ def download_excerpt(url: str, seconds: int, destination: Path) -> Path:
     downloaded = destination.parent / "source.mp4"
 
     print(f"downloading {url}")
-    subprocess.run(
+    _run_or_fail(
         [
             "yt-dlp",
             "--no-playlist",
@@ -208,7 +211,7 @@ def download_excerpt(url: str, seconds: int, destination: Path) -> Path:
             str(downloaded),
             url,
         ],
-        check=True,
+        what="download the source",
     )
     if not downloaded.exists():
         candidates = sorted(destination.parent.glob("source.*"))
@@ -217,7 +220,7 @@ def download_excerpt(url: str, seconds: int, destination: Path) -> Path:
         downloaded = candidates[0]
 
     print(f"cutting the first {seconds}s")
-    subprocess.run(
+    _run_or_fail(
         [
             "ffmpeg",
             "-y",
@@ -235,9 +238,31 @@ def download_excerpt(url: str, seconds: int, destination: Path) -> Path:
             "aac",
             str(destination),
         ],
-        check=True,
+        what="cut the excerpt",
     )
     return destination
+
+
+def _run_or_fail(argv: list[str], *, what: str, attempts: int = 3) -> None:
+    """Run a command, retrying an upstream hiccup and reporting failure as a message.
+
+    The source site intermittently answers "This video is not available" for a video that
+    is plainly available a minute later -- observed on a URL whose metadata had just been
+    read successfully. The application retries every stage for this reason; this script
+    would otherwise report a healthy video as broken.
+
+    A stack trace tells the reader nothing they can act on, so a real failure is a message.
+    """
+    for attempt in range(1, attempts + 1):
+        result = subprocess.run(argv, capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            return
+        detail = (result.stderr or result.stdout).strip().splitlines()
+        reason = detail[-1] if detail else f"exit code {result.returncode}"
+        if attempt < attempts:
+            print(f"could not {what} ({reason}); retrying {attempt}/{attempts - 1}")
+            time.sleep(_RETRY_PAUSE_S * attempt)
+    fail(f"could not {what} after {attempts} attempts: {reason}")
 
 
 def probe_media(path: Path) -> tuple[float | None, str | None]:

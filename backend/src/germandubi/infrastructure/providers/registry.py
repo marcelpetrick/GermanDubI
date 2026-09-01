@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Final
 
 from germandubi.application.ports.providers import (
     AcquisitionProvider,
@@ -54,6 +55,9 @@ from germandubi.infrastructure.providers.ytdlp import YtDlpAcquisitionProvider, 
 __all__ = ["DependencyReport", "ProviderRegistry"]
 
 logger = logging.getLogger(__name__)
+
+#: Runtimes yt-dlp can use to solve YouTube's JavaScript challenge, in no particular order.
+_JS_RUNTIMES: Final = ("deno", "node")
 
 #: Selects the deterministic fakes for every port. Used by tests and the E2E suite.
 FAKE = "fake"
@@ -338,6 +342,13 @@ class ProviderRegistry:
                 self.settings.yt_dlp_path,
             )
         }
+        # YouTube will not release formats without a solved JavaScript challenge, and
+        # yt-dlp needs a runtime to solve it. Absent one, an available video is reported as
+        # unavailable -- a symptom that points nowhere near the cause, which is why this is
+        # surfaced as a tool rather than left to be discovered.
+        tools["javascript runtime"] = any(
+            self.runner.is_installed(runtime) for runtime in _JS_RUNTIMES
+        )
         # Every provider that can actually be selected, so the report is a complete
         # picture of what may run rather than a list of the optional extras.
         candidates: list[object] = [
