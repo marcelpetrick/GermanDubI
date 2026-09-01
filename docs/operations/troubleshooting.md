@@ -84,6 +84,27 @@ worker retries it, and because the deadlock is intermittent the retry usually su
 visible symptom is one slow stage, not a failed project. If a stage exhausts its retries,
 re-running the pipeline resumes from the last finished stage.
 
+## Adding a second video while one is being dubbed
+
+Supported, and queued rather than parallel. One worker processes one stage at a time, so
+the second video starts once the first finishes -- except for inspecting the source, which
+jumps the queue so a newly pasted URL is analysed within a stage or two rather than after
+the whole dub.
+
+Versions before 0.2.1 returned `500 Internal Server Error` with `database is locked` here.
+The worker held the database for the length of every stage. Upgrading is the fix; there is
+no setting that helps.
+
+## Stopping a run, and clearing everything
+
+**Stop** appears next to a project that is working, and on the project's own page. It
+terminates the tool currently running rather than waiting for it to finish, keeps every
+stage that already completed, and the run can be resumed afterwards.
+
+**Delete everything** removes every project and all generated files from this machine,
+after asking. It cancels anything still running first, so a stage cannot recreate the
+directory it was just deleted from. It cannot be undone.
+
 ## Nothing happens after pressing Create German Dub
 
 The worker is not running. `make dev` starts it alongside the API; if you started only the
