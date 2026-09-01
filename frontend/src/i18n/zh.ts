@@ -63,6 +63,11 @@ export const zh: Catalogue = {
   'processing.percentComplete': '已完成 {percent}%',
   'processing.progressLabel': '配音进度',
 
+  'run.started': '开始 {time}',
+  'run.finished': '结束 {time}',
+  'run.running': '已运行 {elapsed}',
+  'run.took': '耗时 {elapsed}',
+
   'segments.title': '校对片段',
   'segments.subtitle': '选中一行，修改一个文本字段，只有其后续内容会重新生成。',
   'segments.loading': '正在加载片段…',

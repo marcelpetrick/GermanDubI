@@ -66,6 +66,11 @@ export const hr: Catalogue = {
   'processing.percentComplete': '{percent} % dovršeno',
   'processing.progressLabel': 'Napredak sinkronizacije',
 
+  'run.started': 'Početak {time}',
+  'run.finished': 'kraj {time}',
+  'run.running': 'traje {elapsed}',
+  'run.took': 'trajanje {elapsed}',
+
   'segments.title': 'Pregled isječaka',
   'segments.subtitle':
     'Odaberi redak, ispravi jedno tekstualno polje i ponovno se radi samo ono što slijedi.',

@@ -70,6 +70,11 @@ export const de: Catalogue = {
   'processing.percentComplete': '{percent} % abgeschlossen',
   'processing.progressLabel': 'Fortschritt der Synchronisation',
 
+  'run.started': 'Gestartet {time}',
+  'run.finished': 'beendet {time}',
+  'run.running': 'läuft seit {elapsed}',
+  'run.took': 'Dauer {elapsed}',
+
   'segments.title': 'Segmente prüfen',
   'segments.subtitle':
     'Zeile auswählen, ein Textfeld korrigieren, und nur das Nachfolgende wird neu erzeugt.',

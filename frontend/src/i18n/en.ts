@@ -71,6 +71,11 @@ export const en = {
   'processing.percentComplete': '{percent}% complete',
   'processing.progressLabel': 'Dub progress',
 
+  'run.started': 'Started {time}',
+  'run.finished': 'finished {time}',
+  'run.running': 'running for {elapsed}',
+  'run.took': 'took {elapsed}',
+
   'segments.title': 'Review segments',
   'segments.subtitle': 'Select a row, correct one text field, and regenerate what follows.',
   'segments.loading': 'Loading segments…',

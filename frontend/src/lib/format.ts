@@ -15,6 +15,32 @@ export function formatTimestamp(milliseconds: number): string {
     : `${mm}:${String(seconds).padStart(2, '0')}`;
 }
 
+/**
+ * Format a moment as wall-clock time in the reader's locale.
+ *
+ * The date is included only when it is not today: a dub started this morning wants
+ * "09:14", and one started last Tuesday needs to say so.
+ */
+export function formatClock(iso: string, locale: string, now: Date = new Date()): string {
+  const moment = new Date(iso);
+  if (Number.isNaN(moment.getTime())) return '—';
+  const sameDay = moment.toDateString() === now.toDateString();
+  return moment.toLocaleString(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    ...(sameDay ? {} : { day: 'numeric', month: 'short' }),
+  });
+}
+
+/** Return the milliseconds between two moments, or `null` when either is unusable. */
+export function elapsedMs(from: string, to: string | Date): number | null {
+  const start = new Date(from).getTime();
+  const end = to instanceof Date ? to.getTime() : new Date(to).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null;
+  return end - start;
+}
+
 /** Format a duration in words, e.g. `12 min 30 s`. */
 export function formatDuration(milliseconds: number): string {
   const total = Math.round(milliseconds / 1000);

@@ -352,6 +352,11 @@ a {
   margin: 0;
 }
 
+/* Tabular figures so the seconds of a live run do not shift the line as they count. */
+.run-timing {
+  font-variant-numeric: tabular-nums;
+}
+
 .preview .section-heading {
   margin-bottom: 12px;
 }

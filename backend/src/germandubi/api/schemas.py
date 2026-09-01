@@ -278,7 +278,14 @@ class RunDetail(BaseModel):
     failed: bool
     cancelled: bool
     current_stage: str | None
-    created_at: datetime
+    created_at: datetime = Field(description="Wall-clock time the run was queued.")
+    finished_at: datetime | None = Field(
+        default=None,
+        description=(
+            "Wall-clock time the run reached a terminal outcome, or null while it is still "
+            "going. With created_at this is how long the dub took."
+        ),
+    )
     queue_position: int | None = Field(
         default=None,
         ge=1,
@@ -329,6 +336,7 @@ class RunDetail(BaseModel):
             cancelled=run.cancelled,
             current_stage=str(current.stage) if current else None,
             created_at=run.created_at,
+            finished_at=run.finished_at,
             queue_position=queue_position,
             queue_length=queue_length,
         )

@@ -982,8 +982,14 @@ export interface components {
             /**
              * Created At
              * Format: date-time
+             * @description Wall-clock time the run was queued.
              */
             created_at: string;
+            /**
+             * Finished At
+             * @description Wall-clock time the run reached a terminal outcome, or null while it is still going. With created_at this is how long the dub took.
+             */
+            finished_at?: string | null;
             /**
              * Queue Position
              * @description Where this project sits among those waiting for the worker, counting from one. Null when it is not waiting behind another project.

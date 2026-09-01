@@ -6,6 +6,7 @@ import { ErrorAlert } from '@/components/ErrorAlert';
 import type { TranslationKey } from '@/i18n/en';
 import { useT } from '@/i18n/LocaleProvider';
 import { PipelineProgress } from '@/features/processing/PipelineProgress';
+import { RunTiming } from '@/features/processing/RunTiming';
 import { SegmentWorkspace } from '@/features/segments/SegmentWorkspace';
 import {
   useAnalyzeProject,
@@ -73,6 +74,10 @@ export function ProjectPage() {
               <span>{t(captionsKey(item.media))}</span>
             </div>
           )}
+          {/* Outside the media block and outside PipelineProgress: the progress card is
+              hidden once a dub finishes, which is exactly when "how long did that take"
+              gets asked, and a local file has no media row to hang this off. */}
+          {run.data && <RunTiming run={run.data} />}
           <ProjectActions
             state={item.state}
             pending={analyze.isPending || start.isPending || cancel.isPending || resume.isPending}

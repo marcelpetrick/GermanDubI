@@ -508,6 +508,36 @@ class TestVoices:
         assert created.status_code == 201, created.text
 
 
+class TestRunTiming:
+    """A run reports when it started and when it stopped.
+
+    Both were recorded and neither was ever sent to the browser, so the only way to answer
+    "how long did that dub take" was to read the server log.
+    """
+
+    def test_a_running_run_has_a_start_and_no_finish(self, client: TestClient) -> None:
+        created = client.post(f"{API_PREFIX}/projects", json={"url": VALID_URL})
+        project_id = created.json()["id"]
+        run = client.post(f"{API_PREFIX}/projects/{project_id}/analyze").json()
+
+        assert run["created_at"]
+        assert run["finished_at"] is None
+
+    def test_a_finished_run_reports_when_it_stopped(
+        self, client: TestClient, application: Application
+    ) -> None:
+        created = client.post(f"{API_PREFIX}/projects", json={"url": VALID_URL})
+        project_id = created.json()["id"]
+        client.post(f"{API_PREFIX}/projects/{project_id}/analyze")
+        application.worker().run_until_idle()
+
+        run = client.get(f"{API_PREFIX}/projects/{project_id}/runs/latest").json()
+
+        assert run["finished"] is True
+        assert run["finished_at"] is not None
+        assert run["finished_at"] >= run["created_at"]
+
+
 class TestUnexpectedFailures:
     """What the browser is shown when something the application did not anticipate breaks.
 
