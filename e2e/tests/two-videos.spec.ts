@@ -88,26 +88,23 @@ test("dubs two different videos in one session without errors", async ({
   ).toEqual([]);
 });
 
-test("stopping a project leaves it resumable and clears cleanly", async ({
+test("clearing everything removes every project and asks first", async ({
   page,
 }) => {
   const problems = watchForProblems(page);
   const id = await analyze(page, FIRST);
+  await dub(page, id);
 
-  await page.goto(`/projects/${id}`);
-  await page.getByRole("button", { name: "Create German dub" }).click();
-  // Stop is offered while work is in progress and says what it does.
-  const stop = page.getByRole("button", { name: "Stop processing" });
-  if (await stop.isVisible().catch(() => false)) {
-    await expect(stop).toHaveAttribute("title", /Finished stages are kept/);
-  }
-
-  await expect(
-    page.getByRole("heading", { name: "German preview" }),
-  ).toBeVisible({ timeout: 120_000 });
-
-  // Clearing everything removes the project from the list.
+  // Stop is not asserted here. With the fake providers a stage finishes in milliseconds,
+  // so catching the button while work is in progress is a race, and a conditional
+  // assertion is one that can pass by never running. Cancellation is covered
+  // deterministically in backend/tests/integration/test_worker_concurrency.py, where a
+  // stage is held open on purpose.
   await page.goto("/");
+  await expect(
+    page.getByRole("link", { name: "Fake narration clip" }),
+  ).not.toHaveCount(0);
+
   page.once("dialog", (dialog) => {
     expect(dialog.message()).toContain("cannot be undone");
     void dialog.accept();

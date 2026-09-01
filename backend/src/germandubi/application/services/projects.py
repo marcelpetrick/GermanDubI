@@ -23,8 +23,8 @@ __all__ = ["ProjectService"]
 
 logger = logging.getLogger(__name__)
 
-#: Upper bound when clearing everything; far above any plausible local project count.
-_ALL_PROJECTS: Final = 10_000
+#: How many projects one pass of a full clear removes before looking again.
+_DELETE_BATCH: Final = 200
 
 
 class ProjectService:
@@ -158,14 +158,19 @@ class ProjectService:
         Returns:
             How many projects were removed.
         """
+        removed = 0
         with self.unit_of_work() as uow:
-            projects = uow.projects.list_all(limit=_ALL_PROJECTS, offset=0)
             uow.jobs.cancel_all()
-            for project in projects:
-                uow.projects.delete(project.id)
-                uow.store.delete_workspace(project.id)
-        logger.info("deleted %d project(s) and their workspaces", len(projects))
-        return len(projects)
+            # Paged rather than capped: a limit chosen for plausibility would silently
+            # leave the rest behind, which is the one thing a "delete everything" must not do.
+            while batch := uow.projects.list_all(limit=_DELETE_BATCH, offset=0):
+                for project in batch:
+                    uow.projects.delete(project.id)
+                    uow.store.delete_workspace(project.id)
+                uow.flush()
+                removed += len(batch)
+        logger.info("deleted %d project(s) and their workspaces", removed)
+        return removed
 
     def set_quality(self, project_id: ProjectId, quality: QualityProfile) -> Project:
         """Change a project's quality profile.

@@ -128,9 +128,16 @@ version: ## Print the VCS-derived build version
 
 .PHONY: clean
 clean: ## Remove build and cache artifacts
-	rm -rf dist build .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage
+	rm -rf dist build .pytest_cache .mypy_cache .ruff_cache .hypothesis htmlcov .coverage
 	find backend -name '__pycache__' -type d -prune -exec rm -rf {} +
 	rm -rf $(FRONTEND)/dist $(E2E)/test-results $(E2E)/playwright-report
+	rm -rf .benchmark
+
+# Deliberately not in `clean`: benchmark-output holds rendered videos, which are results
+# rather than build artifacts and are expensive to reproduce.
+.PHONY: clean-benchmarks
+clean-benchmarks: ## Remove rendered benchmark videos (not touched by `make clean`)
+	rm -rf benchmark-output
 
 # --------------------------------------------------------------------------- gate
 .PHONY: check

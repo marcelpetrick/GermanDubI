@@ -29,8 +29,6 @@ e2e/playwright-report/
 e2e/.playwright/
 
 # --- Application data (never commit user media or models) ---
-data/*
-!data/.gitkeep
 *.mkv
 *.mp4
 *.webm

@@ -34,6 +34,11 @@ logger = logging.getLogger(__name__)
 _CANCELLATION_POLL_S: Final = 0.5
 
 
+def _NEVER_CANCELLED() -> bool:  # noqa: N802 - used as a sentinel callable
+    """The process runner's resting state: nothing to cancel."""
+    return False
+
+
 @dataclass
 class Worker:
     """Claims and executes pipeline jobs.
@@ -182,10 +187,20 @@ class Worker:
         cancelled = self._cancellation_probe(job)
         # Cancelling must reach the process actually doing the work. Without this a stop is
         # only noticed at the next checkpoint, and a stage that spends minutes inside one
-        # FFmpeg or Demucs call has no checkpoint to reach.
+        # FFmpeg or Demucs call has no checkpoint to reach. Removed again afterwards so the
+        # shared runner never carries one job's cancellation into another's lifetime.
         self.registry.runner.cancelled = cancelled
+        try:
+            self._run_stage(job, cancelled, started)
+        finally:
+            self.registry.runner.cancelled = _NEVER_CANCELLED
 
+    def _run_stage(self, job: Job, cancelled: Callable[[], bool], started: float) -> None:
+        """Execute the stage itself, with the outcome recorded in one short transaction."""
+        handler = HANDLERS[job.stage]
         with self.unit_of_work() as uow:
+            project = uow.projects.get(job.project_id)
+            run = uow.jobs.get_run(job.run_id)
             context = StageContext(
                 uow=uow,
                 registry=self.registry,

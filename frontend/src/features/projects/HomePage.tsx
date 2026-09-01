@@ -100,7 +100,6 @@ export function HomePage() {
         </div>
         {reset.error && <ErrorAlert error={reset.error} />}
         {stop.error && <ErrorAlert error={stop.error} />}
-        <p className="muted small">{t('home.resetHint')}</p>
         {projects.isPending && <p className="muted">{t('home.loading')}</p>}
         {projects.error && <ErrorAlert error={projects.error} />}
         {projects.data?.length === 0 && (

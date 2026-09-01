@@ -109,7 +109,6 @@ frontend/   React + TypeScript + Vite single-page app
 e2e/        Playwright end-to-end tests
 docs/       Architecture, ADRs, development, operations and benchmarks
 scripts/    Thin wrappers used by the Makefile
-data/       Default local project storage (never committed)
 ```
 
 ---
