@@ -84,7 +84,7 @@ Every generated artifact records: application version, provider id, model id, in
 content hash, configuration hash, and creation time. If you add a generation step, you add
 its provenance.
 
-### 2.9 A working version beats a newer one
+### 2.9 A working version beats a newer one, once you know why
 
 Dependencies are pinned to exact versions and normally kept at the latest stable release.
 When a newer release breaks something that works, pin back to the version that works. A
