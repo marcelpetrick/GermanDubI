@@ -2,7 +2,7 @@
 
 Infrastructure exceptions are wrapped in these types with domain context, so that the UI
 and the retry logic behave stably even when a third-party library changes its exception
-types (``vision.md`` section 59).
+types (``docs/product/vision.md`` section 59).
 
 Every error carries a stable ``code`` used by the HTTP layer and the frontend, and an
 optional ``details`` mapping for machine-readable context. Error messages are shown to the

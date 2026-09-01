@@ -7,8 +7,10 @@ Companion documents:
 
 | Document | Role |
 | --- | --- |
-| [`vision.md`](vision.md) | North star. Product vision and target architecture. Rarely changes. |
-| [`questions.md`](questions.md) | Every unresolved design/architecture question. Append, never silently drop. |
+| [`docs/README.md`](docs/README.md) | Map of all detailed repository documentation. |
+| [`docs/product/vision.md`](docs/product/vision.md) | North star. Product vision and target architecture. Rarely changes. |
+| [`docs/project/questions.md`](docs/project/questions.md) | Every unresolved design/architecture question. Append, never silently drop. |
+| [`docs/project/plan.md`](docs/project/plan.md) | Committed execution history and remaining project work. |
 | [`docs/adr/`](docs/adr/) | Decisions that are expensive to reverse, once resolved. |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release-relevant behaviour changes. |
 
@@ -189,7 +191,7 @@ A change is done when, where applicable:
 - [ ] E2E test updated if a user-visible workflow changed
 - [ ] Alembic migration if persistence changed
 - [ ] `docs/` and an ADR updated if a boundary or an expensive decision changed
-- [ ] `questions.md` updated if you discovered or resolved an open question
+- [ ] `docs/project/questions.md` updated if you discovered or resolved an open question
 - [ ] `CHANGELOG.md` entry if the behaviour is release-relevant
 - [ ] `make check` passes
 
@@ -271,9 +273,9 @@ artifacts.
 ## 9. When you are unsure
 
 * A decision that is cheap to reverse: make it, note it in the commit body, move on.
-* A decision that is expensive to reverse: write it in `questions.md` with the options and
+* A decision that is expensive to reverse: write it in `docs/project/questions.md` with the options and
   your recommendation, implement the reversible option, and open an ADR when it is settled.
 * A question that should be answered by measurement, not argument (model quality, timing
-  tolerance, performance): put it in `questions.md` as an experiment, not a debate.
+  tolerance, performance): put it in `docs/project/questions.md` as an experiment, not a debate.
 
 Do not silently expand scope. English→German, one narrator, Linux, local browser.

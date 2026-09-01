@@ -21,7 +21,7 @@ def handle_separate(context: StageContext) -> None:
     """Split the original audio into a background stem and a voice stem.
 
     Skipped when no separation model is installed, which is a normal outcome rather than a
-    failure: the mix stage then ducks the original audio instead (questions.md Q-A3).
+    failure: the mix stage then ducks the original audio instead (docs/project/questions.md Q-A3).
 
     Args:
         context: The stage context.

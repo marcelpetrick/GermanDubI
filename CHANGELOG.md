@@ -10,6 +10,12 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Changed
+
+- Organized internal product, project, and historical review documents under `docs/` and
+  added a documentation index, while retaining conventional repository entry points at
+  the root.
+
 ## [0.3.0] - 2026-09-01
 
 Running two videos at once, and everything that turned out to stand between the user and a

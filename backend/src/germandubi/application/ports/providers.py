@@ -47,7 +47,7 @@ class ProviderKind(StrEnum):
     """Whether using a provider sends data off the machine.
 
     The UI must state this before a network provider is used, so it is part of the port
-    rather than documentation (``vision.md`` section 3.4).
+    rather than documentation (``docs/product/vision.md`` section 3.4).
     """
 
     LOCAL = "local"

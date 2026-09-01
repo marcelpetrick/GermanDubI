@@ -9,8 +9,9 @@ bounds: a segment must be long enough to be worth synthesizing separately, and s
 that a duration mismatch stays correctable. Over-long sentences are split at clause
 boundaries - commas, semicolons, conjunctions - which is where German tolerates a break.
 
-The strategy is deliberately simple and is question Q-B1 in ``questions.md``: it is meant to
-be measured against alternatives, not argued about.
+The strategy is deliberately simple and is question Q-B1 in
+``docs/project/questions.md``: it is meant to be measured against alternatives, not argued
+about.
 """
 
 from __future__ import annotations

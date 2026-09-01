@@ -6,7 +6,7 @@ minutes of CPU or GPU. When usable captions exist, they are the right starting p
 Manual captions are strongly preferred: they are punctuated and cased, which is what
 sentence segmentation and translation quality depend on. Automatic captions are accepted
 only as a last resort, and are marked as such so the rest of the pipeline knows the text is
-unpunctuated (questions.md Q-C1).
+unpunctuated (docs/project/questions.md Q-C1).
 """
 
 from __future__ import annotations

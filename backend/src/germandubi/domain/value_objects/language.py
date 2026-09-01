@@ -28,7 +28,7 @@ class LanguageCode(StrEnum):
 SOURCE_LANGUAGE: Final = LanguageCode.ENGLISH
 TARGET_LANGUAGE: Final = LanguageCode.GERMAN
 
-#: The language pairs this version can actually dub. See questions.md section A.
+#: The language pairs this version can actually dub. See docs/project/questions.md section A.
 SUPPORTED_PAIRS: Final[frozenset[tuple[LanguageCode, LanguageCode]]] = frozenset(
     {(LanguageCode.ENGLISH, LanguageCode.GERMAN)}
 )

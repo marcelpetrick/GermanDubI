@@ -4,7 +4,7 @@ Two things in this application are keyed by hash. Artifacts are identified by th
 their **bytes**, which is what makes "this file is unchanged" cheap to answer. Pipeline
 steps are keyed by the hash of their **inputs**, which is what makes the pipeline
 idempotent: if a valid artifact already exists for the same input hash, the step is skipped
-rather than recomputed (``vision.md`` section 13).
+rather than recomputed (``docs/product/vision.md`` section 13).
 
 The input hash must therefore cover everything that can change the output - text, provider,
 model, and configuration - and nothing that cannot, such as wall-clock time.

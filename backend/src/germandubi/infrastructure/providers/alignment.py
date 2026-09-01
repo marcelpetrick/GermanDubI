@@ -1,9 +1,9 @@
 """Word-level timing for a transcript that does not carry any.
 
 Speech recognition emits word timestamps as a by-product, so nothing extra is needed there
-(``questions.md`` Q-C2). A transcript built from captions has none: captions time a whole
-cue, not the words inside it. This estimates the missing timing by spreading each cue's
-duration across its words in proportion to their length.
+(``docs/project/questions.md`` Q-C2). A transcript built from captions has none: captions
+time a whole cue, not the words inside it. This estimates the missing timing by spreading
+each cue's duration across its words in proportion to their length.
 
 The estimate is crude and deliberately so -- it exists to give segmentation and prosody
 something better than nothing, not to replace forced alignment. But it runs on every

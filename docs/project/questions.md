@@ -1,4 +1,4 @@
-# questions.md — Open design and architecture questions
+# Open design and architecture questions
 
 Every unresolved decision lives here. Each entry states the question, why it matters, the
 options, and — where one was needed to keep moving — the **provisional answer** currently
@@ -16,7 +16,7 @@ measurement) · `RESOLVED`.
 
 ### Q-A1 — Is the local-file input path in scope for the MVP, or URL only? · `PROVISIONAL`
 
-`vision.md` §5.1 lists local file input "shortly after the URL vertical slice".
+`docs/product/vision.md` §5.1 lists local file input "shortly after the URL vertical slice".
 A local file is also by far the easiest way to run the pipeline offline and in tests.
 
 **Provisional:** both are supported from the start. `SourceRef` is a sum type
@@ -87,7 +87,7 @@ makes accurate re-segmentation possible later.
 
 ### Q-B5 — What is the project format version policy for `0.x`? · `OPEN`
 
-`vision.md` §34 separates project format version from application version. Unresolved: do
+`docs/product/vision.md` §34 separates project format version from application version. Unresolved: do
 we support opening an older project format, or refuse with a clear message? Currently a
 mismatch is refused with an explicit error. Migration of on-disk manifests is not
 implemented.
@@ -98,7 +98,7 @@ implemented.
 
 ### Q-C1 — Captions or ASR by default? · `EXPERIMENT`
 
-`vision.md` §74.1. YouTube automatic captions are free and instant but unpunctuated,
+`docs/product/vision.md` §74.1. YouTube automatic captions are free and instant but unpunctuated,
 sometimes wrong, and their timing is coarse. ASR costs minutes of GPU/CPU but gives clean
 punctuation and word timestamps.
 
@@ -143,7 +143,7 @@ to ±15 %, and anything still over +15 % is flagged for the user rather than for
 
 ### Q-C7 — Are explicit prosody features worth it versus just matching rate and pauses? · `EXPERIMENT`
 
-`vision.md` §74.7. **Provisional:** MVP matches speaking rate and pause structure only.
+`docs/product/vision.md` §74.7. **Provisional:** MVP matches speaking rate and pause structure only.
 
 ### Q-C8 — Do we ever send data to a network provider by default? · `RESOLVED`
 
@@ -156,7 +156,7 @@ and the UI must state what leaves the machine. See ADR-0010.
 
 ### Q-D1 — At what point does SQLite job claiming become a limitation? · `EXPERIMENT`
 
-`vision.md` §74.10. With one worker it is a non-issue. **Provisional:** single worker,
+`docs/product/vision.md` §74.10. With one worker it is a non-issue. **Provisional:** single worker,
 transactional claim with a lease. Measure claim contention when a second worker is added.
 
 ### Q-D2 — How are jobs cancelled mid-stage? · `PROVISIONAL`
@@ -168,7 +168,7 @@ ignores cancellation for a long time is a bug in that stage.
 ### Q-D3 — Should the worker run stages in-process or fork per stage? · `OPEN`
 
 ML stacks with conflicting CUDA/torch requirements may eventually force process isolation
-per provider (`vision.md` §24.1). Currently in-process. The port boundary means a
+per provider (`docs/product/vision.md` §24.1). Currently in-process. The port boundary means a
 subprocess-backed provider can be introduced without touching application code.
 
 ### Q-D4 — SSE reconnection and event replay semantics? · `PROVISIONAL`
@@ -179,7 +179,7 @@ today — needs a policy.
 
 ### Q-D5 — Where does user project data live by default? · `PROVISIONAL`
 
-`vision.md` §41 says it should default outside the Git checkout.
+`docs/product/vision.md` §41 says it should default outside the Git checkout.
 **Provisional:** `$XDG_DATA_HOME/germandubi` (falling back to `~/.local/share/germandubi`),
 overridable by `GERMANDUBI_DATA_DIR`. The in-repo `data/` directory is for development only.
 
@@ -191,7 +191,7 @@ memory.
 
 ### Q-D7 — Preview transcoding: which codecs actually play in the browser? · `EXPERIMENT`
 
-`vision.md` §74.8. YouTube commonly yields VP9/Opus in WebM (fine in Chrome/Firefox) or
+`docs/product/vision.md` §74.8. YouTube commonly yields VP9/Opus in WebM (fine in Chrome/Firefox) or
 AV1 (patchy). **Provisional:** try direct playback; transcode a preview proxy on demand
 when the browser cannot play the source.
 
@@ -230,7 +230,7 @@ Currently the wheel is built in CI but not published.
 
 ---
 
-## F. Questions inherited from `vision.md` §74
+## F. Questions inherited from `docs/product/vision.md` §74
 
 | # | Question | Tracked as |
 | --- | --- | --- |

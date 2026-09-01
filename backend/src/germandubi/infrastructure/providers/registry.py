@@ -204,7 +204,7 @@ class ProviderRegistry:
         Manual captions win outright: they are punctuated and cased, which is what
         segmentation and translation quality depend on. Speech recognition is preferred
         over *automatic* captions, which are unpunctuated. Automatic captions are used only
-        when recognition is unavailable (questions.md Q-C1).
+        when recognition is unavailable (docs/project/questions.md Q-C1).
 
         Args:
             caption_path: A downloaded caption file, when one exists.
@@ -245,7 +245,7 @@ class ProviderRegistry:
         """Return the word-alignment provider.
 
         Recognition already emits word timestamps, so this only fills in timing for a
-        caption-derived transcript that has none (questions.md Q-C2). There is one
+        caption-derived transcript that has none (docs/project/questions.md Q-C2). There is one
         implementation and it runs in production; it is not a test double.
         """
         return ProportionalAlignmentProvider()

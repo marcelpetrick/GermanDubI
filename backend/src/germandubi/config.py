@@ -5,7 +5,7 @@ environment variables prefixed ``GERMANDUBI_``. Provider credentials are never s
 project files; they come from the environment.
 
 User project data defaults to the XDG data directory rather than the Git checkout, so that
-a clone stays clean and media is never accidentally committed (questions.md Q-D5).
+a clone stays clean and media is never accidentally committed (docs/project/questions.md Q-D5).
 """
 
 from __future__ import annotations
@@ -112,7 +112,7 @@ class Settings(BaseSettings):
         description="Whether a provider that sends data off the machine may be selected.",
     )
 
-    # --- pipeline tuning (questions.md Q-C6) ---
+    # --- pipeline tuning (docs/project/questions.md Q-C6) ---
     max_time_stretch: float = Field(
         default=0.08,
         gt=0,

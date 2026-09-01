@@ -10,7 +10,7 @@ narration. Four remedies exist, applied in order of how much they damage the res
 4. flag the segment and let a person decide.
 
 Anything past the configured bounds is flagged rather than forced, because a segment
-crushed by 30 % sounds worse than one that overruns slightly (questions.md Q-C6).
+crushed by 30 % sounds worse than one that overruns slightly (docs/project/questions.md Q-C6).
 """
 
 from __future__ import annotations

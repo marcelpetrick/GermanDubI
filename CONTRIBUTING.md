@@ -37,11 +37,11 @@ frontend test suite that fails to load rather than a clear version error, so use
 
 ## Definition of Done
 
-See §61 of [`vision.md`](vision.md). In short: implementation, type annotations, public
+See §61 of [`docs/product/vision.md`](docs/product/vision.md). In short: implementation, type annotations, public
 docstrings, tests at the right level, migration if persistence changed, docs and ADR
 updated if architecture changed, changelog entry if the behaviour is release-relevant.
 
 ## Open design questions
 
-Unresolved architecture and design decisions are tracked in [`questions.md`](questions.md).
+Unresolved architecture and design decisions are tracked in [`docs/project/questions.md`](docs/project/questions.md).
 When you resolve one, update that file and write an ADR in `docs/adr/`.

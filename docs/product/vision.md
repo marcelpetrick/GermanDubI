@@ -1,6 +1,6 @@
 # Sprachwechsel — Product Vision and Technical Architecture
 
-> **Document:** `vision.md`  
+> **Document:** `docs/product/vision.md`
 > **Status:** Draft architecture baseline  
 > **Date:** 2026-08-30  
 > **Primary platform:** Linux host, browser UI  
@@ -1228,8 +1228,7 @@ Minimal conceptual contract:
 
 ```python
 class TTSProvider(Protocol):
-    def synthesize(self, request: SpeechRequest) -> SpeechResult:
-        ...
+    def synthesize(self, request: SpeechRequest) -> SpeechResult: ...
 ```
 
 `SpeechRequest` includes:
@@ -1898,8 +1897,7 @@ class TranscriptionProvider(Protocol):
         *,
         language: LanguageCode,
         options: TranscriptionOptions,
-    ) -> TranscriptResult:
-        ...
+    ) -> TranscriptResult: ...
 ```
 
 Similarly:
@@ -2240,11 +2238,13 @@ At minimum:
 
 ```text
 README.md
-vision.md
 CONTRIBUTING.md
 SECURITY.md
 CHANGELOG.md
 docs/
+├── README.md
+├── product/
+│   └── vision.md
 ├── architecture/
 ├── adr/
 ├── development/
@@ -2311,7 +2311,7 @@ Keep C4 diagrams in version control.
 
 Update them when container/component boundaries change materially.
 
-`vision.md` contains the initial C4 baseline; later detailed architecture documents can split diagrams by concern.
+`docs/product/vision.md` contains the initial C4 baseline; later detailed architecture documents can split diagrams by concern.
 
 ---
 
@@ -2962,7 +2962,6 @@ Recommended monorepo:
 ```text
 sprachwechsel/
 ├── README.md
-├── vision.md
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
@@ -3002,6 +3001,10 @@ sprachwechsel/
 │   └── fixtures/
 │
 ├── docs/
+│   ├── README.md
+│   ├── product/
+│   │   └── vision.md
+│   ├── project/
 │   ├── architecture/
 │   ├── adr/
 │   ├── development/
@@ -3460,7 +3463,7 @@ Sections:
 - release/versioning,
 - security/privacy.
 
-`vision.md` remains the high-level north-star document.
+`docs/product/vision.md` remains the high-level north-star document.
 
 ---
 
@@ -3597,7 +3600,7 @@ Deliver:
 - Playwright,
 - pre-commit,
 - CI,
-- `vision.md`,
+- `docs/product/vision.md`,
 - initial C4,
 - ADR directory,
 - sample fixtures.

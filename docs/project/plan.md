@@ -9,7 +9,7 @@ Status values: `PENDING` · `IN PROGRESS` · `COMPLETE`.
 
 ## 1. Audit the inherited implementation · `COMPLETE`
 
-- Compared the implementation with `vision.md`, `AGENTS.md`, the C4 documentation, and
+- Compared the implementation with `docs/product/vision.md`, `AGENTS.md`, the C4 documentation, and
   the executable architecture constraints.
 - Exercised backend, frontend, browser E2E, packaging, and provider fallback paths.
 - Recorded remaining work below rather than silently expanding or dropping scope.
@@ -525,3 +525,16 @@ reading code.
 
 Verified the way the claim is made: cloned the repository into an empty directory, ran
 `make setup`, and read the closing `doctor` report — "Ready to dub".
+
+## 25. Put detailed documentation under one discoverable roof · `COMPLETE`
+
+- Kept `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`, and `AGENTS.md` at
+  the repository root because GitHub, security tooling, and contributors expect them
+  there.
+- Moved the product vision, project plan, open-question ledger, and historical deep review
+  into purpose-named areas under `docs/`.
+- Added `docs/README.md` as the documentation map and updated every prose, source-code,
+  generated-schema, and contributor reference to the canonical paths.
+- Acceptance: all local Markdown links resolve, generated API documentation is current,
+  the full `make check` gate passes, 820 backend tests retain 95.22% line coverage, and all
+  55 frontend tests pass.

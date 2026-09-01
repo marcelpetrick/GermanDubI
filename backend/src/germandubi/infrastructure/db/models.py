@@ -136,7 +136,7 @@ class WordRow(Base):
 
     Word rows dominate table size - a twenty-minute video is roughly three thousand rows -
     but SQLite handles that easily, and word timing is what makes accurate re-segmentation
-    and precise pause reconstruction possible later (questions.md Q-B4).
+    and precise pause reconstruction possible later (docs/project/questions.md Q-B4).
     """
 
     __tablename__ = "words"
@@ -158,7 +158,7 @@ class TranslationRevisionRow(Base):
     """A previous German rendering of a segment.
 
     Human edits are never overwritten silently, so every translation is kept and the
-    current one is a pointer (``vision.md`` section 15.2).
+    current one is a pointer (``docs/product/vision.md`` section 15.2).
     """
 
     __tablename__ = "translation_revisions"
@@ -253,7 +253,7 @@ class EventRow(Base):
 
     The monotonic sequence number is what makes ``Last-Event-ID`` replay possible: a browser
     refresh mid-processing rejoins exactly where it left off rather than losing history
-    (questions.md Q-D4).
+    (docs/project/questions.md Q-D4).
     """
 
     __tablename__ = "events"

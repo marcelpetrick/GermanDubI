@@ -5,7 +5,7 @@ media it points at). A URL reaches ``yt-dlp``, which will happily follow it, so 
 happens here in the domain - before any acquisition code exists - and is enforced by tests.
 
 The policy for ``0.x`` is an allowlist, not a denylist: only ``https`` and only known
-YouTube hostnames. Everything else is refused. See ``SECURITY.md`` and ``vision.md``
+YouTube hostnames. Everything else is refused. See ``SECURITY.md`` and ``docs/product/vision.md``
 section 22.
 """
 

@@ -378,7 +378,7 @@ class FFmpegToolkit:
         exists, the narration is mixed straight onto it. Otherwise the original audio is
         ducked - attenuated only while German speech plays - which needs no ML model and
         always works, at the cost of leaving the English voice faintly audible
-        (questions.md Q-A3).
+        (docs/project/questions.md Q-A3).
 
         Args:
             request: What to mix and how.

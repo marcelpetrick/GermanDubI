@@ -3,7 +3,7 @@
 No application or domain code may depend on a specific model implementation. Everything
 goes through one of these Protocols, so a provider can be replaced when it becomes
 obsolete, changes license, or breaks on a new CUDA version, without rewriting the
-application (``vision.md`` section 3.5).
+application (``docs/product/vision.md`` section 3.5).
 
 Every implementation must pass the shared contract suite in ``backend/tests/contract``.
 """

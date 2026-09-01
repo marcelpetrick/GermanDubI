@@ -12,9 +12,9 @@ GermanDubI is a local-first, browser-based video dubbing workstation. Paste an E
 video URL, press *Analyze*, press *Create German Dub*, and get an editable, synchronized
 German dub while every intermediate stage stays inspectable and reproducible.
 
-> The full product vision and technical architecture live in [`vision.md`](vision.md).
+> The full product vision and technical architecture live in [`docs/product/vision.md`](docs/product/vision.md).
 > Ways of working live in [`AGENTS.md`](AGENTS.md).
-> Unresolved design decisions live in [`questions.md`](questions.md).
+> Unresolved design decisions live in [`docs/project/questions.md`](docs/project/questions.md).
 > The implemented system map lives in [`docs/architecture/c4.md`](docs/architecture/c4.md).
 
 **Author: Marcel Petrick <mail@marcelpetrick.it>**
@@ -117,9 +117,11 @@ review pass on a 500-segment dub stays practical.
 backend/    Python modular monolith (domain / application / infrastructure / api / worker / cli)
 frontend/   React + TypeScript + Vite single-page app
 e2e/        Playwright end-to-end tests
-docs/       Architecture, ADRs, development, operations and benchmarks
+docs/       Product, project, architecture, ADR, development, operations and review docs
 scripts/    Thin wrappers used by the Makefile
 ```
+
+[`docs/README.md`](docs/README.md) is the index for the complete documentation set.
 
 ---
 

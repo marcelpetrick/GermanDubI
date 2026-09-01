@@ -6,7 +6,7 @@ this application is answerable as "what does this mean for one segment?"
 
 Segments are immutable: every change returns a new instance. Human edits and regenerations
 therefore never destroy a previous result, which is what makes the workflow
-non-destructive (``vision.md`` section 3.2).
+non-destructive (``docs/product/vision.md`` section 3.2).
 """
 
 from __future__ import annotations
@@ -111,7 +111,7 @@ class ProsodyProfile:
 
     Applied to a generic German voice, this reproduces delivery - pace and pauses - without
     reproducing the speaker's identity. The two are deliberately separate concerns; see
-    ``vision.md`` section 6.
+    ``docs/product/vision.md`` section 6.
 
     Attributes:
         speech_rate_wps: Source speaking rate in words per second.
@@ -132,7 +132,7 @@ class DurationFit:
 
     German is typically 10-30 % longer than the equivalent English, so this is the number
     that decides whether a segment is usable, needs shortening, or must be flagged for the
-    user (see questions.md Q-C6).
+    user (see docs/project/questions.md Q-C6).
 
     Attributes:
         target_ms: The interval available on the timeline.

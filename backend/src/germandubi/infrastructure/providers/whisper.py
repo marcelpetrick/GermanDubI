@@ -2,11 +2,12 @@
 
 Automatic captions from the source are unpunctuated and coarsely timed. Recognition costs
 real CPU or GPU time but produces punctuated, cased text with word-level timestamps - which
-is what sentence segmentation, translation quality and precise timing all depend on. This is
-therefore the preferred path whenever manual captions are unavailable (questions.md Q-C1).
+is what sentence segmentation, translation quality and precise timing all depend on. This
+is therefore the preferred path whenever manual captions are unavailable
+(docs/project/questions.md Q-C1).
 
 Word timestamps come from the same pass, so no separate forced-alignment stack is needed
-(questions.md Q-C2).
+(docs/project/questions.md Q-C2).
 """
 
 from __future__ import annotations

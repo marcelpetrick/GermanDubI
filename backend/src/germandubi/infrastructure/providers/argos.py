@@ -3,7 +3,7 @@
 Argos is the default local translation provider because it is the only credible option that
 is CPU-only and small enough to install without a GPU stack. The port means swapping it for
 a larger model, or an LLM with a duration-constrained prompt, touches nothing outside this
-file (questions.md Q-C4).
+file (docs/project/questions.md Q-C4).
 
 The model is downloaded on first use and cached; nothing is sent over the network at
 translation time.

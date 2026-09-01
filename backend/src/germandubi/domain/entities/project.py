@@ -34,7 +34,7 @@ __all__ = [
 
 
 class ProjectState(StrEnum):
-    """Where a project is in its lifecycle (``vision.md`` section 12.1)."""
+    """Where a project is in its lifecycle (``docs/product/vision.md`` section 12.1)."""
 
     NEW = "new"
     PROBING = "probing"
@@ -85,7 +85,7 @@ class SourceKind(StrEnum):
 
 
 class QualityProfile(StrEnum):
-    """The speed/quality trade-off chosen for a run (``vision.md`` section 40)."""
+    """The speed/quality trade-off chosen for a run (``docs/product/vision.md`` section 40)."""
 
     FAST = "fast"
     BALANCED = "balanced"
@@ -144,7 +144,8 @@ class CaptionTrack:
     Attributes:
         language: The caption language.
         automatic: Whether the track was machine-generated. Automatic captions are
-            unpunctuated and coarsely timed, so they are the last resort (questions.md Q-C1).
+            unpunctuated and coarsely timed, so they are the last resort
+            (docs/project/questions.md Q-C1).
         name: The label the source uses for the track.
         format: The caption file format, e.g. ``vtt``.
     """

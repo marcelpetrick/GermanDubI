@@ -1,5 +1,5 @@
 # GermanDubI developer command surface.
-# `make check` is the fast inner loop; `make pipeline` runs the full CI gate (plan.md step 7).
+# `make check` is the fast inner loop; `make pipeline` runs the full CI gate (docs/project/plan.md step 7).
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help

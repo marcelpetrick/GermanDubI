@@ -3,7 +3,7 @@
 Separation is what turns "the German dub plays over the English narration" into "the German
 dub replaces it". It is also the largest optional dependency in the project, so it is never
 required: without it the mix falls back to ducking the original audio, which needs only
-FFmpeg (questions.md Q-A3, Q-C3).
+FFmpeg (docs/project/questions.md Q-A3, Q-C3).
 
 Demucs is invoked as a subprocess rather than imported, because its torch requirement
 routinely conflicts with other ML stacks in the same environment.

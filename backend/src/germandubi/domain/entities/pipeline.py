@@ -28,7 +28,7 @@ __all__ = [
 
 
 class Stage(StrEnum):
-    """One step of the dubbing pipeline (``vision.md`` section 10)."""
+    """One step of the dubbing pipeline (``docs/product/vision.md`` section 10)."""
 
     PROBE = "probe"
     ACQUIRE = "acquire"
@@ -156,7 +156,7 @@ def downstream_of(stages: frozenset[Stage] | set[Stage] | Stage) -> frozenset[St
 
 
 class JobStatus(StrEnum):
-    """The lifecycle of one unit of work (``vision.md`` section 12.2)."""
+    """The lifecycle of one unit of work (``docs/product/vision.md`` section 12.2)."""
 
     PENDING = "pending"
     QUEUED = "queued"

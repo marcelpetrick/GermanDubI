@@ -952,7 +952,7 @@ export interface components {
         };
         /**
          * QualityProfile
-         * @description The speed/quality trade-off chosen for a run (``vision.md`` section 40).
+         * @description The speed/quality trade-off chosen for a run (``docs/product/vision.md`` section 40).
          * @enum {string}
          */
         QualityProfile: "fast" | "balanced" | "maximum";
@@ -1110,7 +1110,7 @@ export interface components {
         };
         /**
          * Stage
-         * @description One step of the dubbing pipeline (``vision.md`` section 10).
+         * @description One step of the dubbing pipeline (``docs/product/vision.md`` section 10).
          * @enum {string}
          */
         Stage: "probe" | "acquire" | "normalize" | "transcribe" | "align" | "segment" | "separate" | "translate" | "prosody" | "synthesize" | "fit" | "assemble" | "mix" | "subtitle" | "qa" | "export";

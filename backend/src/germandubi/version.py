@@ -5,7 +5,7 @@ the generated, git-ignored module ``germandubi._version``. Nothing in this repos
 hand-edits a version number; a release is an annotated ``vX.Y.Z`` tag and every other
 commit automatically receives a distinct development version.
 
-See ``AGENTS.md`` section 3 and ``vision.md`` section 23.
+See ``AGENTS.md`` section 3 and ``docs/product/vision.md`` section 23.
 """
 
 from __future__ import annotations

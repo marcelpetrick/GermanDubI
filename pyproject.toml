@@ -19,7 +19,7 @@ classifiers = [
     "Topic :: Multimedia :: Video",
     "Typing :: Typed",
 ]
-# See questions.md Q-E1: 3.12 floor because the optional ML stack lags new releases.
+# See docs/project/questions.md Q-E1: 3.12 floor because the optional ML stack lags new releases.
 requires-python = ">=3.12,<3.14"
 dynamic = ["version"]
 
@@ -41,7 +41,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Optional provider stacks. Never installed by default: they are large and their CUDA /
-# torch requirements conflict. See AGENTS.md section 7 and questions.md section C.
+# torch requirements conflict. See AGENTS.md section 7 and docs/project/questions.md section C.
 asr = ["faster-whisper==1.2.1"]
 translate = ["argostranslate==1.11.0"]
 tts = ["piper-tts==1.7.0"]
@@ -94,7 +94,7 @@ target-version = "py312"
 src = ["backend/src", "backend/tests", "scripts"]
 
 [tool.ruff.lint]
-# A deliberately chosen ruleset, not everything Ruff offers (vision.md section 25.2).
+# A deliberately chosen ruleset, not everything Ruff offers (docs/product/vision.md section 25.2).
 select = [
     "F",    # pyflakes
     "E",    # pycodestyle errors
@@ -161,7 +161,7 @@ exclude = ["backend/src/germandubi/infrastructure/db/migrations/versions/"]
 
 [[tool.mypy.overrides]]
 # Third-party ML libraries ship incomplete typing. Ignores stay localized to the provider
-# adapters instead of weakening typing globally (vision.md section 25.3).
+# adapters instead of weakening typing globally (docs/product/vision.md section 25.3).
 module = [
     "faster_whisper.*",
     "argostranslate.*",

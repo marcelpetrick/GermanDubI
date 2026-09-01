@@ -3,7 +3,7 @@
 The MVP reproduces *delivery* - speaking rate and pause structure - rather than voice
 identity. Those are deliberately separate concerns: matching pace and pauses needs no
 authorization and applies to any stock German voice, while reproducing a recognizable voice
-does need authorization and is an optional capability (``vision.md`` section 6).
+does need authorization and is an optional capability (``docs/product/vision.md`` section 6).
 
 Rate and pauses are measured from word timing, which the pipeline already has, so this
 stage costs nothing and needs no model. Loudness is measured with FFmpeg when available.

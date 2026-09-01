@@ -4,7 +4,7 @@ Piper is the default German voice because it is the only credible option that is
 realistically faster than realtime on a CPU. That matters more than raw quality here: the
 review loop depends on regenerating a corrected segment in about a second, and a model that
 takes thirty seconds per segment would make the editing workflow unusable
-(questions.md Q-C5).
+(docs/project/questions.md Q-C5).
 
 Voices are ONNX files downloaded once and cached. Synthesis is entirely local.
 """
