@@ -398,3 +398,37 @@ and cancellation their own database connections. That deadlocks the process agai
 commit until the handler returns. The test suite went from 113 s to over 600 s and had to be
 killed. Progress and cancellation stay on the stage's connection; what changed is how long
 that connection holds the lock.
+
+## 21. Prove two videos in one browser session · `PENDING`
+
+Two videos are now safe to queue, and nothing demonstrates it. The browser workflow drives
+one project through one dub.
+
+- Extend the deterministic browser test to create two projects with different URLs, dub
+  both, and check both results. It runs against the fake providers, so it stays in the
+  gate: what is under test is the queue, the interface and the absence of errors, none of
+  which needs a real model.
+- **Fail the test on browser console errors and on unhandled page errors.** "No warnings
+  appeared" is only meaningful if something is watching, and nothing currently is.
+- Add an opt-in variant that uses real providers and real URLs for the times a human wants
+  end-to-end proof. It cannot live in the gate: it needs the network, the optional model
+  stacks and several minutes.
+- Acceptance: the gate proves two projects complete in one session with a clean console.
+
+## 22. Let the user stop a run and clear their work · `PENDING`
+
+- **Stop.** A cancel endpoint already exists and the interface never calls it. Worse, it
+  would not work if it did: `ProcessRunner` is constructed without its `cancelled`
+  callback, so cancelling never terminates the ffmpeg, yt-dlp or Demucs process actually
+  doing the work. A stage would notice only at its next checkpoint, and a two-hundred
+  second separation has none inside it. Wire cancellation through to the process tree, then
+  put the button in the interface.
+- **Reset.** Deleting one project exists; clearing everything does not. Add it as one
+  endpoint rather than a loop of deletes from the browser, so a half-finished clear cannot
+  leave orphaned workspaces behind.
+- **Say what the buttons do before they are pressed.** Stop abandons work in progress and
+  keeps what finished; reset destroys every project and its files. The second is
+  irreversible and must ask first.
+- Acceptance: cancelling a running stage stops the subprocess rather than waiting it out,
+  reset leaves neither projects nor workspace directories, and both are covered by tests
+  rather than by having been tried once.
