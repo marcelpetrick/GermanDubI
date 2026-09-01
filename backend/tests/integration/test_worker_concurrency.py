@@ -294,6 +294,85 @@ def test_reset_on_an_empty_installation_is_harmless(application: Application) ->
     assert application.projects.delete_all() == 0
 
 
+class TestTheQueue:
+    """A second video is accepted while the first runs, and says so.
+
+    Isolation between projects is real -- one worker, one job at a time, a workspace each --
+    but it used to be invisible. A project queued behind a forty-minute dub showed a
+    progress bar at zero with no running stage and nothing explaining the wait, which is
+    indistinguishable from a hang.
+    """
+
+    def test_a_project_waiting_behind_another_knows_its_position(
+        self, application: Application, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        running = threading.Event()
+        finish = threading.Event()
+
+        def slow_stage(_context: StageContext) -> None:
+            running.set()
+            assert finish.wait(timeout=30), "the test never released the stage"
+
+        first = application.projects.create_from_url(VALID_URL)
+        application.projects.request_analysis(first.id)
+        application.worker().run_until_idle()
+        monkeypatch.setitem(HANDLERS, Stage.ACQUIRE, slow_stage)
+        application.pipeline.start(first.id)
+
+        worker = application.worker()
+        thread = threading.Thread(target=worker.run_once, daemon=True)
+        thread.start()
+        assert running.wait(timeout=30), "the first project never started work"
+
+        try:
+            second = application.projects.create_from_url(SECOND_URL)
+            application.projects.request_analysis(second.id)
+            waiting = application.pipeline.latest_progress(second.id)
+            busy = application.pipeline.latest_progress(first.id)
+        finally:
+            finish.set()
+            thread.join(timeout=30)
+
+        assert waiting is not None
+        assert waiting.queue_position == 1, "the second project should know it is next"
+        assert waiting.queue_length >= 1
+        # The project actually being worked on is not waiting for anything.
+        assert busy is not None
+        assert busy.queue_position is None
+
+    def test_nothing_is_waiting_when_nothing_is_queued(self, application: Application) -> None:
+        project = application.projects.create_from_url(VALID_URL)
+        application.projects.request_analysis(project.id)
+        application.worker().run_until_idle()
+
+        progress = application.pipeline.latest_progress(project.id)
+
+        assert progress is not None
+        assert progress.queue_position is None
+        assert progress.queue_length == 0
+
+    def test_the_queue_follows_the_order_the_worker_actually_claims_in(
+        self, application: Application
+    ) -> None:
+        """A position from a second, similar query would be a position in a queue that is not
+        the one being worked. Probes jump ahead, so the queue has to say so too."""
+        first = application.projects.create_from_url(VALID_URL)
+        application.projects.request_analysis(first.id)
+        application.worker().run_until_idle()
+        application.pipeline.start(first.id)
+
+        second = application.projects.create_from_url(SECOND_URL)
+        application.projects.request_analysis(second.id)
+
+        with application.unit_of_work() as uow:
+            waiting = uow.jobs.waiting_projects()
+            claimed = uow.jobs.claim_next(lease_seconds=900)
+
+        assert claimed is not None
+        assert str(waiting[0]) == str(claimed.project_id)
+        assert [str(item) for item in waiting] == [str(second.id), str(first.id)]
+
+
 class TestResumability:
     """`checkpoint()` commits, so a stage must be safe to run again after failing part-way.
 

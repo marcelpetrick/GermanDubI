@@ -7,6 +7,7 @@ domain entity from a row, or a row from an entity.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -872,11 +873,36 @@ class JobRepository:
         moment = now or datetime.now(UTC)
         self._reclaim_expired_leases(moment)
 
-        # Source inspection first, then oldest first. A probe costs a second or two and is
-        # what someone who just pasted a URL is waiting on; strict age order put it behind
-        # every remaining stage of a dub already running, so the interface did nothing for
-        # minutes and looked hung. A run in progress loses nothing by yielding at a stage
-        # boundary.
+        for row in self._runnable_in_claim_order():
+            claimed = _row_to_job(row)
+            if claimed.status is JobStatus.PENDING:
+                claimed = claimed.transition_to(JobStatus.QUEUED)
+            claimed = claimed.claimed(lease_expires_at=moment + timedelta(seconds=lease_seconds))
+            _apply_job(row, claimed)
+            self.session.flush()
+            return claimed
+        return None
+
+    def _runnable_in_claim_order(self) -> Iterator[JobRow]:
+        """Return every job that could be claimed now, in the order the worker will take them.
+
+        Source inspection first, then oldest first. A probe costs a second or two and is
+        what someone who just pasted a URL is waiting on; strict age order put it behind
+        every remaining stage of a dub already running, so the interface did nothing for
+        minutes and looked hung. A run in progress loses nothing by yielding at a stage
+        boundary.
+
+        Shared with :meth:`waiting_projects` on purpose. A queue position derived from a
+        second, similar query would be a position in a queue that does not exist -- it has
+        to be the same order the worker actually follows, or the interface would confidently
+        show the wrong wait.
+
+        Lazy, because claiming stops at the first runnable job and each candidate costs a
+        query to check its dependencies.
+
+        Yields:
+            Claimable jobs, first to be claimed first.
+        """
         probe_last = case((JobRow.stage == Stage.PROBE.value, 0), else_=1)
         candidates = self.session.scalars(
             select(JobRow)
@@ -887,18 +913,26 @@ class JobRepository:
             )
             .order_by(probe_last, JobRow.created_at, JobRow.id)
         ).all()
-
         for row in candidates:
-            if not self._dependencies_satisfied(row):
-                continue
-            claimed = _row_to_job(row)
-            if claimed.status is JobStatus.PENDING:
-                claimed = claimed.transition_to(JobStatus.QUEUED)
-            claimed = claimed.claimed(lease_expires_at=moment + timedelta(seconds=lease_seconds))
-            _apply_job(row, claimed)
-            self.session.flush()
-            return claimed
-        return None
+            if self._dependencies_satisfied(row):
+                yield row
+
+    def waiting_projects(self) -> list[ProjectId]:
+        """Return the projects with runnable work, in the order the worker will reach them.
+
+        One entry per project, because a project's fifteen remaining stages are one wait
+        from the reader's point of view, not fifteen. A project whose stage is already
+        running does not appear: it is not waiting.
+
+        Returns:
+            The project ids, first to be worked on first.
+        """
+        ordered: list[ProjectId] = []
+        for row in self._runnable_in_claim_order():
+            project_id = ProjectId(row.project_id)
+            if project_id not in ordered:
+                ordered.append(project_id)
+        return ordered
 
     def renew_lease(self, job_id: JobId, *, lease_seconds: int) -> None:
         """Push a running job's lease out, so long work is not reclaimed underneath it.

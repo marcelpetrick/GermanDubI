@@ -27,6 +27,8 @@ def _detail(progress: RunProgress) -> RunDetail:
         progress=progress.fraction,
         finished=progress.finished,
         failed=progress.failed,
+        queue_position=progress.queue_position,
+        queue_length=progress.queue_length,
     )
 
 

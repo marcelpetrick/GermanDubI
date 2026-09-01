@@ -7,6 +7,10 @@ import { useT } from '@/i18n/LocaleProvider';
 export function PipelineProgress({ run, liveDetail }: { run: Run; liveDetail: string | null }) {
   const t = useT();
   const percent = Math.round(run.progress * 100);
+  // One worker processes one project at a time, so a second video is accepted straight away
+  // and then waits its turn. Unannounced, a bar at zero with no running stage is
+  // indistinguishable from a hang.
+  const position = run.queue_position ?? null;
   return (
     <section className="card" aria-labelledby="processing-heading" aria-live="polite">
       <div className="row section-heading">
@@ -18,6 +22,13 @@ export function PipelineProgress({ run, liveDetail }: { run: Run; liveDetail: st
         </div>
         <strong>{percent}%</strong>
       </div>
+      {position !== null && (
+        <p className="alert alert--warn" role="status">
+          {position === 1 ? t('queue.next') : t('queue.waiting')}
+          {run.queue_length > 1 &&
+            ` · ${t('queue.position', { position, total: run.queue_length })}`}
+        </p>
+      )}
       <div
         className="progress"
         role="progressbar"

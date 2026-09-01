@@ -979,6 +979,17 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Queue Position
+             * @description Where this project sits among those waiting for the worker, counting from one. Null when it is not waiting behind another project.
+             */
+            queue_position?: number | null;
+            /**
+             * Queue Length
+             * @description How many projects have work waiting in total.
+             * @default 0
+             */
+            queue_length: number;
         };
         /**
          * SegmentDetail

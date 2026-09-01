@@ -210,4 +210,6 @@ async def analyze_project(
         progress=progress.fraction,
         finished=progress.finished,
         failed=progress.failed,
+        queue_position=progress.queue_position,
+        queue_length=progress.queue_length,
     )

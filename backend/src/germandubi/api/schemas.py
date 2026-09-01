@@ -272,10 +272,29 @@ class RunDetail(BaseModel):
     cancelled: bool
     current_stage: str | None
     created_at: datetime
+    queue_position: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Where this project sits among those waiting for the worker, counting from "
+            "one. Null when it is not waiting behind another project."
+        ),
+    )
+    queue_length: int = Field(
+        default=0, ge=0, description="How many projects have work waiting in total."
+    )
 
     @classmethod
     def of(
-        cls, run: PipelineRun, jobs: list[Job], *, progress: float, finished: bool, failed: bool
+        cls,
+        run: PipelineRun,
+        jobs: list[Job],
+        *,
+        progress: float,
+        finished: bool,
+        failed: bool,
+        queue_position: int | None = None,
+        queue_length: int = 0,
     ) -> RunDetail:
         """Build the wire model from the domain objects.
 
@@ -285,6 +304,8 @@ class RunDetail(BaseModel):
             progress: Overall completion.
             finished: Whether every job reached a terminal status.
             failed: Whether a job failed with no retries left.
+            queue_position: Position among the projects waiting, counting from one.
+            queue_length: How many projects are waiting.
 
         Returns:
             The serializable model.
@@ -301,6 +322,8 @@ class RunDetail(BaseModel):
             cancelled=run.cancelled,
             current_stage=str(current.stage) if current else None,
             created_at=run.created_at,
+            queue_position=queue_position,
+            queue_length=queue_length,
         )
 
 

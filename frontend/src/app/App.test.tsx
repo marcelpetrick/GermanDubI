@@ -154,7 +154,7 @@ function projectInState(state: string): ProjectDetail {
   };
 }
 
-function runFor(projectId: string): Run {
+function runFor(projectId: string, overrides: Partial<Run> = {}): Run {
   return {
     id: '01KRUN0000000000000000000',
     project_id: projectId,
@@ -166,6 +166,9 @@ function runFor(projectId: string): Run {
     cancelled: false,
     current_stage: null,
     created_at: '2026-08-30T12:00:00Z',
+    queue_position: null,
+    queue_length: 0,
+    ...overrides,
   };
 }
 

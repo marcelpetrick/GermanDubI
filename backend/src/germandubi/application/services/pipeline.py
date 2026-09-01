@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 
 from germandubi.application.services.unit_of_work import UnitOfWork, UnitOfWorkFactory
 from germandubi.domain.entities.pipeline import (
@@ -28,17 +29,35 @@ class RunProgress:
     Attributes:
         run: The run itself.
         jobs: Its jobs, in execution order.
+        queue_position: Where this project sits among those waiting, counting from one, or
+            ``None`` when it is not waiting for another project.
+        queue_length: How many projects are waiting in total.
     """
 
-    def __init__(self, run: PipelineRun, jobs: list[Job]) -> None:
+    def __init__(
+        self,
+        run: PipelineRun,
+        jobs: list[Job],
+        *,
+        queue: Sequence[ProjectId] = (),
+    ) -> None:
         """Initialise the snapshot.
 
         Args:
             run: The run.
             jobs: Its jobs.
+            queue: The projects with runnable work, in the order the worker will reach them.
         """
         self.run = run
         self.jobs = sorted(jobs, key=lambda job: STAGE_ORDER.index(job.stage))
+        self.queue_length = len(queue)
+        position = next(
+            (index for index, project in enumerate(queue) if project == run.project_id), None
+        )
+        # Position one is the project the worker takes next, which is not a wait worth
+        # naming unless something else is already running -- and if something else is
+        # running, this project is not at position one.
+        self.queue_position = None if position is None or self.current else position + 1
 
     @property
     def finished(self) -> bool:
@@ -166,7 +185,11 @@ class PipelineService:
             NotFoundError: If the run does not exist.
         """
         with self.unit_of_work() as uow:
-            return RunProgress(uow.jobs.get_run(run_id), uow.jobs.jobs_for_run(run_id))
+            return RunProgress(
+                uow.jobs.get_run(run_id),
+                uow.jobs.jobs_for_run(run_id),
+                queue=uow.jobs.waiting_projects(),
+            )
 
     def latest_progress(self, project_id: ProjectId) -> RunProgress | None:
         """Return a snapshot of a project's most recent run.
@@ -181,7 +204,9 @@ class PipelineService:
             run = uow.jobs.latest_run(project_id)
             if run is None:
                 return None
-            return RunProgress(run, uow.jobs.jobs_for_run(run.id))
+            return RunProgress(
+                run, uow.jobs.jobs_for_run(run.id), queue=uow.jobs.waiting_projects()
+            )
 
     def cancel_latest(self, project_id: ProjectId) -> bool:
         """Cancel whatever this project is currently doing.
