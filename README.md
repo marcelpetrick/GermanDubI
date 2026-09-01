@@ -109,6 +109,27 @@ if it says "Ready to dub", paste a YouTube URL and press Analyze.
 The segment table filters to flagged, needs-review or failed segments, which is how a
 review pass on a 500-segment dub stays practical.
 
+<details>
+<summary>See the processing workflow</summary>
+
+![GermanDubI processing a video through the persisted pipeline](media/DubI_workflow.png)
+
+</details>
+
+<details>
+<summary>See all pipeline stages</summary>
+
+![GermanDubI help page explaining the sixteen pipeline stages](media/DubI_stages.png)
+
+</details>
+
+<details>
+<summary>See segment review and correction</summary>
+
+![GermanDubI segment table and correction editor](media/DubI_review.png)
+
+</details>
+
 ---
 
 ## Repository layout
