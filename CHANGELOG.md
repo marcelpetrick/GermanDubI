@@ -10,6 +10,12 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-01
+
+Running two videos at once, and everything that turned out to stand between the user and a
+second dub. Three of the defects below were only reachable once the one before it was
+fixed.
+
 ### Added
 
 - The German narrator is chosen per project, from a dropdown with a play button that
@@ -17,28 +23,23 @@ may occur in MINOR releases and are always listed here.
   reachable outside a machine-wide setting.
 - `GET /voices` lists the narrators with their quality tier and whether the model is
   downloaded; `GET /voices/{voice}/sample` returns a cached audio sample of one.
-
 - `GERMANDUBI_DEVICE` selects the compute device (`auto`, `cpu`, `cuda`) for the model
   providers, and `germandubi doctor` reports which one was resolved.
-
-### Added
-
 - Stop a project from the list or from its own page. Cancelling now terminates the tool
   actually running, rather than waiting for a stage to reach its next checkpoint.
 - Delete everything: one action that cancels anything running and removes every project
   and all generated files. It asks first, because it cannot be undone.
 - Every action explains what it does on hover, in all four interface languages.
-
-### Fixed
-
-- Cancelling a run never stopped the external process doing the work. The process runner
-  was created without its cancellation callback, so a stage inside a long ffmpeg or Demucs
-  call ignored the request entirely.
-- Adding a video while another is being dubbed no longer fails with "database is locked".
-  The worker held SQLite's write lock for the entire duration of a stage -- two minutes
-  while transcribing a long source -- so any write from the API during that window failed.
-- A newly added URL is now inspected before the running dub continues, instead of queueing
-  behind every one of its remaining stages.
+- A project waiting behind another says so, with its position in the queue. It previously
+  showed a progress bar at zero and no running stage, which is indistinguishable from a
+  hang.
+- The server keeps a rotating log at `<data_dir>/logs/germandubi.log`. Every unexpected
+  error carries a reference that appears both in the browser and in the log, and the
+  message, `germandubi doctor` and the help page all name the file's path.
+- `make preflight` checks the four things that must be on the machine before anything is
+  installed, and `make setup` runs it first.
+- Two CI workflows: a daily dependency audit, and a weekly run against the real provider
+  stacks that dubs an excerpt of a real source end to end.
 
 ### Changed
 
@@ -52,11 +53,44 @@ may occur in MINOR releases and are always listed here.
   3.6. Speech recognition already selected a GPU on its own and is unchanged.
 - Narration assembly mixes segments in batches instead of building one filter graph over
   every segment. Measured on 400 clips: 94.4 s to 33.1 s, with identical output.
-
 - `make install-providers` now installs voice/background separation as well, and a new
   `make setup` takes a clean checkout to a machine that can really dub in one command.
   Separation was the one provider no documented step ever installed, so following the
   instructions produced a dub with the English voice still faintly audible under the German.
+- The interface is fully translated. Segment editing, error messages, status badges, stage
+  names and segment flags previously rendered in English whichever language was chosen,
+  which reads as broken rather than as untranslated.
+- Database migrations are the only thing that creates or changes the schema. A fresh
+  install previously got its schema from SQLAlchemy metadata and was never stamped, so no
+  existing installation could receive a new column.
+- `./localPipeline.sh` restores the provider extras it removes. Running the gate used to
+  leave a machine that could no longer dub.
+
+### Fixed
+
+- Cancelling a run never stopped the external process doing the work. The process runner
+  was created without its cancellation callback, so a stage inside a long ffmpeg or Demucs
+  call ignored the request entirely.
+- Adding a video while another is being dubbed no longer fails with "database is locked".
+  This had two causes, fixed in turn: the worker held SQLite's write lock for the entire
+  duration of a stage, and then, after that was fixed, reporting progress took the lock and
+  held it for the work that followed -- "using faster-whisper" was announced and the lock
+  stayed taken for the two minutes of recognition.
+- Deleting a project while its stage was running no longer kills the worker. The stage
+  finished and wrote an artifact row for a project that no longer existed; the resulting
+  integrity error left the session unusable, recording the failure raised in turn, and the
+  process ended. Every other project then sat in "probing" indefinitely. A deleted run now
+  counts as cancelled, stage outcomes are recorded on a clean transaction, and the worker
+  loop survives an unexpected error.
+- A project creation that fails no longer leaves its workspace directory behind with no
+  database row referring to it.
+- The processing screen advances as a stage reports progress, instead of only at
+  checkpoints.
+- A stage that legitimately runs longer than its lease is no longer mistaken for an
+  abandoned one, and a second worker for the same data directory is refused rather than
+  quietly writing into the same workspace.
+- A newly added URL is now inspected before the running dub continues, instead of queueing
+  behind every one of its remaining stages.
 
 ## [0.2.0] - 2026-08-31
 
