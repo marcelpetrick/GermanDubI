@@ -89,18 +89,47 @@ class ProjectService:
     def _create(
         self, source: SourceRef, quality: QualityProfile, voice: str | None = None
     ) -> Project:
-        """Persist a new project and create its workspace."""
+        """Persist a new project and create its workspace.
+
+        The workspace is a filesystem side effect inside a database transaction, and the
+        filesystem does not roll back. When creation failed for an unrelated reason -- the
+        write lock held by a running stage was the case that occurred -- the directory
+        stayed behind with no row referring to it, invisible to the interface and to
+        "delete everything". Three of them accumulated in one session.
+
+        So the directory is removed again if the transaction does not complete. Removal is
+        best-effort: failing to tidy up must not replace the real error with a worse one.
+        """
         project = Project.create(source, quality=quality, voice=voice)
-        with self.unit_of_work() as uow:
-            uow.projects.add(project, created_with=build_info().version)
-            uow.store.create_workspace(project.id)
-            uow.events.append(
-                project.id,
-                "project_created",
-                {"source": source.locator, "kind": source.kind.value},
-            )
+        try:
+            with self.unit_of_work() as uow:
+                uow.projects.add(project, created_with=build_info().version)
+                uow.store.create_workspace(project.id)
+                uow.events.append(
+                    project.id,
+                    "project_created",
+                    {"source": source.locator, "kind": source.kind.value},
+                )
+        except Exception:
+            self._discard_workspace(project.id)
+            raise
         logger.info("created project %s for %s", project.id, source.locator)
         return project
+
+    def _discard_workspace(self, project_id: ProjectId) -> None:
+        """Remove the workspace of a project that was never persisted.
+
+        Reached through the factory rather than a unit of work: the failure being cleaned up
+        after is often the database itself, and opening another transaction to tidy up would
+        fail the same way.
+        """
+        try:
+            self.unit_of_work.store.delete_workspace(project_id)
+        except Exception:
+            # Broad on purpose: tidying up must never replace the caller's real error.
+            logger.warning(
+                "could not remove the workspace of unsaved project %s", project_id, exc_info=True
+            )
 
     def get(self, project_id: ProjectId) -> Project:
         """Return a project.

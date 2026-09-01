@@ -114,3 +114,27 @@ def test_approving_all_segments_completes_project(application: Application) -> N
     approved = application.segments.approve(segment.id)
     assert approved.review_state == "approved"
     assert application.projects.get(segment.project_id).state is ProjectState.COMPLETE
+
+
+def test_a_failed_create_leaves_no_workspace_behind(
+    application: Application, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The filesystem does not roll back with the transaction, so it is undone by hand.
+
+    A create that failed after the workspace directory existed left it there with no row
+    referring to it: invisible in the interface, and not removed by "delete everything".
+    Three accumulated in one session when the database was briefly write-locked.
+    """
+    from germandubi.infrastructure.db.repositories import EventRepository
+
+    def refuse(*_args: object, **_kwargs: object) -> None:
+        msg = "database is locked"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(EventRepository, "append", refuse)
+
+    before = sorted(application.settings.projects_dir.glob("*"))
+    with pytest.raises(RuntimeError, match="database is locked"):
+        application.projects.create_from_url("https://www.youtube.com/watch?v=abcdefghijk")
+
+    assert sorted(application.settings.projects_dir.glob("*")) == before
