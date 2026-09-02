@@ -96,9 +96,17 @@ RUN set -eu; \
 # --------------------------------------------------------------------------- runtime
 FROM ${PYTHON_IMAGE} AS runtime
 
+# Standard annotations. Docker Hub, GHCR and Quay all read these to fill in the listing
+# page, and `docker inspect` shows them to anyone who wants to know what they just pulled.
+ARG VERSION
 LABEL org.opencontainers.image.title="GermanDubI" \
-      org.opencontainers.image.description="Turn English videos into editable German dubs." \
+      org.opencontainers.image.description="Like Dobby, the house-elf, but for dubbing - a local-first workstation that turns an English video into an editable, synchronized German dub, running every stage on your own machine." \
+      org.opencontainers.image.authors="Marcel Petrick <mail@marcelpetrick.it>" \
+      org.opencontainers.image.vendor="Marcel Petrick" \
+      org.opencontainers.image.url="https://github.com/marcelpetrick/GermanDubI" \
       org.opencontainers.image.source="https://github.com/marcelpetrick/GermanDubI" \
+      org.opencontainers.image.documentation="https://github.com/marcelpetrick/GermanDubI/blob/main/docs/operations/docker.md" \
+      org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.licenses="GPL-3.0-or-later"
 
 # ffmpeg is the only external tool the pipeline requires. Everything else it needs -- yt-dlp

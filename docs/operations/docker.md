@@ -241,32 +241,165 @@ larger. The round trip was verified: `docker load` restores the image under its 
 
 ## Publishing it
 
-`.github/workflows/image.yml` runs on a version tag, the same trigger that cuts a release.
-It builds `linux/amd64` and `linux/arm64` on runners of each architecture — never under
-QEMU, which takes hours for a stack with torch in it — and publishes one manifest list, so
-`docker pull` picks the right architecture on an Apple Silicon Mac without anyone choosing.
+### The three registries worth being on
 
-**GitHub Container Registry** works with no setup: the workflow authenticates with the
-token GitHub already provides. One manual step, once: the package is private until you open
-the repository's *Packages* section and change its visibility to public.
+| | Host | Why |
+| --- | --- | --- |
+| **Docker Hub** | `docker.io` | The default. `docker pull marcelpetrick/germandubi` needs no registry prefix, and it is where people look first. Rate-limits anonymous pulls. |
+| **GitHub Container Registry** | `ghcr.io` | Sits beside the source. No pull rate limit, no second account, and the workflow authenticates with a token GitHub already provides. |
+| **Quay.io** | `quay.io` | Red Hat's, and what the Kubernetes and RHEL world reaches for. Free public repositories. |
 
-**Docker Hub** is optional and off unless you add two repository secrets. It is where most
-people look first, and it rate-limits anonymous pulls where GHCR does not, so having both is
-worth the five minutes:
+There is no reason to choose. The workflow publishes the same digests under all
+three, so a single build ends up everywhere and the manifests point at identical bytes.
 
-1. On Docker Hub, create the repository `germandubi` under your account.
-2. *Account settings → Personal access tokens* → new token with **Read & Write** scope.
-   Use a token, never your password: it is scoped and you can revoke it alone.
-3. In the GitHub repository, *Settings → Secrets and variables → Actions*, add:
-   - `DOCKERHUB_USERNAME` — your Docker Hub username
-   - `DOCKERHUB_TOKEN` — the token from step 2
+### Automatically, on a version tag
 
-With those present the same digests are published under both names, so Docker Hub gets the
-bytes without a second build. Without them the step is skipped and GHCR still publishes,
-which is what lets the workflow run unchanged in a fork.
+`.github/workflows/image.yml` runs on the same tag that cuts a release. It builds
+`linux/amd64` and `linux/arm64` on runners of each architecture — never under QEMU, which
+takes hours for a stack with torch in it — and merges them into one manifest list, so
+`docker pull` picks the right architecture without anyone choosing.
 
-To publish by hand, or to check the pipeline before tagging, run the workflow from the
-Actions tab: a manual run tags the version as `0.0.0-dev` and never moves `latest`.
+**GHCR needs no setup.** The workflow uses the token GitHub provides. One manual step,
+once: the package starts private, so open the repository's *Packages* section and set its
+visibility to public.
+
+**Docker Hub** — five minutes, once:
+
+1. Create the repository `germandubi` under your account at
+   <https://hub.docker.com/repositories>. Make it public.
+2. *Account settings → Personal access tokens* → **New access token**, description
+   `github-actions`, permissions **Read & Write**. Copy it; it is shown once.
+3. In GitHub, *Settings → Secrets and variables → Actions → New repository secret*:
+   - `DOCKERHUB_USERNAME` = `marcelpetrick`
+   - `DOCKERHUB_TOKEN` = the token from step 2
+
+**Quay.io** — the same shape:
+
+1. Create the repository `germandubi` at <https://quay.io/new/>, visibility public.
+2. *Account settings → Robot accounts* → create one with **Write** on that repository.
+   Quay shows the robot's username as `marcelpetrick+github_actions` and its token.
+3. Add `QUAY_USERNAME` and `QUAY_TOKEN` as GitHub secrets.
+
+Each registry is skipped silently when its secrets are absent, so nothing breaks in a fork
+and you can add them one at a time.
+
+Use tokens, never your account password: a token is scoped to what it can push and can be
+revoked on its own if it leaks.
+
+### By hand
+
+Same result, if you would rather not wait for a tag. Build once, tag it for each place:
+
+```bash
+make docker-build                       # germandubi:latest, version from the current tag
+VERSION=0.3.0
+
+docker login -u marcelpetrick                                    # Docker Hub
+docker tag germandubi:latest marcelpetrick/germandubi:$VERSION
+docker tag germandubi:latest marcelpetrick/germandubi:latest
+docker push marcelpetrick/germandubi:$VERSION
+docker push marcelpetrick/germandubi:latest
+```
+
+```bash
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u marcelpetrick --password-stdin
+docker tag germandubi:latest ghcr.io/marcelpetrick/germandubi:$VERSION
+docker push ghcr.io/marcelpetrick/germandubi:$VERSION
+```
+
+```bash
+docker login quay.io -u marcelpetrick
+docker tag germandubi:latest quay.io/marcelpetrick/germandubi:$VERSION
+docker push quay.io/marcelpetrick/germandubi:$VERSION
+```
+
+A hand-built push is single-architecture — whatever machine you built on. Only the workflow
+produces the amd64 + arm64 manifest, so an Apple Silicon user pulling a hand-pushed amd64
+image gets emulation. Worth knowing before you push `latest` by hand.
+
+### Being found
+
+The image carries the standard `org.opencontainers.image.*` annotations — title,
+description, authors, vendor, source, documentation, version, licence. All three registries
+read them to fill in the listing, and `docker inspect` shows them to anyone who wants to
+know what they just pulled. The maintainer is named as
+**Marcel Petrick &lt;mail@marcelpetrick.it&gt;**, which is who a registry or a user contacts
+about the image.
+
+Two fields the registries do **not** take from the image, worth setting once per repository.
+
+**Short description** — one line, shown in search results. The same one the GitHub
+repository uses, because it earns its place:
+
+```
+Like Dobby, the house-elf, but for dubbing — a local-first workstation that turns an English video into an editable, synchronized German dub.
+```
+
+**Long description** — the page body, rendered as Markdown on Docker Hub and Quay. Paste
+this:
+
+````markdown
+# GermanDubI
+
+**Like Dobby, the house-elf, but for dubbing.** Paste an English video URL, press *Analyze*,
+press *Create German Dub*, and get an editable, synchronized German dub — with every
+intermediate stage inspectable and reproducible.
+
+**Nothing leaves your machine** except the URL you paste. Recognition, translation, speech
+and separation all run locally. No account, no API key, no upload.
+
+## Run it
+
+```bash
+docker volume create germandubi-data
+docker run -d --name germandubi-api -p 127.0.0.1:8756:8756 \
+  -v germandubi-data:/data marcelpetrick/germandubi serve
+docker run -d --name germandubi-worker \
+  -v germandubi-data:/data marcelpetrick/germandubi worker
+```
+
+Open <http://127.0.0.1:8756>. Two containers from one image: the API answers the browser,
+the worker does the dubbing, and they share the `/data` volume — projects, database,
+models and log all live there.
+
+## What you get
+
+- **A dub you can correct.** Every segment shows the English, the German and how well the
+  German fits the original timing. Fix a translation and only that segment is spoken again,
+  plus what depends on it — transcription and separation are not repeated.
+- **A pipeline, not a script.** Sixteen stages with recorded inputs, outputs and
+  provenance. Close the tab, restart the machine; a run resumes from the last finished
+  stage.
+- **Subtitles too.** German and English, alongside a video that keeps the original audio as
+  a second track.
+- **Your language.** Interface in English, Deutsch, Hrvatski and 中文. Dark and light
+  themes.
+
+## Tags
+
+| Tag | |
+| --- | --- |
+| `latest`, `X.Y.Z` | Every provider, CPU-only. `linux/amd64` and `linux/arm64`. |
+
+Roughly a fifth of the video's running time on a CPU: a 40-minute source takes about eight
+minutes. The models download once, into the volume, on the first dub.
+
+## More
+
+- Source, issues and full documentation:
+  <https://github.com/marcelpetrick/GermanDubI>
+- Container guide — GPU, configuration, bind mounts, offline sharing:
+  <https://github.com/marcelpetrick/GermanDubI/blob/main/docs/operations/docker.md>
+- Licence: GPL-3.0-or-later
+- Maintainer: Marcel Petrick &lt;mail@marcelpetrick.it&gt;
+````
+
+Docker Hub can keep that in step automatically — `peter-evans/dockerhub-description` reads a
+file from the repository on each push to `main`. Worth adding once the description settles;
+until then, pasting it is a two-minute job done rarely.
+
+Tag deliberately: `latest` should only ever move on a real release. The workflow enforces
+this — a manual run publishes `0.0.0-dev` and leaves `latest` alone.
 
 ## Building for another architecture
 

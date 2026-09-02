@@ -119,16 +119,32 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Optional third. Quay is the registry the Kubernetes and Red Hat world reaches for,
+      # and public repositories there are free. Same treatment: present or skipped.
+      - name: Log in to Quay
+        id: quay
+        if: ${{ secrets.QUAY_USERNAME != '' && secrets.QUAY_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_TOKEN }}
+
       - name: Tag the manifest
         working-directory: /tmp/digests
         env:
           DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/germandubi
           HAVE_DOCKERHUB: ${{ steps.dockerhub.outcome == 'success' }}
+          QUAY_REPO: quay.io/${{ secrets.QUAY_USERNAME }}/germandubi
+          HAVE_QUAY: ${{ steps.quay.outcome == 'success' }}
         run: |
           version="${{ needs.build.outputs.version }}"
           names="${IMAGE}"
           if [ "${HAVE_DOCKERHUB}" = "true" ]; then
             names="${names} docker.io/${DOCKERHUB_REPO}"
+          fi
+          if [ "${HAVE_QUAY}" = "true" ]; then
+            names="${names} ${QUAY_REPO}"
           fi
 
           tags=""
