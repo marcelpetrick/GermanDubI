@@ -44,8 +44,12 @@ hooks: ## Install the pre-commit hooks
 DOCKER_VERSION ?= $(shell git describe --tags --dirty 2>/dev/null | sed 's/^v//' || echo 0.0.0)
 
 .PHONY: docker-build
-docker-build: ## Build the container image with every provider (~5 GB)
+docker-build: ## Build the container image: every provider, CPU-only (2.4 GB)
 	docker build --build-arg VERSION=$(DOCKER_VERSION) -t germandubi:latest .
+
+.PHONY: docker-build-cuda
+docker-build-cuda: ## Same, keeping the CUDA libraries for the GPU worker (~5 GB)
+	docker build --build-arg TORCH=cuda --build-arg VERSION=$(DOCKER_VERSION) -t germandubi:cuda .
 
 .PHONY: docker-build-lean
 docker-build-lean: ## Build without the model stacks (~800 MB); cannot produce German

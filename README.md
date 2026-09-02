@@ -93,8 +93,9 @@ cd GermanDubI
 docker compose up
 ```
 
-Then open <http://127.0.0.1:8756>. See [docs/operations/docker.md](docs/operations/docker.md)
-for the smaller provider-free image, GPU support, and which hosts do what.
+Then open <http://127.0.0.1:8756>. The image is 2.4 GB and dubs on the CPU; see
+[docs/operations/docker.md](docs/operations/docker.md) for the GPU build, the smaller
+provider-free image, and which hosts do what.
 
 **From source** — what you want if you are going to change anything:
 

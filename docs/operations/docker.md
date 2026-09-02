@@ -23,16 +23,20 @@ Desktop on macOS and Windows ships it already.
 
 ## Two images, and which one you want
 
-| Build | Image size | Free disk to build it | Can it dub? |
-| --- | --- | --- | --- |
-| `PROVIDERS=full` (default) | about 5 GB | 15 GB | Yes — recognition, translation, German speech, separation |
-| `PROVIDERS=lean` | 814 MB | 3 GB | No — every stage runs, and the output is placeholder tones, not German |
+| Build | Image size | Can it dub? |
+| --- | --- | --- |
+| default | **2.4 GB** | Yes — recognition, translation, German speech, separation, on the CPU |
+| `TORCH=cuda` | about 5 GB | Yes, and can use an NVIDIA GPU |
+| `PROVIDERS=lean` | 814 MB | No — every stage runs, and the output is placeholder tones, not German |
 
-The full build needs considerably more free space than the image it produces: torch and the
-CUDA libraries are unpacked into an intermediate layer before it is committed. A build that
-runs out of disk fails with `no space left on device` partway through installing NVIDIA
-libraries, which is worth recognising because it does not look like a disk problem at first
-glance.
+**The default image is CPU-only, and that is the whole difference between 2.4 GB and 5 GB.**
+The locked resolution installs the CUDA build of torch, which drags in 2.8 GB of NVIDIA
+libraries. Inside a container those are reachable only through the NVIDIA Container Toolkit,
+and on macOS they are dead weight that can never be used. The build swaps torch for the CPU
+wheel and deletes them, in the same layer, so neither the image nor the build ever carries
+them.
+
+Build with `--build-arg TORCH=cuda` when you want the GPU worker. Nothing else changes.
 
 `lean` exists to try the interface, to review someone else's finished project, or to check
 that the container works at all without waiting for a multi-gigabyte download. It reports
@@ -93,12 +97,25 @@ docker compose down -v          # removes the volume too. This cannot be undone.
 ```
 
 To keep projects on your own filesystem instead of in a Docker volume, bind-mount a
-directory. The container runs as UID 10001, so the directory must be writable by it:
+directory. The container runs as UID 10001, which will not match you, so either hand the
+directory to that UID:
 
 ```bash
 mkdir -p ~/germandubi-data && sudo chown 10001:10001 ~/germandubi-data
 docker run -d -p 127.0.0.1:8756:8756 -v ~/germandubi-data:/data germandubi serve
 ```
+
+or run as yourself, which needs no `sudo` and leaves files you own:
+
+```bash
+mkdir -p ~/germandubi-data
+docker run -d -p 127.0.0.1:8756:8756 \
+  --user "$(id -u):$(id -g)" -e HOME=/data \
+  -v ~/germandubi-data:/data germandubi serve
+```
+
+`HOME` is set because an arbitrary UID has no entry in the image's password file, and some
+libraries look there for a cache directory.
 
 ## Using a GPU
 
@@ -183,14 +200,26 @@ throws away whatever that stage had not committed.
 
 Stated plainly, because a container that has never been run is a guess:
 
-- **Verified**: the `lean` image builds with the classic builder, reports its version,
-  passes `germandubi doctor` with `ffmpeg`, `ffprobe`, `yt-dlp` and a JavaScript runtime all
-  found, serves the browser bundle over HTTP, answers `/api/v1/health`, reaches Docker's own
-  `healthy` state, and refuses a second worker on a shared volume with the right message.
-- **Not verified here**: the `full` image, which ran out of disk on the machine this was
-  written on; `docker compose up`, because that host had no Compose plugin; and the GPU
-  profile, because it had no NVIDIA container runtime. The compose file parses and the
-  services it defines are the two commands that were exercised directly.
+**Verified**, on both images, with the classic builder:
+
+- Builds, reports the version it was stamped with, serves the browser bundle over HTTP,
+  answers `/api/v1/health`, and reaches Docker's own `healthy` state.
+- `germandubi doctor` finds `ffmpeg`, `ffprobe`, `yt-dlp` and a JavaScript runtime.
+- A second worker against a shared volume is refused with the right message. The advisory
+  lock is a kernel lock on one inode, so it works across containers — which is what makes
+  the two-service layout in `compose.yaml` safe.
+
+**Verified on the default image only**, because the lean one cannot do it: a real dub, end
+to end. Twenty seconds of English narration went in and fourteen of fifteen stages
+succeeded, including recognition, separation, translation and German speech —
+"For many years, archaeologists puzzled over…" came back as "Viele Jahre lang rätselten
+Archäologen darüber…", with German and English subtitle files and synthesized speech beside
+it. The fifteenth stage refused correctly: the input was a bare `.wav`, and there is no
+video to mux a dub into.
+
+**Not verified here**: `docker compose up`, on a host with no Compose plugin, and the GPU
+profile, on a host with no NVIDIA container runtime. The compose file parses, and the two
+commands its services run are the ones exercised directly above.
 
 ## What the image contains
 

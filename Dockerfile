@@ -6,8 +6,9 @@
 # so compose starts two containers from one build rather than needing a supervisor inside
 # one container.
 #
-#   docker build -t germandubi .                       # everything, ~5 GB
-#   docker build -t germandubi --build-arg PROVIDERS=lean .   # no models, ~700 MB
+#   docker build -t germandubi .                              # every provider, CPU
+#   docker build -t germandubi --build-arg TORCH=cuda .       # add the CUDA libraries
+#   docker build -t germandubi --build-arg PROVIDERS=lean .   # no models at all
 #
 # Deliberately free of BuildKit-only syntax: no dockerfile-frontend directive, no cache
 # mounts. It therefore builds with the classic builder as well. Cache mounts would shorten a
@@ -44,6 +45,13 @@ FROM ${PYTHON_IMAGE} AS python-build
 # that will only ever review someone else's output.
 ARG PROVIDERS=full
 
+# Which torch build to end up with. The locked resolution installs the CUDA one, which drags
+# in 2.8 GB of NVIDIA libraries -- more than half the image -- and those are only reachable
+# from a container through the NVIDIA Container Toolkit, and never at all on macOS. `cpu`
+# swaps torch for the CPU wheel and deletes the CUDA libraries; `cuda` keeps them, for the
+# compose gpu profile.
+ARG TORCH=cpu
+
 # setuptools-scm derives the version from Git, and the build context has no .git. Passing it
 # in keeps the image honest about which version it is instead of reporting 0.0.0.
 ARG VERSION=0.0.0
@@ -54,18 +62,35 @@ COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
 WORKDIR /app
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    # No cache. A build layer is thrown away, so caching the download only doubles the peak
+    # disk this stage needs -- and the CUDA wheels it would cache are several gigabytes that
+    # the very next command deletes. This is what a build actually ran out of disk on.
+    UV_NO_CACHE=1
 
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY backend/ ./backend/
 
 # --no-editable because the source tree does not survive into the runtime stage, and an
 # editable install would leave a .pth file pointing at a directory that is not there.
-RUN if [ "${PROVIDERS}" = "lean" ]; then \
+# One layer on purpose. Slimming in a later step would leave the CUDA payload in an earlier
+# layer, so the image would still carry it and the build would still need the disk for it.
+RUN set -eu; \
+    if [ "${PROVIDERS}" = "lean" ]; then \
         uv sync --locked --no-dev --no-editable; \
     else \
         uv sync --locked --no-dev --no-editable \
             --extra asr --extra translate --extra tts --extra separation; \
+        if [ "${TORCH}" = "cpu" ]; then \
+            # `==2.2.2` matches `2.2.2+cpu` under PEP 440, which is what the index offers on
+            # x86-64; on arm64 the same index serves a plain 2.2.2 that is CPU-only already.
+            uv pip install --python /opt/venv --no-deps --reinstall \
+                --index-url https://download.pytorch.org/whl/cpu "torch==2.2.2"; \
+            site="$(/opt/venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"; \
+            rm -rf "${site}/nvidia" "${site}/triton"; \
+            find "${site}" -maxdepth 1 \( -name 'nvidia_*' -o -name 'triton-*' \) -exec rm -rf {} +; \
+            /opt/venv/bin/python -c 'import torch; assert not torch.cuda.is_available(); print("torch", torch.__version__)'; \
+        fi; \
     fi
 
 # --------------------------------------------------------------------------- runtime
