@@ -1,0 +1,88 @@
+# One command to run GermanDubI: `docker compose up`.
+#
+# Two services from one image. They are separate containers rather than two processes in
+# one because that is the shape the application already has: the API answers requests while
+# the worker spends minutes inside a model, and giving each its own container means
+# `docker logs` separates them and either can be restarted without the other.
+#
+# They coordinate exactly as they do outside a container -- through the shared data
+# directory. The worker slot is an advisory lock on a file there, and it works across
+# containers because it is a kernel lock on one inode. Migrations take a second lock beside
+# the database, so both starting at once on an empty volume is safe.
+
+name: germandubi
+
+services:
+  api:
+    image: germandubi:latest
+    build:
+      context: .
+      args:
+        # Override with `PROVIDERS=lean docker compose build` for an image without the
+        # model stacks: much smaller, and unable to produce German.
+        PROVIDERS: ${PROVIDERS:-full}
+        VERSION: ${GERMANDUBI_VERSION:-0.0.0}
+    command: ["serve"]
+    ports:
+      # Loopback only. This is a single-user workstation tool that reads local media and
+      # has no authentication; publishing it on 0.0.0.0 would put it on the network.
+      - "127.0.0.1:${GERMANDUBI_PORT:-8756}:8756"
+    volumes:
+      - germandubi-data:/data
+    environment:
+      GERMANDUBI_LOG_LEVEL: ${GERMANDUBI_LOG_LEVEL:-INFO}
+    restart: unless-stopped
+
+  worker:
+    image: germandubi:latest
+    build:
+      context: .
+      args:
+        PROVIDERS: ${PROVIDERS:-full}
+        VERSION: ${GERMANDUBI_VERSION:-0.0.0}
+    command: ["worker"]
+    volumes:
+      - germandubi-data:/data
+    environment:
+      GERMANDUBI_LOG_LEVEL: ${GERMANDUBI_LOG_LEVEL:-INFO}
+      # auto resolves to the GPU when one is usable and to the CPU when it is not, so this
+      # is the right default whether or not the gpu profile below is active.
+      GERMANDUBI_DEVICE: ${GERMANDUBI_DEVICE:-auto}
+    # A stage can be minutes inside one ffmpeg or Demucs call, and stopping mid-write is
+    # what the worker's clean shutdown exists to avoid. Give it room to finish.
+    stop_grace_period: 120s
+    restart: unless-stopped
+
+  # Same worker, with an NVIDIA GPU attached. Start it with:
+  #   docker compose --profile gpu up api worker-gpu
+  # Needs the NVIDIA Container Toolkit on the host, which exists for Linux and for Windows
+  # through WSL2. There is no CUDA on macOS, so the CPU worker above is the only option
+  # there. Separation measured 3.6x faster on a GPU than on a CPU.
+  worker-gpu:
+    profiles: ["gpu"]
+    image: germandubi:latest
+    build:
+      context: .
+      args:
+        PROVIDERS: ${PROVIDERS:-full}
+        VERSION: ${GERMANDUBI_VERSION:-0.0.0}
+    command: ["worker"]
+    volumes:
+      - germandubi-data:/data
+    environment:
+      GERMANDUBI_DEVICE: cuda
+      NVIDIA_VISIBLE_DEVICES: all
+    stop_grace_period: 120s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  # Projects, the database, the log and the downloaded models all live here. It is the one
+  # thing worth backing up, and the one thing to delete to start over.
+  germandubi-data:

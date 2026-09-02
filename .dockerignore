@@ -1,0 +1,30 @@
+# Everything the build does not need. Keeping this tight is what makes the build context
+# small enough to send quickly -- .venv and node_modules alone are several gigabytes, and
+# both are rebuilt inside the image anyway.
+.git
+.github
+.venv
+venv
+**/node_modules
+**/dist
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/htmlcov
+**/coverage.xml
+e2e/test-results
+e2e/playwright-report
+docs
+*.md
+!README.md
+.pre-commit-config.yaml
+compose.yaml
+Dockerfile
+.dockerignore
+
+# setuptools-scm derives the version from Git, which the image does not have. The build
+# passes it in as an argument instead; see the Dockerfile.
+backend/src/germandubi/_version.py

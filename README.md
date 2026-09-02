@@ -53,9 +53,12 @@ See [`CHANGELOG.md`](CHANGELOG.md) for what exists today.
 
 ## Requirements
 
-Four things must already be on the machine. Everything else -- Python itself, `yt-dlp`, its
-JavaScript challenge solver, the recognition, translation, speech and separation stacks --
-is installed for you by `make setup`.
+Docker, if you take the container route below — then nothing here applies and you can skip
+to the quick start.
+
+Otherwise four things must already be on the machine. Everything else -- Python itself,
+`yt-dlp`, its JavaScript challenge solver, the recognition, translation, speech and
+separation stacks -- is installed for you by `make setup`.
 
 | Requirement | Notes |
 | --- | --- |
@@ -81,6 +84,19 @@ placeholder audio.
 ---
 
 ## Quick start
+
+**With Docker** — nothing to install but Docker itself:
+
+```bash
+git clone https://github.com/marcelpetrick/GermanDubI.git
+cd GermanDubI
+docker compose up
+```
+
+Then open <http://127.0.0.1:8756>. See [docs/operations/docker.md](docs/operations/docker.md)
+for the smaller provider-free image, GPU support, and which hosts do what.
+
+**From source** — what you want if you are going to change anything:
 
 ```bash
 git clone https://github.com/marcelpetrick/GermanDubI.git

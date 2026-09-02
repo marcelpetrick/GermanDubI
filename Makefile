@@ -39,6 +39,26 @@ setup: preflight install install-providers hooks ## Clean checkout to a machine 
 hooks: ## Install the pre-commit hooks
 	$(RUN) pre-commit install
 
+# --------------------------------------------------------------------------- docker
+# VERSION is passed in because setuptools-scm reads Git, and the build context has none.
+DOCKER_VERSION ?= $(shell git describe --tags --dirty 2>/dev/null | sed 's/^v//' || echo 0.0.0)
+
+.PHONY: docker-build
+docker-build: ## Build the container image with every provider (~5 GB)
+	docker build --build-arg VERSION=$(DOCKER_VERSION) -t germandubi:latest .
+
+.PHONY: docker-build-lean
+docker-build-lean: ## Build without the model stacks (~800 MB); cannot produce German
+	docker build --build-arg PROVIDERS=lean --build-arg VERSION=$(DOCKER_VERSION) -t germandubi:lean .
+
+.PHONY: docker-up
+docker-up: ## Start the API and the worker in containers
+	docker compose up
+
+.PHONY: docker-down
+docker-down: ## Stop them, keeping every project
+	docker compose down
+
 # --------------------------------------------------------------------------- run
 .PHONY: dev
 dev: ## Run API, worker and frontend dev server together
