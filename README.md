@@ -85,17 +85,19 @@ placeholder audio.
 
 ## Quick start
 
-**With Docker** — nothing to install but Docker itself:
+**With Docker** — nothing to install but Docker itself, and nothing to clone:
 
 ```bash
-git clone https://github.com/marcelpetrick/GermanDubI.git
-cd GermanDubI
-docker compose up
+docker volume create germandubi-data
+docker run -d -p 127.0.0.1:8756:8756 -v germandubi-data:/data \
+  ghcr.io/marcelpetrick/germandubi serve
+docker run -d -v germandubi-data:/data ghcr.io/marcelpetrick/germandubi worker
 ```
 
-Then open <http://127.0.0.1:8756>. The image is 2.4 GB and dubs on the CPU; see
-[docs/operations/docker.md](docs/operations/docker.md) for the GPU build, the smaller
-provider-free image, and which hosts do what.
+Then open <http://127.0.0.1:8756>. The image is 2.4 GB, dubs on the CPU, and needs no GPU,
+no account and no toolchain. From a checkout, `docker compose up` is the same thing in one
+command. See [docs/operations/docker.md](docs/operations/docker.md) for the GPU build,
+sharing an image offline, and which hosts do what.
 
 **From source** — what you want if you are going to change anything:
 

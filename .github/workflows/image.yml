@@ -1,0 +1,151 @@
+name: Container image
+
+# Publishes the image so nobody has to build it. `docker pull` is the shortest path from
+# "I heard about this" to a running dub, and building a 2.4 GB image on a laptop is not.
+#
+# Same trigger as the release: an annotated version tag is the deliberate act that publishes.
+# workflow_dispatch is here so the pipeline can be exercised without cutting a release.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  # One job per architecture, each on a runner of that architecture. Building arm64 under
+  # QEMU works and takes hours for a stack this size: torch alone is punishing to emulate.
+  # Each job pushes an unnamed image by digest; the manifest that ties them together is
+  # assembled in `merge`.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Work out the version
+        id: version
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=0.0.0-dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          # The default build: every provider, CPU-only, 2.4 GB. A CUDA image would be
+          # twice the size and useless to everyone without the NVIDIA Container Toolkit,
+          # which is most people pulling this.
+          build-args: |
+            VERSION=${{ steps.version.outputs.value }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+
+      - name: Export the digest
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${{ steps.push.outputs.digest }}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ strategy.job-index }}
+          path: /tmp/digests/*
+          retention-days: 1
+
+  # Both architectures under one name, so `docker pull` gets the right one automatically.
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Optional second home. Docker Hub is where people look first, and it rate-limits
+      # anonymous pulls where GHCR does not, so both are worth having. Skipped entirely
+      # when the credentials are absent, which is what makes this work in a fork.
+      - name: Log in to Docker Hub
+        id: dockerhub
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag the manifest
+        working-directory: /tmp/digests
+        env:
+          DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/germandubi
+          HAVE_DOCKERHUB: ${{ steps.dockerhub.outcome == 'success' }}
+        run: |
+          version="${{ needs.build.outputs.version }}"
+          names="${IMAGE}"
+          if [ "${HAVE_DOCKERHUB}" = "true" ]; then
+            names="${names} docker.io/${DOCKERHUB_REPO}"
+          fi
+
+          tags=""
+          for name in ${names}; do
+            tags="${tags} -t ${name}:${version}"
+            # `latest` only ever moves for a real release, never for a manual run.
+            if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+              tags="${tags} -t ${name}:latest"
+            fi
+          done
+
+          # One manifest list built from the per-architecture digests, published under every
+          # name at once. imagetools copies the blobs across registries as needed, so
+          # Docker Hub gets the bytes without a second build.
+          # shellcheck disable=SC2046,SC2086
+          docker buildx imagetools create ${tags} \
+            $(printf "${IMAGE}@sha256:%s " *)
+
+      - name: Show what was published
+        run: docker buildx imagetools inspect "${IMAGE}:${{ needs.build.outputs.version }}"
