@@ -82,10 +82,14 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
 
+      # The digest is carried to the merge job as a file name, and `merge` rebuilds the
+      # reference as `${IMAGE}@sha256:<name>`. So the name is the bare hex: buildx reports
+      # the digest with its `sha256:` prefix, and an artifact path may not contain a colon.
       - name: Export the digest
         run: |
           mkdir -p /tmp/digests
-          touch "/tmp/digests/${{ steps.push.outputs.digest }}"
+          digest="${{ steps.push.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
 
       - uses: actions/upload-artifact@v7
         with:
