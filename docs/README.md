@@ -10,7 +10,7 @@ expect to find immediately. Detailed product and engineering material lives here
 | [`architecture/`](architecture/) | The concise C4 view of the implemented system. |
 | [`adr/`](adr/) | Accepted architecture decisions that are expensive to reverse. |
 | [`development/`](development/) | Workstation setup and the development workflow. |
-| [`operations/`](operations/) | Running, troubleshooting, and releasing GermanDubI. |
+| [`operations/`](operations/) | Running, troubleshooting, releasing, and containerising GermanDubI. |
 | [`benchmarks/`](benchmarks/) | Reproducible real-provider measurements and their context. |
 | [`reviews/`](reviews/) | Point-in-time repository reviews retained as historical evidence. |
 

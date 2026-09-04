@@ -106,6 +106,12 @@ them.
 
 Build with `--build-arg TORCH=cuda` when you want the GPU worker. Nothing else changes.
 
+Docker stores images and build layers under its data root, which is `/var/lib/docker` by
+default and may not be on the partition with the space. Moving it is supported and is a
+`daemon.json` setting;
+[moving-the-docker-data-root.md](moving-the-docker-data-root.md) records doing it on this
+project's development machine, with the checks that made it safe.
+
 `lean` exists to try the interface, to review someone else's finished project, or to check
 that the container works at all without waiting for a multi-gigabyte download. It reports
 "Not ready to dub" from `germandubi doctor`, which is correct and deliberate: a run that
