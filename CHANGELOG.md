@@ -12,6 +12,11 @@ may occur in MINOR releases and are always listed here.
 
 ### Fixed
 
+- The container image workflow is valid again, and can therefore publish. GitHub rejected
+  the file for testing `secrets` inside a step's `if`, which is not a context available
+  there; an unparseable workflow fails in zero seconds without running a step, so no image
+  was ever built and `docker pull` was answered with `denied`. The optional registry
+  credentials are now tested through job-level `env`.
 - Assembling the German narration no longer hangs. An open-ended `apad` behind an `amix`
   whose clips ended at different times made FFmpeg spin at 100% CPU indefinitely, at
   random: on a 40-minute dub roughly one batch in ten never finished. The pad is now

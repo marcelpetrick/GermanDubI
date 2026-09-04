@@ -93,6 +93,16 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The optional registries are switched on by the presence of their credentials, and a
+    # step's `if` cannot read `secrets` -- GitHub rejects the whole file for it, without
+    # running anything, which is how this workflow sat broken and published nothing. Job
+    # level `env` may read secrets, and a step's `if` may read `env`, so the test goes
+    # through here.
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
     steps:
       - uses: actions/download-artifact@v6
         with:
@@ -113,7 +123,7 @@ jobs:
       # when the credentials are absent, which is what makes this work in a fork.
       - name: Log in to Docker Hub
         id: dockerhub
-        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -123,7 +133,7 @@ jobs:
       # and public repositories there are free. Same treatment: present or skipped.
       - name: Log in to Quay
         id: quay
-        if: ${{ secrets.QUAY_USERNAME != '' && secrets.QUAY_TOKEN != '' }}
+        if: env.QUAY_USERNAME != '' && env.QUAY_TOKEN != ''
         uses: docker/login-action@v3
         with:
           registry: quay.io
@@ -133,9 +143,9 @@ jobs:
       - name: Tag the manifest
         working-directory: /tmp/digests
         env:
-          DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/germandubi
+          DOCKERHUB_REPO: ${{ env.DOCKERHUB_USERNAME }}/germandubi
           HAVE_DOCKERHUB: ${{ steps.dockerhub.outcome == 'success' }}
-          QUAY_REPO: quay.io/${{ secrets.QUAY_USERNAME }}/germandubi
+          QUAY_REPO: quay.io/${{ env.QUAY_USERNAME }}/germandubi
           HAVE_QUAY: ${{ steps.quay.outcome == 'success' }}
         run: |
           version="${{ needs.build.outputs.version }}"

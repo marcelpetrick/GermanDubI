@@ -583,16 +583,21 @@ nobody has checked.
   than in the application. *Closes when:* someone with `docker-compose-plugin` runs it once.
 - **The GPU profile.** No NVIDIA Container Toolkit here. *Closes when:* run on a host that
   has it, confirming `germandubi doctor` inside the container reports `GPU (cuda)`.
-- **The publish workflow.** GitHub Actions cannot run locally. `.github/workflows/image.yml`
-  builds `linux/amd64` and `linux/arm64` on native runners and merges one manifest.
-  *Closes when:* the next version tag is pushed, and `docker pull` from a clean machine
-  returns a working image.
+- **The publish workflow.** GitHub Actions cannot run locally, and the file was rejected
+  outright by GitHub for using `secrets` in a step's `if`, which is not one of the contexts
+  available there. An unparseable workflow fails in zero seconds and is listed by its path
+  instead of its name, which is easy to read as "it simply did not run" -- so it published
+  nothing, and `docker pull` answered `denied`. The conditions now go through job-level
+  `env`, which may read secrets. *Closes when:* a version tag is pushed, the run goes green,
+  and `docker pull` from a clean machine returns a working image.
 
 ### One-time account setup, before anyone can pull
 
-- **Make the GHCR package public.** It is private until someone opens the repository's
-  *Packages* section and changes it. Until then the `docker pull` line in the README is a
-  promise the registry will refuse.
+- **Make the GHCR package public.** A package is created private, and an anonymous pull of
+  a private package is refused with `denied` -- the same word the registry uses for a
+  package that does not exist, so the two are indistinguishable from the client. It stays
+  private until someone opens the repository's *Packages* section and changes it, and until
+  then the `docker pull` line in the README is a promise the registry will refuse.
 - **Docker Hub and Quay secrets.** `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` and
   `QUAY_USERNAME` / `QUAY_TOKEN`. Each registry is skipped silently when its pair is absent,
   so publishing works today and reaches only GHCR.
