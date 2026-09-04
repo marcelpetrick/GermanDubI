@@ -10,6 +10,20 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Assembling the German narration no longer hangs. An open-ended `apad` behind an `amix`
+  whose clips ended at different times made FFmpeg spin at 100% CPU indefinitely, at
+  random: on a 40-minute dub roughly one batch in ten never finished. The pad is now
+  bounded and the track cut with `-t`, which produces byte-identical audio and always
+  terminates.
+- Assembly reports each batch as it lands, so a long one moves the progress bar, keeps its
+  lease, and can be cancelled. It previously said nothing between its first report and its
+  last, which was indistinguishable from being stuck.
+- Each assembly pass is bounded by the running time of the video rather than by the global
+  one-hour process timeout, so a pass that is not progressing gives up in a useful time
+  instead of being retried three times over three hours.
+
 ### Changed
 
 - Organized internal product, project, and historical review documents under `docs/` and

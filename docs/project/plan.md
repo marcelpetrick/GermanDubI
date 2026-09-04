@@ -539,7 +539,35 @@ Verified the way the claim is made: cloned the repository into an empty director
   the full `make check` gate passes, 820 backend tests retain 95.22% line coverage, and all
   55 frontend tests pass.
 
-## 26. Outstanding · `OPEN`
+## 26. Stop the assembly stage from hanging · `COMPLETE`
+
+- Reproduced the hang against the real clips of a 40-minute dub: of ten assembly batches,
+  one never finished -- 100% CPU, output file frozen at the byte, indefinitely. The other
+  nine took between one and eight seconds.
+- Narrowed it from fifty clips to **two**, and found it is not deterministic: the same
+  command on the same files finished instantly on some runs and hung forever on others.
+  `-filter_complex_threads 1` did not change that, so it is not filter threading.
+- Isolated the cause to the shape of the tail of the graph. An open-ended `apad` generates
+  silence forever and depends on whatever follows it to stop asking; behind an `amix` whose
+  inputs end at different times, the `atrim` that followed it intermittently never does.
+  Bounding the pad instead (`apad=whole_dur=`) and letting the output option `-t` cut an
+  over-long mix removes the failure: 0 hangs in 20 runs of the arrangement that hung 9 times
+  in 12, and 8 for 8 on the batch that had never once completed.
+- Verified the change is not merely a different graph but the *same* audio: the new graph's
+  output is byte-for-byte identical to the old graph's on every batch the old graph managed
+  to finish.
+- Bounded each assembly pass at the running time of the video itself, floored at five
+  minutes and capped by the process runner's own default. A pass that has not finished in
+  the time the video lasts is not making progress; previously it burned the global one-hour
+  timeout and was then retried twice.
+- Gave `concatenate_speech` an `on_batch` callback and had the stage report through it, so a
+  long assembly moves the progress bar, renews its lease, and can be cancelled between
+  batches instead of going silent for the whole run.
+- Acceptance: the full gate passes; a new integration test runs the exact arrangement that
+  used to hang ten times over and fails in 30 seconds if it returns; unit tests pin the
+  bounded pad, the absence of `atrim`, the timeout bound, and the per-batch reports.
+
+## 27. Outstanding · `OPEN`
 
 Everything below is known, deliberate, and not done. It is written here rather than carried
 in someone's head, and each item says what would close it.
@@ -587,26 +615,6 @@ condition that would change the answer.
   `node_modules`. That is a migration, not a bump: move the setting to
   `pnpm-workspace.yaml`, regenerate both lockfiles, confirm esbuild still builds, and update
   what CI and both `engines` fields expect.
-
-### The assembly hang
-
-The one open defect that costs real time. FFmpeg's `adelay` + `amix` graph intermittently
-livelocks: a batch spins at 100% CPU with its output frozen and never finishes. Observed
-holding a 40-minute dub for 27 minutes before it was killed, and a minimal reproducer --
-fifty identical inputs, `adelay`, `amix=inputs=50`, `apad` then `atrim` -- ran for 26 hours
-without producing a byte. It is not slow; it is stopped.
-
-Three things follow, in order of how much they are worth:
-
-- **Bound the stage's timeout.** `process_timeout_s` is one hour globally, so a hung batch
-  spins for an hour, fails, and retries -- up to three times. Assembly of a known number of
-  short clips has a plausible ceiling far below that.
-- **Rework the filter graph.** `apad` before `atrim` on an `amix` whose inputs all end early
-  is the usual shape of this deadlock. The reproducer makes this testable in seconds instead
-  of in forty-minute dubs.
-- **Report progress from inside the stage.** It reports once and then says nothing for the
-  whole run, which also means its lease is never renewed and the progress bar sits frozen --
-  indistinguishable from a hang, which is how this was found in the first place.
 
 ### Still open from the deep review
 
