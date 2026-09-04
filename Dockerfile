@@ -68,6 +68,13 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     # the very next command deletes. This is what a build actually ran out of disk on.
     UV_NO_CACHE=1
 
+# `sphn` vendors libopus through the `audiopus_sys` crate, whose bundled CMakeLists still
+# declares a minimum of CMake 3.4. CMake 4 removed compatibility below 3.5 and refuses to
+# configure, which is where the arm64 build stopped once it had a compiler. This is CMake's
+# own documented escape hatch, named in the error it prints, and it is scoped to the build
+# stage. Reproduced and fixed on x86-64 by forcing the same source build there.
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+
 # A C toolchain, for the dependencies that do not ship a wheel for every architecture.
 # `sphn`, which Demucs pulls in, publishes Linux wheels for x86-64 only, so on arm64 uv
 # builds it from source: maturin fetches its own Rust but not a linker, and the build dies
