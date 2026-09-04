@@ -10,6 +10,27 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-04
+
+0.4.1 got both builders as far as building. Three more faults were waiting behind the two
+that had stopped the workflow before it, each only reachable once the one before it was
+fixed.
+
+### Fixed
+
+- The published digest survives the hand-off between the two build jobs. Each architecture
+  passes its digest to the merge job as a file name, and buildx reports it with its
+  `sha256:` prefix -- which an artifact path may not contain, so the amd64 image was built,
+  pushed, and then thrown away one step later.
+- `sphn` builds from source, which on `linux/arm64` is the only way it can be installed at
+  all: it publishes Linux wheels for x86-64 only. It needed a C compiler, which the slim
+  build image did not have, and then a way past the vendored libopus whose CMakeLists
+  predates CMake 4.
+- A worker container no longer reports itself unhealthy for its whole life. The image ships
+  one entrypoint and two commands, only one of which answers HTTP, and the healthcheck
+  probed HTTP whichever was running. It now asks each what it can actually answer: the
+  server over HTTP, the worker by whether its data volume is writable.
+
 ## [0.4.1] - 2026-09-04
 
 0.4.0 published no image. Both reasons were only reachable once the workflow was able to
