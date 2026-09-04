@@ -538,3 +538,88 @@ Verified the way the claim is made: cloned the repository into an empty director
 - Acceptance: all local Markdown links resolve, generated API documentation is current,
   the full `make check` gate passes, 820 backend tests retain 95.22% line coverage, and all
   55 frontend tests pass.
+
+## 26. Outstanding · `OPEN`
+
+Everything below is known, deliberate, and not done. It is written here rather than carried
+in someone's head, and each item says what would close it.
+
+### Blocked on this machine, not on the code
+
+Three parts of the container work are written and unverified, each because this development
+machine lacks the thing that would exercise them. None is a defect; all three are claims
+nobody has checked.
+
+- **`docker compose up`.** No Compose plugin installed here. The file parses and the two
+  commands its services run were both exercised directly, so the risk is in the YAML rather
+  than in the application. *Closes when:* someone with `docker-compose-plugin` runs it once.
+- **The GPU profile.** No NVIDIA Container Toolkit here. *Closes when:* run on a host that
+  has it, confirming `germandubi doctor` inside the container reports `GPU (cuda)`.
+- **The publish workflow.** GitHub Actions cannot run locally. `.github/workflows/image.yml`
+  builds `linux/amd64` and `linux/arm64` on native runners and merges one manifest.
+  *Closes when:* the next version tag is pushed, and `docker pull` from a clean machine
+  returns a working image.
+
+### One-time account setup, before anyone can pull
+
+- **Make the GHCR package public.** It is private until someone opens the repository's
+  *Packages* section and changes it. Until then the `docker pull` line in the README is a
+  promise the registry will refuse.
+- **Docker Hub and Quay secrets.** `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` and
+  `QUAY_USERNAME` / `QUAY_TOKEN`. Each registry is skipped silently when its pair is absent,
+  so publishing works today and reaches only GHCR.
+- **The registry listing pages.** A short description and a long one, neither of which a
+  registry takes from the image. Both are written and ready to paste in
+  `docs/operations/docker.md`.
+
+### Dependency majors, each rejected with a reason
+
+Both were tried, measured, and reverted. Neither is a "someday"; each has a specific
+condition that would change the answer.
+
+- **TypeScript 5.9.3 → 7.0.2.** `typescript-eslint` 8.69.0 refuses to load against TS 7 and
+  says so, pointing at its own tracking issue for TS ≥ 7.1. Adopting it today means no
+  TypeScript linting at all. TS 7 also removed `baseUrl`, which `tsconfig.json` uses.
+  *Closes when:* typescript-eslint ships TS 7 support; then the `baseUrl` removal is a
+  small, separate change.
+- **pnpm 10.34.5 → 11.25.0.** pnpm 11 no longer reads `pnpm.onlyBuiltDependencies` from
+  `package.json`, which this repository uses for esbuild, and it wants to purge
+  `node_modules`. That is a migration, not a bump: move the setting to
+  `pnpm-workspace.yaml`, regenerate both lockfiles, confirm esbuild still builds, and update
+  what CI and both `engines` fields expect.
+
+### The assembly hang
+
+The one open defect that costs real time. FFmpeg's `adelay` + `amix` graph intermittently
+livelocks: a batch spins at 100% CPU with its output frozen and never finishes. Observed
+holding a 40-minute dub for 27 minutes before it was killed, and a minimal reproducer --
+fifty identical inputs, `adelay`, `amix=inputs=50`, `apad` then `atrim` -- ran for 26 hours
+without producing a byte. It is not slow; it is stopped.
+
+Three things follow, in order of how much they are worth:
+
+- **Bound the stage's timeout.** `process_timeout_s` is one hour globally, so a hung batch
+  spins for an hour, fails, and retries -- up to three times. Assembly of a known number of
+  short clips has a plausible ceiling far below that.
+- **Rework the filter graph.** `apad` before `atrim` on an `amix` whose inputs all end early
+  is the usual shape of this deadlock. The reproducer makes this testable in seconds instead
+  of in forty-minute dubs.
+- **Report progress from inside the stage.** It reports once and then says nothing for the
+  whole run, which also means its lease is never renewed and the progress bar sits frozen --
+  indistinguishable from a hang, which is how this was found in the first place.
+
+### Still open from the deep review
+
+Eleven findings, eight Medium and three Low, listed in
+[`docs/reviews/deep-review.md`](../reviews/deep-review.md) with what each would take. None
+is urgent; the ones most likely to be felt are the missing error boundary, which blanks the
+page on a render error, and `delete_all` removing workspaces inside a single transaction --
+the same class of defect as the create that left orphaned directories.
+
+### Ideas, deliberately not scheduled
+
+[`future_features.md`](../../future_features.md) holds twenty-two, with what each is worth
+and what it would cost, and a list of what is deliberately not worth building. The three
+cheapest real wins named there: the glossary UI, which is implemented and tested and never
+populated; a local LLM translator, which the provider port was designed for; and speaker
+diarization.
