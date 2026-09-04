@@ -132,6 +132,7 @@ COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
 
 COPY --from=python-build /opt/venv /opt/venv
 COPY --from=frontend /build/dist /app/frontend/dist
+COPY scripts/docker-healthcheck.sh /usr/local/bin/germandubi-healthcheck
 
 # A dub writes gigabytes of intermediate audio. Running as root would leave every one of
 # those files owned by root on the host's volume.
@@ -163,5 +164,7 @@ EXPOSE 8756
 ENTRYPOINT ["/usr/bin/tini", "--", "germandubi"]
 CMD ["serve"]
 
+# One image, two programs, two meanings of healthy: the script picks the right check from
+# the command this container was actually given. See scripts/docker-healthcheck.sh.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD ["python", "-c", "import urllib.request,os,sys; sys.exit(0 if urllib.request.urlopen(f\"http://127.0.0.1:{os.environ['GERMANDUBI_PORT']}/api/v1/health\", timeout=4).status==200 else 1)"]
+    CMD ["/usr/local/bin/germandubi-healthcheck"]
