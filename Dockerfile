@@ -68,6 +68,15 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     # the very next command deletes. This is what a build actually ran out of disk on.
     UV_NO_CACHE=1
 
+# A C toolchain, for the dependencies that do not ship a wheel for every architecture.
+# `sphn`, which Demucs pulls in, publishes Linux wheels for x86-64 only, so on arm64 uv
+# builds it from source: maturin fetches its own Rust but not a linker, and the build dies
+# on a missing cc. This stage is discarded, so the toolchain costs build time
+# and nothing in the image.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY backend/ ./backend/
 

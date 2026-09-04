@@ -22,7 +22,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
   # One job per architecture, each on a runner of that architecture. Building arm64 under
@@ -44,6 +43,12 @@ jobs:
       version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@v6
+
+      # A Docker reference must be lowercase and this repository is not: the name is
+      # `marcelpetrick/GermanDubI`, and buildx rejects it outright. Expressions have no
+      # lowercase function, so the name is folded here and exported for the steps below.
+      - name: Work out the image name
+        run: echo "IMAGE=ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
       - name: Work out the version
         id: version
@@ -104,6 +109,12 @@ jobs:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
     steps:
+      # A Docker reference must be lowercase and this repository is not: the name is
+      # `marcelpetrick/GermanDubI`, and buildx rejects it outright. Expressions have no
+      # lowercase function, so the name is folded here and exported for the steps below.
+      - name: Work out the image name
+        run: echo "IMAGE=ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
       - uses: actions/download-artifact@v6
         with:
           path: /tmp/digests
