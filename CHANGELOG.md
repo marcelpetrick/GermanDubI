@@ -10,6 +10,23 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-04
+
+0.4.0 published no image. Both reasons were only reachable once the workflow was able to
+run at all, which it never had been.
+
+### Fixed
+
+- The image is pushed under a lowercase name. A Docker reference must be lowercase and this
+  repository is not -- `marcelpetrick/GermanDubI` -- so buildx rejected the reference before
+  it built anything. GitHub expressions have no lowercase function, so the name is folded in
+  a step and exported to the ones that need it.
+- The `linux/arm64` build no longer fails on a missing compiler. `sphn`, which Demucs pulls
+  in, publishes Linux wheels for x86-64 only, so on arm64 it is built from source; maturin
+  fetches its own Rust but not a linker, and the build died on a missing `cc`. The build
+  stage now carries a C toolchain, which is discarded with it and costs nothing in the
+  image.
+
 ## [0.4.0] - 2026-09-04
 
 Two ways to get the tool running that did not exist before -- a container anyone can pull,
