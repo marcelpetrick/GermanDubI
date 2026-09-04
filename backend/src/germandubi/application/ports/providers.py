@@ -8,6 +8,7 @@ provider response may still be kept as a diagnostic artifact.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -513,7 +514,12 @@ class MediaToolkit(Protocol):
         ...
 
     def concatenate_speech(
-        self, placements: list[tuple[TimeInterval, Path]], destination: Path, *, total_ms: int
+        self,
+        placements: list[tuple[TimeInterval, Path]],
+        destination: Path,
+        *,
+        total_ms: int,
+        on_batch: Callable[[int, int], None] | None = None,
     ) -> Path:
         """Assemble per-segment speech into one continuous narration track.
 
@@ -525,6 +531,8 @@ class MediaToolkit(Protocol):
             placements: Timeline position and audio file for each segment.
             destination: Where to write the narration track.
             total_ms: Total length of the track.
+            on_batch: Called with ``(clips placed, clips in total)`` after each batch, so a
+                caller can report progress and stay cancellable during a long assembly.
 
         Returns:
             The written file.

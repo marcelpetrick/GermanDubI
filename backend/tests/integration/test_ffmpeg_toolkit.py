@@ -156,6 +156,50 @@ class TestNarrationAssembly:
         out = toolkit.concatenate_speech([], tmp_path / "silent.wav", total_ms=3000)
         assert toolkit.probe(out).duration_ms == pytest.approx(3000, abs=100)
 
+    def test_clips_of_different_lengths_far_short_of_the_end_always_finish(
+        self, tmp_path: Path
+    ) -> None:
+        """Regression: this exact shape used to hang FFmpeg outright, at random.
+
+        Two clips of unequal length, ending long before the track does, is what an open
+        `apad` behind an `amix` needs to livelock: FFmpeg spins at 100% CPU and never
+        emits another sample. On the arrangement below the old graph hung in roughly two
+        runs out of three, so ten runs make a surviving bug practically certain to show.
+        A real 40-minute dub hit it about once every ten batches.
+        """
+        # Deliberately short: assembly caps each pass at the runner's own ceiling, so a
+        # graph that hangs again fails this test in half a minute rather than tying the
+        # suite up until the default timeout expires.
+        toolkit = FFmpegToolkit(ProcessRunner(default_timeout_s=30))
+        short = tmp_path / "short.wav"
+        long = tmp_path / "long.wav"
+        toolkit.runner.run(
+            ["ffmpeg", "-y", "-nostdin", "-f", "lavfi", "-i", "sine=d=1.62:r=22050", str(short)]
+        )
+        toolkit.runner.run(
+            ["ffmpeg", "-y", "-nostdin", "-f", "lavfi", "-i", "sine=d=3.25:r=22050", str(long)]
+        )
+        placements = [(TimeInterval(5000, 6620), short), (TimeInterval(6400, 9650), long)]
+
+        for attempt in range(10):
+            out = toolkit.concatenate_speech(
+                placements, tmp_path / f"narration_{attempt}.wav", total_ms=60_000
+            )
+            assert toolkit.probe(out).duration_ms == pytest.approx(60_000, abs=100)
+
+    def test_every_batch_is_reported_as_it_lands(
+        self, toolkit: FFmpegToolkit, tone: Path, tmp_path: Path
+    ) -> None:
+        """The stage renews its lease from these reports, so they must actually arrive."""
+        reported: list[tuple[int, int]] = []
+        toolkit.concatenate_speech(
+            [(TimeInterval(1000, 2000), tone), (TimeInterval(3000, 4000), tone)],
+            tmp_path / "narration.wav",
+            total_ms=6000,
+            on_batch=lambda done, total: reported.append((done, total)),
+        )
+        assert reported == [(2, 2)]
+
 
 class TestMixing:
     def test_mixes_narration_onto_a_background_stem(

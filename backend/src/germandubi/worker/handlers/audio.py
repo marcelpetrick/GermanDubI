@@ -91,7 +91,19 @@ def handle_assemble(context: StageContext) -> None:
     context.progress(0.3, f"placing {len(placements)} clips")
     context.checkpoint()
     destination = context.directory("mixes") / "narration.wav"
-    media.concatenate_speech(placements, destination, total_ms=total_ms)  # type: ignore[arg-type]
+
+    def placed(done: int, total: int) -> None:
+        """Report one finished batch, so the bar moves and cancelling still works."""
+        share = done / total if total else 1.0
+        context.progress(0.3 + 0.65 * share, f"{done} / {total} clips placed")
+        context.checkpoint()
+
+    media.concatenate_speech(
+        placements,  # type: ignore[arg-type]
+        destination,
+        total_ms=total_ms,
+        on_batch=placed,
+    )
 
     context.publish(
         ArtifactKind.NARRATION_TRACK,

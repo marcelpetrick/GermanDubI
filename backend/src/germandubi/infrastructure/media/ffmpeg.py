@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Final
 
@@ -36,6 +37,9 @@ LOUDNESS_TARGET_LUFS: Final = -16.0
 #: How many clips one assembly pass may place. Above this the work is split into batches
 #: and the batch results summed, which is bit-identical and markedly faster.
 _PLACEMENTS_PER_PASS: Final = 50
+#: Floor on how long one assembly batch may run. Batches are seconds of work in practice;
+#: this is only a backstop against a graph that never finishes.
+_ASSEMBLY_TIMEOUT_FLOOR_S: Final = 300
 #: How many speech intervals one ducking ``volume`` filter may name. Chosen well below the
 #: size at which FFmpeg fails to evaluate the expression, since the cost of another filter
 #: in the chain is negligible next to the cost of a mix that cannot run at all.
@@ -208,6 +212,7 @@ class FFmpegToolkit:
         *,
         total_ms: int,
         sample_rate: int = MASTER_SAMPLE_RATE,
+        on_batch: Callable[[int, int], None] | None = None,
     ) -> Path:
         """Place per-segment speech clips onto one silent narration track.
 
@@ -221,6 +226,9 @@ class FFmpegToolkit:
             destination: Where to write the narration track.
             total_ms: Total length of the track.
             sample_rate: Output sample rate.
+            on_batch: Called with ``(clips placed, clips in total)`` after each batch. A
+                long assembly is otherwise silent for minutes, which leaves the progress
+                bar frozen and gives cancellation nowhere to take effect.
 
         Returns:
             The written file.
@@ -234,6 +242,8 @@ class FFmpegToolkit:
 
         if len(placements) <= _PLACEMENTS_PER_PASS:
             self._place(placements, destination, total_ms=total_ms, sample_rate=sample_rate)
+            if on_batch is not None:
+                on_batch(len(placements), len(placements))
             return self._require_output(destination, "narration assembly")
 
         # One `amix` over every segment makes FFmpeg hold a decoder and a full-length
@@ -249,7 +259,9 @@ class FFmpegToolkit:
                 partial = staging / f"part_{index:05d}.wav"
                 self._place(batch, partial, total_ms=total_ms, sample_rate=sample_rate)
                 partials.append(self._require_output(partial, "narration assembly"))
-            self._combine(partials, destination, sample_rate=sample_rate)
+                if on_batch is not None:
+                    on_batch(min(index + _PLACEMENTS_PER_PASS, len(placements)), len(placements))
+            self._combine(partials, destination, total_ms=total_ms, sample_rate=sample_rate)
         finally:
             shutil.rmtree(staging, ignore_errors=True)
         return self._require_output(destination, "narration assembly")
@@ -281,9 +293,18 @@ class FFmpegToolkit:
             f"{''.join(labels)}amix=inputs={len(placements)}:normalize=0:dropout_transition=0"
             f"[mixed]"
         )
-        # apad + atrim pins the track to exactly the media duration, so the narration and
-        # the video stay the same length whatever the last segment does.
-        filters.append(f"[mixed]apad,atrim=0:{ms_to_seconds(total_ms):.3f},asetpts=N/SR/TB[out]")
+        # The pad pins the track to exactly the media duration, so the narration and the
+        # video stay the same length whatever the last segment does.
+        #
+        # The pad length is given to `apad` rather than left open and cut back by a
+        # following `atrim`. An open-ended `apad` generates silence forever and relies on
+        # the consumer to stop asking; paired with `atrim` behind an `amix` whose inputs end
+        # at different times, FFmpeg intermittently spins at 100% CPU without ever emitting
+        # another sample. It reproduces with two clips, it survives
+        # `-filter_complex_threads 1`, and it is not rare: on a 40-minute dub of 500 clips
+        # one batch in ten hung indefinitely. Bounding the pad, and letting `-t` rather than
+        # `atrim` cut an over-long mix, produces byte-identical output and always finishes.
+        filters.append(f"[mixed]apad=whole_dur={ms_to_seconds(total_ms):.3f},asetpts=N/SR/TB[out]")
 
         argv += [
             "-filter_complex",
@@ -294,17 +315,21 @@ class FFmpegToolkit:
             "2",
             "-ar",
             str(sample_rate),
+            "-t",
+            f"{ms_to_seconds(total_ms):.3f}",
             "-c:a",
             "pcm_s16le",
             str(destination),
         ]
         try:
-            self.runner.run(argv, timeout_s=self.runner.default_timeout_s)
+            self.runner.run(argv, timeout_s=self._assembly_timeout_s(total_ms))
         except ProcessError as exc:
             msg = f"could not assemble the German narration track: {exc.message}"
             raise MixError(msg) from exc
 
-    def _combine(self, partials: list[Path], destination: Path, *, sample_rate: int) -> None:
+    def _combine(
+        self, partials: list[Path], destination: Path, *, total_ms: int, sample_rate: int
+    ) -> None:
         """Sum already-positioned, equal-length tracks into one.
 
         Every partial is the full length with silence where it has no speech, so summing
@@ -328,10 +353,21 @@ class FFmpegToolkit:
             str(destination),
         ]
         try:
-            self.runner.run(argv, timeout_s=self.runner.default_timeout_s)
+            self.runner.run(argv, timeout_s=self._assembly_timeout_s(total_ms))
         except ProcessError as exc:
             msg = f"could not combine the German narration batches: {exc.message}"
             raise MixError(msg) from exc
+
+    def _assembly_timeout_s(self, total_ms: int) -> int:
+        """Return how long one assembly pass may run before it is given up on.
+
+        A pass that has not finished in the time the video itself lasts is not making
+        progress -- measured passes finish in single-digit seconds even for a 40-minute
+        track. Without a bound of its own a stuck pass would run for the process runner's
+        default hour and then be retried twice more. The runner's own default stays the
+        ceiling, so this can only ever tighten the bound, never loosen it.
+        """
+        return min(self.runner.default_timeout_s, max(_ASSEMBLY_TIMEOUT_FLOOR_S, total_ms // 1000))
 
     def silence(
         self, destination: Path, *, duration_ms: int, sample_rate: int = MASTER_SAMPLE_RATE
