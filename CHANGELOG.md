@@ -10,6 +10,39 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-04
+
+Two ways to get the tool running that did not exist before -- a container anyone can pull,
+and a build anyone can reproduce -- and the removal of the one defect that could stop a
+long dub dead.
+
+### Added
+
+- **Run GermanDubI from a container.** A multi-stage `Dockerfile` builds the API, the
+  worker and the browser bundle into one image, and `compose.yaml` runs the API and the
+  worker together against a shared `/data` volume. The port is bound to `127.0.0.1`,
+  because this is a workstation tool and not a public service.
+- Two builds from the same file: the default carries every provider and is 2.4 GB, and
+  `PROVIDERS=lean` is 814 MB for anyone supplying their own models. The full image is
+  CPU-only by choice -- a CUDA build is roughly twice the size and useless without the
+  NVIDIA Container Toolkit, which most people pulling it will not have.
+- A `gpu` compose profile for hosts that do have that toolkit.
+- The image is published to GitHub Container Registry on every version tag, for
+  `linux/amd64` and `linux/arm64`, each built on a runner of its own architecture and tied
+  together by one manifest, so `docker pull` fetches the right one. Docker Hub and Quay
+  activate when their credentials are present and are skipped silently when they are not.
+- The image carries the full set of OCI annotations, which is what a registry reads to fill
+  in its listing page, and names a maintainer.
+- [`docs/operations/docker.md`](docs/operations/docker.md): what to install, how to build,
+  run, configure, publish, and what to do when it goes wrong -- including which claims in it
+  have actually been exercised and which have not.
+- **A project shows when its run started, when it finished, and how long it took.** Both
+  timestamps were already recorded and neither reached the browser, so the only way to
+  answer "how long did that dub take" was to read the server log. A run still going counts
+  up once a second, which also tells a slow stage from a stopped one at a glance.
+- `RunDetail` carries `finished_at` alongside `created_at`. Additive; no existing field
+  changed.
+
 ### Fixed
 
 - The container image workflow is valid again, and can therefore publish. GitHub rejected
@@ -34,6 +67,8 @@ may occur in MINOR releases and are always listed here.
 - Organized internal product, project, and historical review documents under `docs/` and
   added a documentation index, while retaining conventional repository entry points at
   the root.
+- Dependencies moved to their current patch releases. TypeScript 7 and pnpm 11 were both
+  evaluated and deliberately not adopted; the reasons are recorded in the project plan.
 
 ## [0.3.0] - 2026-09-01
 
