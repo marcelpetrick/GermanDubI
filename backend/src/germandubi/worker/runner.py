@@ -407,8 +407,11 @@ class Worker:
 
         if failed.can_retry:
             # Re-queue rather than giving up: transient failures - a dropped connection, a
-            # busy GPU - are common and a whole run should not die for one.
-            uow.jobs.save_job(failed.transition_to(JobStatus.QUEUED))
+            # busy GPU - are common and a whole run should not die for one. Not immediately,
+            # though: an instant retry asks again while the condition that caused the
+            # failure is still true, which spends all three attempts on one moment.
+            requeued = failed.transition_to(JobStatus.QUEUED)
+            uow.jobs.save_job(requeued.scheduled_after(failed.retry_delay_seconds))
             uow.events.append(
                 job.project_id,
                 "stage_retrying",

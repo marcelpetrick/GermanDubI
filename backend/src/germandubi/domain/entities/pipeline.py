@@ -8,7 +8,7 @@ edit on everything downstream can be computed rather than guessed.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Final, Self
 
@@ -211,6 +211,13 @@ _ALLOWED_JOB_TRANSITIONS: Final[dict[JobStatus, frozenset[JobStatus]]] = {
 
 #: How many times a failed job is retried before the run gives up.
 MAX_ATTEMPTS: Final = 3
+#: How long a failed stage waits before its next attempt, indexed by the attempt just
+#: finished. Retrying instantly makes all three attempts one event: a rate-limited
+#: download or a busy GPU is in exactly the same state milliseconds later, and the run
+#: fails having really been tried once. These are short enough not to strain a person
+#: watching the progress bar and long enough for a transient condition to pass -- the
+#: yt-dlp failure that prompted this succeeded about a minute after it first failed.
+RETRY_BACKOFF_SECONDS: Final = (5, 60)
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,6 +236,7 @@ class Job:
         error: Why the job failed, when it did.
         lease_expires_at: When the current claim expires. A worker that dies leaves the job
             claimable again after this moment, instead of stranding it in ``RUNNING``.
+        next_attempt_at: The earliest a retry may be claimed. ``None`` means immediately.
         progress: Fraction complete in ``[0, 1]``, for stages that can report it.
         progress_detail: A short human-readable note, e.g. ``124 / 192 segments``.
         created_at: When the job was created.
@@ -245,6 +253,7 @@ class Job:
     input_hash: str | None = None
     error: str | None = None
     lease_expires_at: datetime | None = None
+    next_attempt_at: datetime | None = None
     progress: float = 0.0
     progress_detail: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -269,6 +278,27 @@ class Job:
     def can_retry(self) -> bool:
         """Return whether a failed job still has attempts left."""
         return self.status is JobStatus.FAILED and self.attempt < MAX_ATTEMPTS
+
+    @property
+    def retry_delay_seconds(self) -> int:
+        """Return how long this job should wait before being retried.
+
+        Indexed by attempts already made, so the first retry is quick and the last one
+        waits long enough to be a genuinely different moment.
+        """
+        index = min(max(self.attempt - 1, 0), len(RETRY_BACKOFF_SECONDS) - 1)
+        return RETRY_BACKOFF_SECONDS[index]
+
+    def scheduled_after(self, delay_seconds: int) -> Self:
+        """Return a copy that may not be claimed until ``delay_seconds`` from now.
+
+        Args:
+            delay_seconds: How long to wait.
+
+        Returns:
+            The rescheduled job.
+        """
+        return replace(self, next_attempt_at=datetime.now(UTC) + timedelta(seconds=delay_seconds))
 
     def transition_to(self, status: JobStatus, *, error: str | None = None) -> Self:
         """Return a copy in a new status.
@@ -302,6 +332,7 @@ class Job:
             finished_at=now if status.is_finished else None,
             progress=1.0 if status is JobStatus.SUCCEEDED else self.progress,
             lease_expires_at=None if status.is_finished else self.lease_expires_at,
+            next_attempt_at=None if status is JobStatus.RUNNING else self.next_attempt_at,
         )
 
     def claimed(self, *, lease_expires_at: datetime, input_hash: str | None = None) -> Self:

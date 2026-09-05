@@ -3,6 +3,7 @@ from __future__ import annotations
 import signal
 import time
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ import pytest
 
 from germandubi.composition import Application, build_application
 from germandubi.config import Settings
-from germandubi.domain.entities.pipeline import JobStatus, Stage
+from germandubi.domain.entities.pipeline import RETRY_BACKOFF_SECONDS, JobStatus, Stage
 from germandubi.domain.entities.project import ProjectState
 from germandubi.domain.errors import CancelledError, DomainError
 from germandubi.worker.handlers import HANDLERS
@@ -42,7 +43,7 @@ def queued_probe(application: Application) -> tuple[Any, Any]:
 
 
 def test_worker_retries_then_permanently_fails(
-    application: Application, monkeypatch: pytest.MonkeyPatch
+    application: Application, monkeypatch: pytest.MonkeyPatch, immediate_retries: None
 ) -> None:
     project, run = queued_probe(application)
 
@@ -68,7 +69,7 @@ def test_worker_retries_then_permanently_fails(
 
 
 def test_worker_wraps_unexpected_errors(
-    application: Application, monkeypatch: pytest.MonkeyPatch
+    application: Application, monkeypatch: pytest.MonkeyPatch, immediate_retries: None
 ) -> None:
     project, run = queued_probe(application)
 
@@ -155,3 +156,35 @@ def test_worker_lifecycle_helpers(
 
     monkeypatch.setattr(time, "sleep", stop_after_sleep)
     worker.run_forever()
+
+
+def test_a_failed_stage_is_not_retried_immediately(
+    application: Application, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Three attempts in the same millisecond is one attempt, told three times.
+
+    The failure this was written for is a rate-limited download: the same request a
+    moment later fails the same way, and the run ends having really been tried once.
+    """
+    _project, run = queued_probe(application)
+
+    def fail(_context: Any) -> None:
+        raise DomainError("provider failed")
+
+    monkeypatch.setitem(HANDLERS, Stage.PROBE, fail)
+    worker = application.worker()
+
+    assert worker.run_once(), "the first attempt should run"
+    assert not worker.run_once(), "the retry is not due yet"
+
+    job = application.pipeline.progress(run.id).jobs[0]
+    assert job.status is JobStatus.QUEUED, "still queued, waiting rather than given up on"
+    assert job.attempt == 1
+
+    # Due once its wait has passed, and it must still be the same job rather than a new one.
+    with application.unit_of_work() as uow:
+        claimed = uow.jobs.claim_next(
+            lease_seconds=60, now=datetime.now(UTC) + timedelta(seconds=RETRY_BACKOFF_SECONDS[0])
+        )
+    assert claimed is not None and claimed.id == job.id
+    assert claimed.attempt == 2

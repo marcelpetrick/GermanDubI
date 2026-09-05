@@ -873,7 +873,7 @@ class JobRepository:
         moment = now or datetime.now(UTC)
         self._reclaim_expired_leases(moment)
 
-        for row in self._runnable_in_claim_order():
+        for row in self._runnable_in_claim_order(ready_at=moment):
             claimed = _row_to_job(row)
             if claimed.status is JobStatus.PENDING:
                 claimed = claimed.transition_to(JobStatus.QUEUED)
@@ -883,8 +883,8 @@ class JobRepository:
             return claimed
         return None
 
-    def _runnable_in_claim_order(self) -> Iterator[JobRow]:
-        """Return every job that could be claimed now, in the order the worker will take them.
+    def _runnable_in_claim_order(self, *, ready_at: datetime | None = None) -> Iterator[JobRow]:
+        """Return every job with runnable work, in the order the worker will take them.
 
         Source inspection first, then oldest first. A probe costs a second or two and is
         what someone who just pasted a URL is waiting on; strict age order put it behind
@@ -900,8 +900,14 @@ class JobRepository:
         Lazy, because claiming stops at the first runnable job and each candidate costs a
         query to check its dependencies.
 
+        Args:
+            ready_at: When given, jobs still inside their retry backoff are skipped. The
+                claim path passes it; the queue-position path does not, because a job
+                waiting out a backoff is still a project waiting its turn and dropping it
+                from the queue would make the interface show nothing for those seconds.
+
         Yields:
-            Claimable jobs, first to be claimed first.
+            Runnable jobs, first to be claimed first.
         """
         probe_last = case((JobRow.stage == Stage.PROBE.value, 0), else_=1)
         candidates = self.session.scalars(
@@ -914,6 +920,13 @@ class JobRepository:
             .order_by(probe_last, JobRow.created_at, JobRow.id)
         ).all()
         for row in candidates:
+            if ready_at is not None and row.next_attempt_at is not None:
+                # Stored naive by SQLite; compare in UTC rather than crash on the offset.
+                due = row.next_attempt_at
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=UTC)
+                if due > ready_at:
+                    continue
             if self._dependencies_satisfied(row):
                 yield row
 
@@ -1070,6 +1083,7 @@ def _apply_job(row: JobRow, job: Job) -> None:
     """Copy a job's current values onto its row."""
     row.status = job.status.value
     row.attempt = job.attempt
+    row.next_attempt_at = job.next_attempt_at
     row.input_hash = job.input_hash
     row.error = job.error
     row.lease_expires_at = job.lease_expires_at
@@ -1088,6 +1102,7 @@ def _row_to_job(row: JobRow) -> Job:
         stage=Stage(row.stage),
         status=JobStatus(row.status),
         attempt=row.attempt,
+        next_attempt_at=row.next_attempt_at,
         input_hash=row.input_hash,
         error=row.error,
         lease_expires_at=row.lease_expires_at,

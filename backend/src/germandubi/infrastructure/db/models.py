@@ -239,6 +239,7 @@ class JobRow(Base):
     input_hash: Mapped[str | None] = mapped_column(String(80))
     error: Mapped[str | None] = mapped_column(Text)
     lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     progress: Mapped[float] = mapped_column(Float, default=0.0)
     progress_detail: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

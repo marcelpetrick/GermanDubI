@@ -523,7 +523,7 @@ class TestResumability:
         assert "partial_work" in kinds
 
     def test_a_resumable_handler_reaches_the_same_result_as_an_uninterrupted_one(
-        self, application: Application, monkeypatch: pytest.MonkeyPatch
+        self, application: Application, monkeypatch: pytest.MonkeyPatch, immediate_retries: None
     ) -> None:
         """The pattern every handler must follow: look for your own output first."""
         produced: list[int] = []

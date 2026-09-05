@@ -90,18 +90,24 @@ def test_a_database_from_before_migrations_is_adopted(tmp_path: Path) -> None:
 
 
 def test_the_schema_survives_a_downgrade_and_upgrade(tmp_path: Path) -> None:
-    """A migration that cannot be reversed is a migration nobody dares run."""
+    """A migration that cannot be reversed is a migration nobody dares run.
+
+    Written against whatever the newest migration happens to be rather than against a
+    named column, so adding one does not break this test and tempt someone to weaken it.
+    """
     from alembic import command
 
     database = create_database(f"sqlite:///{tmp_path / 'roundtrip.db'}")
     database.migrate()
     config = database._alembic_config()
+    at_head = _columns(database)
 
     command.downgrade(config, "-1")
-    assert "voice" not in _columns(database)["projects"]
+    after_downgrade = _columns(database)
+    assert after_downgrade != at_head, "the newest migration's downgrade changed nothing"
 
     command.upgrade(config, "head")
-    assert "voice" in _columns(database)["projects"]
+    assert _columns(database) == at_head
     database.dispose()
 
 
