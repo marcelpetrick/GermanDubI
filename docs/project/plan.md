@@ -583,21 +583,25 @@ nobody has checked.
   than in the application. *Closes when:* someone with `docker-compose-plugin` runs it once.
 - **The GPU profile.** No NVIDIA Container Toolkit here. *Closes when:* run on a host that
   has it, confirming `germandubi doctor` inside the container reports `GPU (cuda)`.
-- **The publish workflow.** GitHub Actions cannot run locally, and the file was rejected
-  outright by GitHub for using `secrets` in a step's `if`, which is not one of the contexts
-  available there. An unparseable workflow fails in zero seconds and is listed by its path
-  instead of its name, which is easy to read as "it simply did not run" -- so it published
-  nothing, and `docker pull` answered `denied`. The conditions now go through job-level
-  `env`, which may read secrets. *Closes when:* a version tag is pushed, the run goes green,
-  and `docker pull` from a clean machine returns a working image.
+- **The publish workflow.** `CLOSED`. It had never run: GitHub rejected the file for using
+  `secrets` in a step's `if`, which fails in zero seconds and is listed by its path rather
+  than its name -- easy to read as "not triggered yet". Fixing that exposed four more faults
+  in code that had never executed: the image reference carried the repository's capitals and
+  a Docker reference may not; `sphn` has no Linux aarch64 wheel, so arm64 compiles it and
+  needed first a C compiler and then a way past a vendored libopus that CMake 4 refuses; and
+  the digest was handed between jobs under a file name containing a colon, which an artifact
+  path may not hold, so the amd64 image was built, pushed and discarded one step later.
+  Verified by pulling `ghcr.io/marcelpetrick/germandubi:latest` anonymously on a machine that
+  did not build it: both architectures present, `doctor` reports "Ready to dub", and the
+  image reports its own version as 0.4.2.
 
 ### One-time account setup, before anyone can pull
 
-- **Make the GHCR package public.** A package is created private, and an anonymous pull of
-  a private package is refused with `denied` -- the same word the registry uses for a
-  package that does not exist, so the two are indistinguishable from the client. It stays
-  private until someone opens the repository's *Packages* section and changes it, and until
-  then the `docker pull` line in the README is a promise the registry will refuse.
+- **Make the GHCR package public.** `CLOSED`. It is public, and the first anonymous pull
+  confirmed it. Worth keeping the note that `denied` is what the registry says about a
+  package that is private *and* about one that does not exist, so the message alone never
+  distinguishes "not allowed" from "never published" -- here it meant the latter.
+
 - **Docker Hub and Quay secrets.** `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` and
   `QUAY_USERNAME` / `QUAY_TOKEN`. Each registry is skipped silently when its pair is absent,
   so publishing works today and reaches only GHCR.
