@@ -22,12 +22,14 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Session
 
 from germandubi.composition import Application, build_application
 from germandubi.config import Settings
 from germandubi.domain.entities.pipeline import Stage
 from germandubi.domain.errors import ResourceError
-from germandubi.domain.value_objects.identifiers import JobId
+from germandubi.domain.value_objects.identifiers import JobId, ProjectId
 from germandubi.worker.context import StageContext
 from germandubi.worker.handlers import HANDLERS
 from tests.fixtures.media import make_narration_video
@@ -605,3 +607,50 @@ class TestSingleWorker:
 
         assert len(leases) == 2
         assert leases[1] > leases[0], "the checkpoint should have extended the lease"
+
+
+class TestDeletingIsOrderedRowsFirst:
+    """A delete removes rows and files, and the two must not be able to disagree.
+
+    Removing the files inside the transaction means a commit that fails afterwards leaves
+    the project listed and its files gone -- a project the interface offers and cannot
+    open. That commit failing is not hypothetical here: deleting while a stage holds the
+    write lock is precisely how this application fails.
+    """
+
+    def test_a_failed_commit_leaves_the_project_whole(self, application: Application) -> None:
+        project = application.projects.create_from_url(VALID_URL)
+        workspace = application.store.workspace(project.id)
+        assert workspace.exists()
+
+        original = Session.commit
+
+        def fail(self: Session) -> None:
+            Session.commit = original  # type: ignore[method-assign]
+            raise OperationalError("database is locked", None, Exception())
+
+        Session.commit = fail  # type: ignore[method-assign]
+        try:
+            with pytest.raises(OperationalError):
+                application.projects.delete(project.id)
+        finally:
+            Session.commit = original  # type: ignore[method-assign]
+
+        # Neither half may have happened: the project is still listed, so its files must
+        # still be there for it.
+        assert [p.id for p in application.projects.list_projects()] == [project.id]
+        assert workspace.exists(), "the workspace was removed for a project that still exists"
+
+    def test_the_rows_are_gone_even_if_the_files_cannot_be_removed(
+        self, application: Application
+    ) -> None:
+        """The user asked for the project to go. A failed `rmtree` must not undo that."""
+        project = application.projects.create_from_url(VALID_URL)
+
+        def refuse(_project_id: ProjectId) -> None:
+            raise OSError("device or resource busy")
+
+        application.store.delete_workspace = refuse  # type: ignore[assignment]
+        application.projects.delete(project.id)
+
+        assert application.projects.list_projects() == []

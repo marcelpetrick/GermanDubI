@@ -123,12 +123,29 @@ class ProjectService:
         after is often the database itself, and opening another transaction to tidy up would
         fail the same way.
         """
+        self._remove_workspace(project_id, "unsaved project")
+
+    def _remove_workspace(self, project_id: ProjectId, description: str) -> None:
+        """Remove a project's files, outside any transaction.
+
+        Never called with a unit of work open, and that is the point. Removing a workspace
+        is not a quick operation -- a 40-minute dub leaves several gigabytes behind -- and
+        doing it inside the transaction holds SQLite's write lock for the whole of it. That
+        is the same defect that made adding a second video fail with "database is locked",
+        on a path that holds the lock for far longer than a stage ever did.
+
+        Deleting the rows first also changes what a crash between the two leaves behind: an
+        unreferenced directory, which costs disk, rather than rows pointing at files that
+        are gone, which is a project the interface offers and cannot open. Removal is
+        idempotent, so it can simply be run again.
+        """
         try:
             self.unit_of_work.store.delete_workspace(project_id)
         except Exception:
-            # Broad on purpose: tidying up must never replace the caller's real error.
+            # Broad on purpose: tidying up must never replace the caller's real error, and
+            # the rows are already gone, so the deletion the user asked for did happen.
             logger.warning(
-                "could not remove the workspace of unsaved project %s", project_id, exc_info=True
+                "could not remove the workspace of %s %s", description, project_id, exc_info=True
             )
 
     def get(self, project_id: ProjectId) -> Project:
@@ -177,7 +194,7 @@ class ProjectService:
         with self.unit_of_work() as uow:
             uow.projects.get(project_id)
             uow.projects.delete(project_id)
-            uow.store.delete_workspace(project_id)
+        self._remove_workspace(project_id, "deleted project")
         logger.info("deleted project %s", project_id)
 
     def delete_all(self) -> int:
@@ -193,7 +210,7 @@ class ProjectService:
         Returns:
             How many projects were removed.
         """
-        removed = 0
+        deleted: list[ProjectId] = []
         with self.unit_of_work() as uow:
             uow.jobs.cancel_all()
             # Paged rather than capped: a limit chosen for plausibility would silently
@@ -201,11 +218,15 @@ class ProjectService:
             while batch := uow.projects.list_all(limit=_DELETE_BATCH, offset=0):
                 for project in batch:
                     uow.projects.delete(project.id)
-                    uow.store.delete_workspace(project.id)
+                    deleted.append(project.id)
                 uow.flush()
-                removed += len(batch)
-        logger.info("deleted %d project(s) and their workspaces", removed)
-        return removed
+        # Only rows above, so the write lock is held for a query and some deletes rather
+        # than for however many gigabytes every workspace happens to hold. See
+        # :meth:`_remove_workspace`.
+        for project_id in deleted:
+            self._remove_workspace(project_id, "deleted project")
+        logger.info("deleted %d project(s) and their workspaces", len(deleted))
+        return len(deleted)
 
     def set_quality(self, project_id: ProjectId, quality: QualityProfile) -> Project:
         """Change a project's quality profile.
