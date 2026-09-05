@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==84.0.0", "setuptools-scm==10.2.2"]
+requires = ["setuptools==84.0.0", "setuptools-scm==10.2.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,7 +24,7 @@ requires-python = ">=3.12,<3.14"
 dynamic = ["version"]
 
 dependencies = [
-    "alembic==1.19.1",
+    "alembic==1.19.2",
     "fastapi==0.141.1",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
@@ -44,7 +44,7 @@ dependencies = [
 # torch requirements conflict. See AGENTS.md section 7 and docs/project/questions.md section C.
 asr = ["faster-whisper==1.2.1"]
 translate = ["argostranslate==1.11.0"]
-tts = ["piper-tts==1.7.0"]
+tts = ["piper-tts==1.8.0"]
 separation = ["demucs==4.1.0"]
 
 [project.urls]
@@ -57,7 +57,7 @@ germandubi = "germandubi.cli.main:main"
 
 [dependency-groups]
 dev = [
-    "anyio==4.14.2",
+    "anyio==4.15.1",
     "coverage[toml]==7.16.0",
     # starlette 1.6 requires httpx2 for its test client.
     "httpx2==2.12.0",
@@ -66,9 +66,9 @@ dev = [
     "pre-commit==4.6.2",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "ruff==0.16.5",
+    "ruff==0.16.6",
     # Needed at runtime in a Git checkout so a build-generated _version.py cannot go stale.
-    "setuptools-scm==10.2.2",
+    "setuptools-scm==10.2.3",
 ]
 
 [tool.setuptools_scm]
@@ -196,7 +196,16 @@ markers = [
     "real_provider: needs a real model, network access or a GPU; deselected by default",
     "slow: takes more than a couple of seconds",
 ]
-filterwarnings = ["error", "ignore::DeprecationWarning:pydantic.*"]
+# Warnings are errors, with two exceptions that are somebody else's code to fix.
+# starlette 1.6.0 -- the newest there is -- still reaches for `anyio.abc.BlockingPortal`
+# in its test client, which anyio 4.15 deprecated. The filter names the module so our own
+# use of a deprecated anyio API would still fail the build. Remove it when starlette moves
+# to `anyio.from_thread.BlockingPortal`.
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning:starlette.*",
+]
 
 [tool.coverage.run]
 branch = false
