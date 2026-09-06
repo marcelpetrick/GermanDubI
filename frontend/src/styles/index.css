@@ -989,3 +989,29 @@ audio {
   flex: 1;
   min-width: 0;
 }
+
+/* The crash screen. Deliberately plain: it has to render when the rest of the interface
+   could not, so it leans on nothing but the base tokens. */
+.error-boundary {
+  max-width: 48rem;
+  margin: 4rem auto;
+  padding: 0 1.5rem;
+}
+
+.error-boundary__detail {
+  overflow-x: auto;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-boundary__hint {
+  margin-top: 1.5rem;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}

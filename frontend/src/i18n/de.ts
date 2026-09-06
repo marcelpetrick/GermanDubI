@@ -248,6 +248,12 @@ export const de: Catalogue = {
   'queue.position': 'Platz {position} von {total} in der Warteschlange',
   'queue.next': 'Als Nächstes in der Warteschlange',
 
+  'boundary.title': 'Die Oberfläche funktioniert nicht mehr',
+  'boundary.body':
+    'Ein Teil dieser Seite konnte nicht angezeigt werden. Ihre Projekte und Dateien sind unverändert — der Fehler liegt in der Oberfläche, nicht in Ihrer Arbeit.',
+  'boundary.reload': 'Seite neu laden',
+  'boundary.hint':
+    'Wenn es erneut auftritt: Die Info-Seite nennt die Version für eine Meldung, das Server-Log die Einzelheiten.',
   'error.title': 'Etwas ist schiefgelaufen',
   'error.reference': 'Kennung {reference}',
   'error.logAt': 'Die Einzelheiten stehen im Server-Log: {path}',

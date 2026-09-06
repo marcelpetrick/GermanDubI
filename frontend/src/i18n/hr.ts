@@ -244,6 +244,12 @@ export const hr: Catalogue = {
   'queue.position': 'Mjesto {position} od {total} u redu',
   'queue.next': 'Sljedeće u redu',
 
+  'boundary.title': 'Sučelje je prestalo raditi',
+  'boundary.body':
+    'Dio ove stranice nije se mogao prikazati. Vaši projekti i datoteke su netaknuti — kvar je u sučelju, ne u vašem radu.',
+  'boundary.reload': 'Ponovno učitaj stranicu',
+  'boundary.hint':
+    'Ako se ponovi, stranica O programu ima verziju za prijavu, a zapisnik poslužitelja pojedinosti.',
   'error.title': 'Nešto je pošlo po zlu',
   'error.reference': 'Oznaka {reference}',
   'error.logAt': 'Pojedinosti su u zapisniku poslužitelja: {path}',

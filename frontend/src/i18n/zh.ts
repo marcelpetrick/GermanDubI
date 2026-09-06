@@ -235,6 +235,11 @@ export const zh: Catalogue = {
   'queue.position': '队列中第 {position} 位，共 {total} 个',
   'queue.next': '队列中的下一个',
 
+  'boundary.title': '界面已停止工作',
+  'boundary.body':
+    '此页面的某个部分无法显示。您的项目和文件未受影响——这是界面的故障，而非您的工作。',
+  'boundary.reload': '重新加载页面',
+  'boundary.hint': '若再次出现，"关于"页面提供可用于报告的版本号，服务器日志包含详细信息。',
   'error.title': '出错了',
   'error.reference': '编号 {reference}',
   'error.logAt': '详细信息在服务器日志中：{path}',

@@ -251,6 +251,12 @@ export const en = {
   'queue.position': 'Position {position} of {total} in the queue',
   'queue.next': 'Next in the queue',
 
+  'boundary.title': 'The interface stopped working',
+  'boundary.body':
+    'Something in this page failed to display. Your projects and files are untouched — this is a fault in the interface, not in your work.',
+  'boundary.reload': 'Reload the page',
+  'boundary.hint':
+    'If it happens again, the About page has the version to report, and the server log has the details.',
   'error.title': 'Something went wrong',
   // What the browser shows when the server did not anticipate a failure. The reference and
   // the log path are the two things that turn "it broke" into something a person can act on.
