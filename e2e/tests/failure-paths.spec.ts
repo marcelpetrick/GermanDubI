@@ -67,3 +67,35 @@ test("stopping a run leaves the project explained, not spinning", async ({
     page.getByRole("button", { name: "Resume unfinished work" }),
   ).toBeVisible({ timeout: 60_000 });
 });
+
+test("a run's clock is the reader's clock, not UTC pretending to be it", async ({
+  page,
+}) => {
+  // Regression: timestamps reached the browser with no offset, so `new Date(...)` read
+  // them as local time. A run started at 10:46 CEST displayed "Started 08:46" and, while
+  // still running, "running for 120 min" seconds after it began.
+  //
+  // Asserted on the moment rather than on the elapsed text on purpose. Start and finish
+  // were shifted by the same two hours, so a finished run's duration looked right and
+  // only the wall-clock was wrong -- and with fake providers a dub finishes too quickly
+  // to catch it any other way.
+  await page.goto("/");
+  await page.getByLabel("YouTube URL").fill(WORKING);
+  await page.getByRole("button", { name: "Analyze" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Fake narration clip" }),
+  ).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Create German dub" }).click();
+
+  const timing = page.locator(".run-timing time").first();
+  await expect(timing).toBeVisible({ timeout: 30_000 });
+
+  // The same parse the component does, on the same value it renders.
+  const skewMinutes = await timing.evaluate((element) => {
+    const iso = element.getAttribute("datetime");
+    if (!iso) throw new Error("the timing element carries no datetime");
+    return Math.abs(Date.now() - new Date(iso).getTime()) / 60_000;
+  });
+
+  expect(skewMinutes).toBeLessThan(5);
+});
