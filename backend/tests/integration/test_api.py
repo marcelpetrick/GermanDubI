@@ -35,6 +35,8 @@ def app_and_api(tmp_path: Path, clip: Path) -> Iterator[tuple[Application, FastA
     settings = Settings(
         data_dir=tmp_path / "data",
         transcription_provider="fake",
+        probe_provider="fake",
+        prosody_provider="fake",
         translation_provider="fake",
         tts_provider="fake",
         separation_provider="fake",

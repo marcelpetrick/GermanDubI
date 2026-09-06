@@ -19,6 +19,9 @@ export GERMANDUBI_TRANSCRIPTION_PROVIDER="fake"
 export GERMANDUBI_TRANSLATION_PROVIDER="fake"
 export GERMANDUBI_TTS_PROVIDER="fake"
 export GERMANDUBI_SEPARATION_PROVIDER="fake"
+# Named rather than inherited: these two used to follow the transcription setting.
+export GERMANDUBI_PROBE_PROVIDER="fake"
+export GERMANDUBI_PROSODY_PROVIDER="fake"
 export GERMANDUBI_WORKER_POLL_INTERVAL_S="0.05"
 
 # Dedicated ports. The browser workflow must own the server it tests: sharing a

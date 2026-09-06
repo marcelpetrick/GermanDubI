@@ -86,6 +86,8 @@ def test_fake_selection_and_cached_media(tmp_path: Path) -> None:
         settings(
             tmp_path,
             transcription_provider="fake",
+            probe_provider="fake",
+            prosody_provider="fake",
             translation_provider="fake",
             tts_provider="fake",
             separation_provider="fake",
@@ -239,3 +241,36 @@ def test_readiness_requires_a_real_translator_and_voice(
 
     # Separation stays absent, and that is still a real dub: the mix ducks instead.
     assert ready.can_dub and not ready.missing_for_a_real_dub
+
+
+def test_each_port_is_selected_by_its_own_setting(tmp_path: Path) -> None:
+    """Asking for a fake transcript must not quietly replace two other ports.
+
+    Source inspection and delivery analysis both used to read
+    `transcription_provider`, so choosing a fake transcriber silently swapped them too.
+    It worked, and the deterministic browser run depended on it, but nothing about the
+    setting's name said so -- and the next person to change it would not have known.
+    """
+    runner = RegistryRunner()
+    registry = ProviderRegistry(
+        settings(tmp_path, transcription_provider="fake"),
+        runner=runner,  # type: ignore[arg-type]
+    )
+    source = SourceRef(
+        kind=SourceKind.YOUTUBE, locator="https://www.youtube.com/watch?v=abcdefghijk"
+    )
+
+    assert isinstance(registry.transcription(), FakeTranscriptionProvider)
+    assert not isinstance(registry.prosody(), FakeProsodyProvider)
+    assert not isinstance(registry.probe(source), FakeProbeProvider)
+
+    # And each is reachable on its own.
+    faked = ProviderRegistry(
+        settings(tmp_path, probe_provider="fake", prosody_provider="fake"),
+        runner=runner,  # type: ignore[arg-type]
+    )
+    assert isinstance(faked.probe(source), FakeProbeProvider)
+    assert isinstance(faked.prosody(), FakeProsodyProvider)
+    # Not asserted here: what `transcription()` returns when only these two are faked.
+    # It depends on whether the ASR extra is installed, and the gate deliberately runs
+    # without it -- so the assertion would pass on a developer's machine and fail in CI.

@@ -87,10 +87,16 @@ class Settings(BaseSettings):
     )
 
     # --- providers ---
+    # One setting per port, including the two that have no real alternative to choose
+    # between. Source inspection and delivery analysis used to follow
+    # `transcription_provider`, so asking for a fake transcript silently replaced two
+    # unrelated ports -- which is invisible from the name of the setting that did it.
     transcription_provider: str = Field(default="auto")
     translation_provider: str = Field(default="auto")
     tts_provider: str = Field(default="auto")
     separation_provider: str = Field(default="auto")
+    probe_provider: str = Field(default="auto")
+    prosody_provider: str = Field(default="auto")
     fake_media_fixture: Path | None = Field(
         default=None,
         description="Local media copied by fake acquisition in deterministic E2E runs.",

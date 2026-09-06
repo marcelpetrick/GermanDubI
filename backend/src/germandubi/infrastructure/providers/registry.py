@@ -176,7 +176,7 @@ class ProviderRegistry:
             The provider for this source kind, or the fake when the real one is
             unavailable or has been selected explicitly.
         """
-        if self.settings.transcription_provider == FAKE:
+        if self.settings.probe_provider == FAKE:
             return FakeProbeProvider()
         if source.kind is SourceKind.LOCAL_FILE:
             local = LocalFileProbeProvider(self.media())
@@ -298,7 +298,7 @@ class ProviderRegistry:
 
     def prosody(self) -> ProsodyProvider:
         """Return the narrator delivery analysis provider."""
-        if self.settings.transcription_provider == FAKE:
+        if self.settings.prosody_provider == FAKE:
             return FakeProsodyProvider()
         return TimingProsodyProvider(self.runner, ffmpeg=self.settings.ffmpeg_path)
 
