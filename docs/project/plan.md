@@ -627,11 +627,11 @@ condition that would change the answer.
 
 ### Still open from the deep review
 
-Eleven findings, eight Medium and three Low, listed in
-[`docs/reviews/deep-review.md`](../reviews/deep-review.md) with what each would take. None
-is urgent; the ones most likely to be felt are the missing error boundary, which blanks the
-page on a render error, and `delete_all` removing workspaces inside a single transaction --
-the same class of defect as the create that left orphaned directories.
+Three Low findings, listed in
+[`docs/reviews/deep-review.md`](../reviews/deep-review.md) with what each would take: no
+automated accessibility check, a wheel smoke test that only asks the CLI for a version, and
+voice previews that keep playing after the page is left. Every High and every Medium finding
+is closed.
 
 ### Ideas, deliberately not scheduled
 

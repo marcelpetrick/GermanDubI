@@ -31,23 +31,38 @@ in good shape and the review found nothing to say about them.
   `job_lease_seconds` defaults to 900. Separation measured 2.38x realtime on CPU over a 120-second sample, which puts a 40-minute source in the same order of magnitude as the lease itself. `claim_next` reclaims expired leases, so a second worker process (nothing prevents starting one) could pick up a job the first is still executing, and both would write to the same workspace.
   *Done:* both, because neither alone is sufficient. The lease is renewed from the stage's checkpoint, so a stage that legitimately runs longer than its lease is no longer mistaken for an abandoned one -- but a stage inside a single long subprocess has no checkpoint to renew from, so that could not be the whole answer. `Worker.exclusive()` takes an exclusive `flock` on the data directory and `germandubi worker` refuses to start when another holds it, naming the directory. The lock is released by the operating system on exit, so a crashed worker does not lock its successor out.
 
-* [ ] **[Medium] `delete_all` deletes every workspace inside a single transaction.**
+* [x] **[Medium] `delete_all` deletes every workspace inside a single transaction.** -- *Fixed.*
   `projects.py` pages through projects and calls `uow.store.delete_workspace` for each, all within one unit of work. Filesystem deletion is not transactional: if the transaction rolls back after several directories are gone, the database still lists projects whose files no longer exist.
-  *Do:* commit the database deletion first, then remove directories, and make workspace removal idempotent so a crash between the two is recoverable. Alternatively record intent in a table and sweep orphaned directories on startup.
+  *Done:* the rows are committed first and the directories removed afterwards, outside any
+  transaction, for both `delete` and `delete_all`. That changes which way the two can
+  disagree: an interruption now leaves an unreferenced directory, which costs disk and can
+  be cleared by deleting again, rather than rows pointing at files that are gone. A failed
+  `rmtree` no longer undoes the deletion either. The write-lock half of the original
+  suspicion turned out not to hold for a single delete -- the ORM had not flushed the
+  DELETE, so no lock was held -- and did hold for `delete_all` past its second batch.
 
-* [ ] **[Medium] Stage retries have no backoff.**
+* [x] **[Medium] Stage retries have no backoff.** -- *Fixed.*
   `_finish_failed` re-queues immediately, so a deterministic failure burns all three attempts in milliseconds and a transient one — a rate-limited download, a busy GPU — retries at the least useful possible moment. The yt-dlp investigation in this repository is a live example: three immediate attempts all failed while the same command succeeded a minute later.
-  *Do:* store `next_attempt_at` on the job and have `claim_next` skip jobs whose time has not come. Exponential from a few seconds is enough; the point is that attempt two is not simultaneous with attempt one.
+  *Done:* exactly that. Jobs carry `next_attempt_at`, claiming skips those whose time has
+  not come, and the waits are five seconds then a minute -- configurable, because the
+  deterministic browser run wants zero and an operator may want otherwise. The queue
+  position deliberately still counts a job waiting out its backoff: it is a project waiting
+  its turn, and dropping it would blank the queue for those seconds.
 
 ## Architecture
 
-* [ ] **[Medium] `repositories.py` is 1,135 lines holding four repositories and their mappers.**
+* [x] **[Medium] `repositories.py` is 1,135 lines holding four repositories and their mappers.** -- *Fixed.*
   Every persistence concern in the application lives in one file: project, segment, artifact and job repositories, plus roughly a dozen row/domain mapping functions between them. Nothing is wrong with the code, but a file this size is where merge conflicts concentrate and where a reader stops being able to hold the whole thing in their head.
-  *Do:* split by aggregate into `repositories/projects.py`, `segments.py`, `artifacts.py`, `jobs.py`, keeping the mapping functions next to the repository that owns them, and re-export from `repositories/__init__.py` so no import site changes.
+  *Done:* as described, plus `events.py`. No mapper was used outside its own section, which
+  is what made this a move rather than a redesign: no behaviour, signature or test changed.
+  Jobs is still the largest at 440 lines and is the one worth watching -- it holds the claim
+  operation, the lease handling and the queue ordering.
 
-* [ ] **[Medium] Provider settings are cross-wired through `transcription_provider`.**
+* [x] **[Medium] Provider settings are cross-wired through `transcription_provider`.** -- *Fixed.*
   `ProviderRegistry.probe()` and `prosody()` both check `settings.transcription_provider == "fake"`, so selecting a fake transcript provider silently changes two unrelated ports. It works, and the deterministic E2E depends on it, but the coupling is invisible from the setting's name and will surprise whoever changes it next.
-  *Do:* give each port its own setting (`probe_provider`, `prosody_provider`) defaulting to `auto`, and have `scripts/e2e-server` set them explicitly. Alternatively introduce one `deterministic_providers` flag that means what the E2E actually wants.
+  *Done:* the first. Each port has its own setting, and `scripts/e2e-server` names all six
+  rather than relying on one to imply another. A test pins both directions so the coupling
+  cannot return.
 
 * [x] **[Medium] No ADR records the concurrency and transaction model.** — *Fixed.*
   The rule that a stage runs outside any open write transaction is now load-bearing — it is the difference between a working application and `database is locked` — and it lives only in a commit message and a section of `c4.md`. ADRs exist for smaller decisions (a separate worker, SSE over WebSocket).
@@ -59,17 +74,27 @@ in good shape and the review found nothing to say about them.
   `pytest.ini_options` deselects `-m real_provider`, `make test-real` exists, and no workflow or script ever calls it. Three tests carry the marker, so the only automated check that a real model produces anything at all is `scripts/benchmark_real_dub.py`, which is also run by hand. Every gate in the repository passes against fakes.
   *Done:* `.github/workflows/providers.yml` runs weekly and on demand. It installs FFmpeg, a Deno runtime for yt-dlp's JavaScript challenge, and every provider extra; reports the environment with `germandubi doctor`; runs `make test-real`; and dubs a 60-second excerpt of a real source end to end, uploading the measurement. It gates nothing, on purpose: what it catches is upstream breakage, which arrives on its own schedule and which a contributor cannot have caused.
 
-* [ ] **[Medium] The frontend has no coverage measurement and roughly a third of its components have tests.**
+* [x] **[Medium] The frontend has no coverage measurement and roughly a third of its components have tests.** -- *Fixed.*
   Five test files cover fourteen components. The backend enforces 95.1% and the frontend enforces nothing, so the untested half is invisible rather than merely untested. `HelpPage`, `AboutPage`, `VoicePicker`, `PipelineProgress` and `SegmentWorkspace` have no direct tests.
-  *Do:* enable `vitest --coverage` with a floor that reflects today's reality and raise it deliberately. Prioritise `VoicePicker` (network, audio playback, error path) and `SegmentWorkspace` (filtering, selection following the filter), which have real logic rather than markup.
+  *Done:* the measurement and the floor, set at what the suite covers today -- 67.85% of
+  statements, 69.61% of lines -- and enforced by the gate rather than by a command someone
+  remembers to run. The prioritisation stands as written: `VoicePicker` at 33% and
+  `useProjectEvents` at 26% are where raising the floor should start.
 
-* [ ] **[Medium] There is no error boundary; a render error blanks the page.**
+* [x] **[Medium] There is no error boundary; a render error blanks the page.** -- *Fixed.*
   `grep -rn Boundary frontend/src` returns nothing. Any exception thrown during render unmounts the whole tree, leaving a white page with the explanation only in the console — where a non-developer will never look.
-  *Do:* wrap the routes in an error boundary that shows what failed, offers a reload, and links to the About page for the version to report. React Router's `errorElement` covers route-level failures; a class boundary is still needed for render errors elsewhere.
+  *Done:* a class boundary above every provider, so a failure in the query client, the
+  theme or the locale provider still reaches a page. It reads the catalogue directly rather
+  than through `useLocale` for that reason -- a boundary that needed a context could not
+  report a failure in the context it needs. It says the work is untouched before it says
+  anything else, which is the reader's first question.
 
-* [ ] **[Medium] The browser tests cover the happy path only.**
+* [x] **[Medium] The browser tests cover the happy path only.** -- *Fixed.*
   Both specs drive a successful dub. Nothing exercises a failed stage, a degraded environment, an unavailable source, or a project stopped mid-run — and those are the paths where the interface has the most to say and the most to get wrong.
-  *Do:* add specs for a failed stage (force one by pointing at an unusable fixture) and for the degraded-environment banner, asserting the interface explains the failure rather than showing a spinner forever.
+  *Done:* a failed stage and a run stopped mid-flight. The fake downloader fails for a
+  marked source, which is how a deterministic run reaches the path without the server
+  needing a mode of its own. The specs assert that the project reaches a failed state, that
+  the reason reaches the reader in both places it is shown, and that there is a way on.
 
 * [ ] **[Low] No automated accessibility check, despite deliberate accessibility work.**
   There are 34 `aria-`/`role` attributes, a skip link, a `forced-colors` fallback and focus-visible styling — the intent is clearly there, and nothing verifies it. Contrast in particular is a real risk given a neon palette that was tuned by eye.
@@ -81,9 +106,11 @@ in good shape and the review found nothing to say about them.
   Neither workflow runs `pip-audit`, `osv-scanner`, or npm's audit, and the project pulls a large transitive surface — torch, spacy, stanza, onnxruntime and their dependencies. A GPL-licensed local tool still ships code that parses untrusted media.
   *Done:* `.github/workflows/audit.yml`, on every push and pull request and daily at 05:23 — a disclosure does not wait for the next commit. `pip-audit` runs against the *exported lockfile* rather than the installed environment, because this project's own package is installed editable and is not on PyPI, which `pip-audit` reports as an error that neither `--strict` nor `--skip-editable` can get past. The default install is audited strictly and blocks: it is clean today, and it is what every user gets. The provider extras are audited too but reported rather than enforced — torch is held at 2.2.2 by a `numpy<2` constraint from the separation stack, so those findings cannot be closed by bumping a pin here, and a permanently red gate teaches people to ignore it. Both `pnpm audit --audit-level=high` runs are blocking and clean.
 
-* [ ] **[Medium] Released artifacts carry no provenance or signature.**
+* [x] **[Medium] Released artifacts carry no provenance or signature.** -- *Fixed.*
   `release.yml` builds a wheel and an sdist and uploads them. Anyone downloading has no way to verify they came from this repository and this commit, which matters more for a GPL tool people are invited to self-host.
-  *Do:* add `actions/attest-build-provenance` after the build step and publish the attestation with the release. It needs `id-token: write` and about five lines.
+  *Done:* after the install check rather than before it, so nothing is vouched for until it
+  has been shown to work. Verifiable with `gh attestation verify <wheel> --repo
+  marcelpetrick/GermanDubI`.
 
 * [x] **[Medium] The gate silently removes the providers needed to use the product.** — *Fixed.*
   `uv sync --locked` in `localPipeline.sh` uninstalls the optional extras every run, so the sequence "run the gate, then dub something" leaves a machine that cannot dub. It is documented in three places, which is itself the evidence that it surprises people — it caught this project's own maintainer twice during development.
@@ -163,10 +190,10 @@ inconvenience: schema ownership, the resumability contract, and the lease. The d
 scan is High for a different reason — it is the only finding here that someone outside this
 repository could exploit, and it is an afternoon's work.
 
-All five High findings are now closed, along with the concurrency ADR, the translation gap,
-the invisible queue and the gate that disabled the product it was testing. What remains is
-eight Medium and three Low findings, none urgent enough to hold a release: the application
-works, the gate is honest, and every finding above is a known gap rather than a surprise.
+Every High and every Medium finding is now closed. What remains is three Low ones -- no
+automated accessibility check, a wheel smoke test that only asks for a version, and voice
+previews that keep playing when the page is left. None of them can produce a wrong result;
+all three are worth doing and nothing breaks meanwhile.
 
 The three defects under "found since this review" are the more interesting result. All three
 were in code this review had just declared sound, and each was exposed by the fix before it.
