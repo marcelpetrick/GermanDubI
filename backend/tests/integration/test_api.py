@@ -224,6 +224,21 @@ class TestWorkflow:
         assert {job["stage"] for job in run["jobs"]} >= {"translate", "synthesize", "export"}
         assert all(job["label"] for job in run["jobs"])
 
+    def test_run_timestamps_carry_their_offset(self, client: TestClient, dubbed: str) -> None:
+        """The browser reads a timestamp with no offset as local time, and gets it wrong.
+
+        `new Date("2026-09-06T02:00:00")` is local; only the offset makes it UTC. Without
+        it every run appeared hours old on any machine east of Greenwich.
+        """
+        run = client.get(url(f"/projects/{dubbed}/runs/latest")).json()
+
+        for field in ("created_at", "finished_at"):
+            moment = run[field]
+            assert moment is not None, f"a finished run has a {field}"
+            assert moment.endswith("Z") or "+" in moment[10:], (
+                f"{field} is {moment!r}, which a browser will read as local time"
+            )
+
     def test_gets_one_run_and_rejects_cross_project_access(
         self, client: TestClient, dubbed: str
     ) -> None:
