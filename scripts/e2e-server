@@ -23,6 +23,9 @@ export GERMANDUBI_SEPARATION_PROVIDER="fake"
 export GERMANDUBI_PROBE_PROVIDER="fake"
 export GERMANDUBI_PROSODY_PROVIDER="fake"
 export GERMANDUBI_WORKER_POLL_INTERVAL_S="0.05"
+# Retry immediately. The failure spec drives a stage to its final failure, and waiting
+# out the real backoff would add a minute to the browser workflow to prove nothing.
+export GERMANDUBI_JOB_RETRY_BACKOFF_SECONDS="[0, 0]"
 
 # Dedicated ports. The browser workflow must own the server it tests: sharing a
 # developer's `make dev` meant testing real providers and real project data, which fails

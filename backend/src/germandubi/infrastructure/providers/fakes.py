@@ -97,8 +97,20 @@ class FakeProbeProvider:
         return self._media
 
 
+#: A source whose locator contains this is made to fail by the fake downloader. The
+#: failure path -- what the interface says when a stage cannot finish -- is as much a part
+#: of the product as the successful one, and it was the half no browser test drove. A
+#: marker in the URL is how a deterministic run reaches it without the server needing a
+#: mode of its own, and it is specific enough not to fire by accident.
+FAILING_SOURCE_MARKER: Final = "germandubi-fail"
+
+
 class FakeAcquisitionProvider:
-    """Copies a fixture media file into the project workspace instead of downloading."""
+    """Copies a fixture media file into the project workspace instead of downloading.
+
+    Fails deliberately for a source marked with :data:`FAILING_SOURCE_MARKER`, so the
+    browser workflow can drive a failed stage.
+    """
 
     def __init__(self, fixture: Path) -> None:
         """Initialise the provider.
@@ -127,8 +139,12 @@ class FakeAcquisitionProvider:
             The path to the copied file.
 
         Raises:
-            SourceAcquisitionError: If the fixture is missing.
+            SourceAcquisitionError: If the fixture is missing, or the source is marked to
+                fail.
         """
+        if FAILING_SOURCE_MARKER in request.source.locator:
+            msg = "this source was marked to fail, so the failure path can be exercised"
+            raise SourceAcquisitionError(msg, path=request.source.locator)
         if not self.fixture.exists():
             msg = f"the test fixture is missing: {self.fixture}"
             raise SourceAcquisitionError(msg, path=str(self.fixture))

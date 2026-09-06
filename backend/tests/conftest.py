@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy.orm import Session
 
-from germandubi.domain.entities import pipeline
 from germandubi.domain.entities.project import Project, SourceRef
 from germandubi.domain.value_objects.source_url import validate_source_url
 from germandubi.infrastructure.artifacts.store import ArtifactStore
@@ -54,11 +54,12 @@ def project(youtube_source: SourceRef) -> Project:
 
 
 @pytest.fixture
-def immediate_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+def immediate_retries(application: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Remove the retry backoff, for tests about how many attempts happen rather than when.
 
     A failed stage waits before its next attempt, which is the point of the backoff and a
-    nuisance for a test that drives three attempts in a row. Tests that care about the
-    waiting itself do not use this.
+    nuisance for a test that drives three attempts in a row. Set on the application's own
+    settings rather than on the default, so it cannot leak into a test that did not ask.
+    Tests that care about the waiting itself do not use this.
     """
-    monkeypatch.setattr(pipeline, "RETRY_BACKOFF_SECONDS", (0, 0))
+    monkeypatch.setattr(application.settings, "job_retry_backoff_seconds", ())

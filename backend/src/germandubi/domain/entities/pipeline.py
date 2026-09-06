@@ -7,6 +7,7 @@ edit on everything downstream can be computed rather than guessed.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
@@ -279,15 +280,20 @@ class Job:
         """Return whether a failed job still has attempts left."""
         return self.status is JobStatus.FAILED and self.attempt < MAX_ATTEMPTS
 
-    @property
-    def retry_delay_seconds(self) -> int:
+    def retry_delay_seconds(self, schedule: Sequence[int] = RETRY_BACKOFF_SECONDS) -> int:
         """Return how long this job should wait before being retried.
 
-        Indexed by attempts already made, so the first retry is quick and the last one
-        waits long enough to be a genuinely different moment.
+        Args:
+            schedule: The waits, indexed by attempts already made, so the first retry is
+                quick and the last waits long enough to be a genuinely different moment.
+
+        Returns:
+            The wait in seconds; zero when the schedule is empty.
         """
-        index = min(max(self.attempt - 1, 0), len(RETRY_BACKOFF_SECONDS) - 1)
-        return RETRY_BACKOFF_SECONDS[index]
+        if not schedule:
+            return 0
+        index = min(max(self.attempt - 1, 0), len(schedule) - 1)
+        return schedule[index]
 
     def scheduled_after(self, delay_seconds: int) -> Self:
         """Return a copy that may not be claimed until ``delay_seconds`` from now.

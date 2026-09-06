@@ -18,6 +18,8 @@ from typing import Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from germandubi.domain.entities.pipeline import RETRY_BACKOFF_SECONDS
+
 __all__ = ["Settings", "get_settings", "reset_settings_cache"]
 
 
@@ -68,6 +70,15 @@ class Settings(BaseSettings):
 
     # --- worker ---
     worker_poll_interval_s: float = Field(default=0.5, gt=0, le=30)
+    job_retry_backoff_seconds: tuple[int, ...] = Field(
+        default=RETRY_BACKOFF_SECONDS,
+        description=(
+            "How long a failed stage waits before each retry, indexed by the attempt just "
+            "finished. Zeros retry immediately, which is what the deterministic browser "
+            "run wants: it drives a stage to its final failure and should not spend a "
+            "minute waiting to do so."
+        ),
+    )
     job_lease_seconds: int = Field(
         default=900,
         gt=0,

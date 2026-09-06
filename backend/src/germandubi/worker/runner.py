@@ -411,7 +411,8 @@ class Worker:
             # though: an instant retry asks again while the condition that caused the
             # failure is still true, which spends all three attempts on one moment.
             requeued = failed.transition_to(JobStatus.QUEUED)
-            uow.jobs.save_job(requeued.scheduled_after(failed.retry_delay_seconds))
+            delay = failed.retry_delay_seconds(self.settings.job_retry_backoff_seconds)
+            uow.jobs.save_job(requeued.scheduled_after(delay))
             uow.events.append(
                 job.project_id,
                 "stage_retrying",
