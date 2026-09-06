@@ -10,6 +10,16 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-06
+
+### Fixed
+
+- Run timestamps show the reader's clock again. SQLite accepts `timezone=True` and
+  discards it, so every timestamp reached the browser without an offset and `new Date(...)`
+  read it as local time: a run started at 10:46 displayed "Started 08:46", and while it was
+  still going it reported "running for 120 min" seconds after it began. Stored values were
+  always UTC — only the label was missing — so there is nothing to migrate or backfill.
+
 ## [0.5.1] - 2026-09-06
 
 0.5.0 published its container image and not its release: the new browser spec asserted how
