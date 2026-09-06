@@ -440,3 +440,26 @@ class TestEventRepository:
         self, session: Session, saved: Project
     ) -> None:
         assert EventRepository(session).latest_sequence(saved.id) == 0
+
+
+def test_timestamps_survive_a_round_trip_as_utc(
+    jobs: JobRepository, saved: Project, session: Session
+) -> None:
+    """A naive timestamp reaching the browser is read as local time, not as UTC.
+
+    SQLite accepts `DateTime(timezone=True)` and discards it, so every value came back
+    naive, was serialized without an offset, and `new Date(...)` in the browser took it
+    for local time. On a UTC+2 machine a run that had just started reported itself as two
+    hours old -- in the display whose entire purpose is to say how long a dub took.
+    """
+    created = PipelineRun.create(saved.id, stages=(Stage.PROBE,))
+    jobs.add_run(created, [Job.create(run_id=created.id, project_id=saved.id, stage=Stage.PROBE)])
+    session.flush()
+    session.expire_all()
+
+    stored = jobs.get_run(created.id)
+
+    assert stored.created_at.tzinfo is not None, "a naive timestamp is a wrong timestamp"
+    assert stored.created_at.utcoffset() == timedelta(0)
+    # The same moment, not the same numbers relabelled.
+    assert abs((stored.created_at - created.created_at).total_seconds()) < 1

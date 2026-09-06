@@ -234,13 +234,10 @@ class JobRepository:
             .order_by(probe_last, JobRow.created_at, JobRow.id)
         ).all()
         for row in candidates:
-            if ready_at is not None and row.next_attempt_at is not None:
-                # Stored naive by SQLite; compare in UTC rather than crash on the offset.
-                due = row.next_attempt_at
-                if due.tzinfo is None:
-                    due = due.replace(tzinfo=UTC)
-                if due > ready_at:
-                    continue
+            # Both sides are UTC-aware: `UtcDateTime` guarantees it for the stored one.
+            due = row.next_attempt_at
+            if ready_at is not None and due is not None and due > ready_at:
+                continue
             if self._dependencies_satisfied(row):
                 yield row
 

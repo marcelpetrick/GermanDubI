@@ -4,8 +4,9 @@ These are persistence models, not domain objects. They are deliberately separate
 :mod:`germandubi.domain`, and mapping happens in the repositories, so that a schema
 convenience never leaks into the domain and a domain refactor never forces a migration.
 
-Time is stored as integer milliseconds; timestamps are stored timezone-aware in UTC. Large
-media never lives here - only relative paths, hashes, and metadata.
+Time is stored as integer milliseconds; timestamps are UTC, and :class:`UtcDateTime`
+guarantees they are still UTC-aware after a round trip. Large media never lives here -
+only relative paths, hashes, and metadata.
 """
 
 from __future__ import annotations
@@ -26,6 +27,38 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.types import TypeDecorator
+
+
+class UtcDateTime(TypeDecorator[datetime]):
+    """A timestamp that is UTC-aware in Python whatever the database gives back.
+
+    SQLite has no timezone type. `DateTime(timezone=True)` is accepted and then ignored, so
+    every timestamp read back is naive -- and naive is not merely untidy. It is serialized
+    to the browser as an ISO string with no offset, and `new Date("2026-09-06T02:00:00")`
+    reads that as *local* time: on a UTC+2 machine a run that had just started reported
+    itself as two hours old, in the elapsed-time display whose whole purpose is to say how
+    long a dub took.
+
+    Normalising on the way in and out puts the invariant where it cannot be forgotten,
+    rather than in each of the mappers or at the API boundary.
+    """
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, _dialect: object) -> datetime | None:
+        """Store UTC, whether the caller supplied an offset or not."""
+        if value is None:
+            return None
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+    def process_result_value(self, value: datetime | None, _dialect: object) -> datetime | None:
+        """Return an aware UTC value, including for rows written before this existed."""
+        if value is None:
+            return None
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
 
 __all__ = [
     "ArtifactRow",
@@ -71,8 +104,8 @@ class ProjectRow(Base):
     media: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     project_format_version: Mapped[int] = mapped_column(Integer, default=1)
     created_with: Mapped[str | None] = mapped_column(String(64))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
 
     segments: Mapped[list[SegmentRow]] = relationship(
         back_populates="project", cascade="all, delete-orphan", order_by="SegmentRow.ordinal"
@@ -117,8 +150,8 @@ class SegmentRow(Base):
     flags: Mapped[list[Any]] = mapped_column(JSON, default=list)
 
     speech_artifact_id: Mapped[str | None] = mapped_column(String(26))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
 
     project: Mapped[ProjectRow] = relationship(back_populates="segments")
     words: Mapped[list[WordRow]] = relationship(
@@ -173,7 +206,7 @@ class TranslationRevisionRow(Base):
     origin: Mapped[str] = mapped_column(String(32))
     provider_id: Mapped[str | None] = mapped_column(String(64))
     model_id: Mapped[str | None] = mapped_column(String(128))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
 
     segment: Mapped[SegmentRow] = relationship(back_populates="revisions")
 
@@ -196,7 +229,7 @@ class ArtifactRow(Base):
     media_type: Mapped[str | None] = mapped_column(String(128))
     superseded: Mapped[bool] = mapped_column(Boolean, default=False)
     provenance: Mapped[dict[str, Any] | None] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
 
     project: Mapped[ProjectRow] = relationship(back_populates="artifacts")
 
@@ -212,8 +245,8 @@ class RunRow(Base):
     )
     stages: Mapped[list[Any]] = mapped_column(JSON, default=list)
     cancelled: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
+    finished_at: Mapped[datetime | None] = mapped_column(UtcDateTime())
 
     project: Mapped[ProjectRow] = relationship(back_populates="runs")
     jobs: Mapped[list[JobRow]] = relationship(
@@ -238,13 +271,13 @@ class JobRow(Base):
     attempt: Mapped[int] = mapped_column(Integer, default=0)
     input_hash: Mapped[str | None] = mapped_column(String(80))
     error: Mapped[str | None] = mapped_column(Text)
-    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(UtcDateTime())
+    next_attempt_at: Mapped[datetime | None] = mapped_column(UtcDateTime())
     progress: Mapped[float] = mapped_column(Float, default=0.0)
     progress_detail: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
+    started_at: Mapped[datetime | None] = mapped_column(UtcDateTime())
+    finished_at: Mapped[datetime | None] = mapped_column(UtcDateTime())
 
     run: Mapped[RunRow] = relationship(back_populates="jobs")
 
@@ -265,7 +298,7 @@ class EventRow(Base):
     run_id: Mapped[str | None] = mapped_column(String(26))
     kind: Mapped[str] = mapped_column(String(48))
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
 
 
 class ExportRow(Base):
@@ -282,4 +315,4 @@ class ExportRow(Base):
     include_original_audio: Mapped[bool] = mapped_column(Boolean, default=True)
     include_subtitles: Mapped[bool] = mapped_column(Boolean, default=True)
     app_version: Mapped[str | None] = mapped_column(String(64))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime(), default=_now)
