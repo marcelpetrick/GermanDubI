@@ -10,6 +10,17 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-06
+
+0.5.0 published its container image and not its release: the new browser spec asserted how
+many times a message appeared rather than where, and CI renders it three times where a
+developer's machine renders two.
+
+### Fixed
+
+- The failed-stage browser spec asserts that the failure reason is attached to the stage
+  that produced it, instead of counting how many places render the same sentence.
+
 ## [0.5.0] - 2026-09-06
 
 An audit of the whole codebase and the eight findings it produced. Every High and Medium
