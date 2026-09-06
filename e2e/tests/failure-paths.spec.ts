@@ -30,11 +30,18 @@ test("a stage that fails says so, and offers a way on", async ({ page }) => {
   });
 
   // An explanation, not just a state: the reason the stage gave has to reach the reader,
-  // both in the alert and against the stage that produced it.
+  // and it has to be attached to the stage that produced it rather than floating free.
+  // Asserted by where it appears, not by how many times -- the same sentence is rendered
+  // in more than one place and counting them pins something nobody meant to promise.
   await expect(page.getByText(/marked to fail/i).first()).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByText(/marked to fail/i)).toHaveCount(2);
+  await expect(
+    page
+      .getByRole("listitem")
+      .filter({ hasText: "Downloading media" })
+      .getByText(/marked to fail/i),
+  ).toBeVisible();
 
   // And a way out of the dead end.
   await expect(
