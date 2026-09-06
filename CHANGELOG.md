@@ -10,6 +10,48 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-06
+
+An audit of the whole codebase and the eight findings it produced. Every High and Medium
+finding from the deep review is now closed; what remains is three Low ones.
+
+MINOR rather than PATCH: retries now wait, which changes observable behaviour, and there are
+three new settings.
+
+### Added
+
+- **The interface says so when it breaks.** A render error used to unmount the whole page
+  and leave a blank document, with the explanation in a console a reader will never open.
+  There is now a crash screen that names the fault, says the projects and files are
+  untouched, and offers a reload — in all four languages. It sits above every provider, so
+  a failure in the theme or the language provider still reaches a page.
+- `probe_provider` and `prosody_provider` settings. Source inspection and delivery analysis
+  used to follow `transcription_provider`, so asking for a fake transcript silently
+  replaced two unrelated ports.
+- `job_retry_backoff_seconds` sets how long a failed stage waits before each retry.
+- Released wheels and sdists carry build provenance. Verify one with
+  `gh attestation verify <wheel> --repo marcelpetrick/GermanDubI`.
+
+### Changed
+
+- **A failed stage waits before it is retried** — five seconds, then a minute. All three
+  attempts used to happen inside the same millisecond, which spends the whole retry budget
+  on one moment: a rate-limited download or a busy GPU is in the same state a millisecond
+  later, so a run failed having genuinely been tried once.
+- Deleting a project removes its rows before its files, instead of both in one transaction.
+  A failure after the directory was gone used to restore the rows, leaving a project the
+  interface offered and could not open; now an interruption leaves an unreferenced
+  directory instead, and a workspace that cannot be removed no longer undoes the deletion.
+- The persistence layer is one module per aggregate rather than one 1,196-line file. A move
+  only: no behaviour, signature or test changed.
+
+### Fixed
+
+- Frontend coverage is measured and the gate enforces a floor, at what the suite covers
+  today rather than at an aspiration. It was the untested half being invisible rather than
+  merely untested.
+- The browser suite drives a failed stage and a stopped run, not only successful dubs.
+
 ## [0.4.2] - 2026-09-04
 
 0.4.1 got both builders as far as building. Three more faults were waiting behind the two
