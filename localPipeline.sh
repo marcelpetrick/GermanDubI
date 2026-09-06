@@ -194,7 +194,7 @@ uv run pytest --cov --cov-report=term-missing
 stage_done
 
 stage "Frontend tests"
-(cd frontend && pnpm run test)
+(cd frontend && pnpm run test:coverage)
 stage_done
 
 # --------------------------------------------------------------------------- build

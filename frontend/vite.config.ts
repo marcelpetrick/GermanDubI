@@ -41,5 +41,23 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      // What the browser actually runs. The generated API types carry no logic, the entry
+      // point is exercised by the browser tests rather than by jsdom, and measuring the
+      // tests themselves flatters the number.
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx', 'src/test/**', 'src/api/generated/**'],
+      // Set at what the suite covers today, not at an aspiration. A floor that fails on
+      // the day it is added teaches people to lower it; this one only moves upward, and
+      // only when tests have been written to earn it.
+      thresholds: {
+        statements: 67,
+        branches: 62,
+        functions: 57,
+        lines: 69,
+      },
+    },
   },
 });
