@@ -10,6 +10,17 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-09-07
+
+### Fixed
+
+- YouTube videos can be dubbed from the container again. yt-dlp enables only deno by
+  default, so the Node runtime the image ships was never used: yt-dlp fell back to a player
+  API and reported "This video is not available" for videos YouTube serves happily, while
+  `germandubi doctor` correctly reported a JavaScript runtime present. Both the probe and
+  the download now name every runtime, so what `doctor` checks for and what the downloader
+  is allowed to use are the same list.
+
 ## [0.5.2] - 2026-09-06
 
 ### Fixed
