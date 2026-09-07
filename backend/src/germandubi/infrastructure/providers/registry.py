@@ -15,7 +15,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
 
 from germandubi.application.ports.providers import (
     AcquisitionProvider,
@@ -50,14 +49,16 @@ from germandubi.infrastructure.providers.localfile import LocalFileProbeProvider
 from germandubi.infrastructure.providers.piper import PiperTTSProvider
 from germandubi.infrastructure.providers.prosody import TimingProsodyProvider
 from germandubi.infrastructure.providers.whisper import WhisperTranscriptionProvider
-from germandubi.infrastructure.providers.ytdlp import YtDlpAcquisitionProvider, YtDlpProbeProvider
+from germandubi.infrastructure.providers.ytdlp import (
+    JS_RUNTIMES,
+    YtDlpAcquisitionProvider,
+    YtDlpProbeProvider,
+)
 
 __all__ = ["DependencyReport", "ProviderRegistry"]
 
 logger = logging.getLogger(__name__)
 
-#: Runtimes yt-dlp can use to solve YouTube's JavaScript challenge, in no particular order.
-_JS_RUNTIMES: Final = ("deno", "node")
 
 #: Selects the deterministic fakes for every port. Used by tests and the E2E suite.
 FAKE = "fake"
@@ -347,7 +348,7 @@ class ProviderRegistry:
         # unavailable -- a symptom that points nowhere near the cause, which is why this is
         # surfaced as a tool rather than left to be discovered.
         tools["javascript runtime"] = any(
-            self.runner.is_installed(runtime) for runtime in _JS_RUNTIMES
+            self.runner.is_installed(runtime) for runtime in JS_RUNTIMES
         )
         # Every provider that can actually be selected, so the report is a complete
         # picture of what may run rather than a list of the optional extras.

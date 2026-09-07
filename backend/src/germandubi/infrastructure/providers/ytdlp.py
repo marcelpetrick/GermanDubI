@@ -35,6 +35,21 @@ __all__ = ["YtDlpAcquisitionProvider", "YtDlpProbeProvider"]
 
 logger = logging.getLogger(__name__)
 
+#: Runtimes yt-dlp may use to solve YouTube's JavaScript challenge, in preference order.
+#: The registry checks for these when reporting whether the machine is ready.
+JS_RUNTIMES: Final = ("deno", "node")
+#: yt-dlp enables *only* deno by default. Node being installed is not enough -- it has to be
+#: named, or yt-dlp falls back to a player API that answers "This video is not available"
+#: for videos that are plainly available. That is what made a container shipping Node fail
+#: on a video YouTube served happily, while `doctor` reported a JavaScript runtime present:
+#: the check was right, and nothing passed the answer on.
+#:
+#: One flag per runtime. `--js-runtimes deno,node` is accepted and silently useless -- it is
+#: read as a single runtime named "deno,node", and the challenge goes unsolved. Naming a
+#: runtime that is not installed is harmless.
+_JS_RUNTIME_ARGS: Final = tuple(
+    argument for runtime in JS_RUNTIMES for argument in ("--js-runtimes", runtime)
+)
 #: A probe must stay cheap: it is run interactively while the user waits.
 _PROBE_TIMEOUT_S: Final = 90
 #: Prefer a container the browser can play directly, falling back to whatever exists.
@@ -94,6 +109,7 @@ class YtDlpProbeProvider:
             result = self.runner.run(
                 [
                     self.executable,
+                    *_JS_RUNTIME_ARGS,
                     "--dump-single-json",
                     "--no-playlist",
                     "--no-warnings",
@@ -248,6 +264,7 @@ class YtDlpAcquisitionProvider:
         request.destination.mkdir(parents=True, exist_ok=True)
         argv = [
             self.executable,
+            *_JS_RUNTIME_ARGS,
             "--no-playlist",
             "--no-warnings",
             "--no-progress",
