@@ -26,9 +26,10 @@ current release. No behaviour changes.
 ### Changed
 
 - Dependencies are at their current releases: hypothesis 6.168.0, `@types/node` 26.5.0,
-  typescript-eslint 8.70.0, pnpm 12.3.4, and Node 24.21.0, which is also the container
-  image's base. TypeScript stays at 5.9.3 although 7.0.2 exists: typescript-eslint declares
-  `typescript >=4.8.4 <6.1.0`, and typed linting is worth more than the newer major.
+  typescript-eslint 8.70.0, and pnpm 12.3.4. Two were deliberately held back: TypeScript
+  stays at 5.9.3 although 7.0.2 exists, because typescript-eslint declares
+  `typescript >=4.8.4 <6.1.0` and typed linting is worth more than the newer major; and
+  Node stays at 24.20.0 because the official container image for 24.21.0 is not published.
 - Building the browser bundle from a checkout now needs pnpm 12, which no longer reads the
   `pnpm` field in `package.json` -- the frontend's settings moved to
   `frontend/pnpm-workspace.yaml`. `corepack enable pnpm` picks the right version up from

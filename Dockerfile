@@ -21,7 +21,10 @@
 # Kept at the top so every stage can see them. Pinned by digest-free tag on purpose: the
 # lockfiles pin what actually matters, and a base image tag that never moves would go
 # unpatched.
-ARG NODE_IMAGE=node:24.21.0-bookworm-slim
+# Node stays at 24.20.0, matching .node-version. 24.21.0 is released upstream, but the
+# official node image for it is not published -- node:24.21.0-bookworm-slim is a 404 -- and
+# an image the build cannot pull is not an upgrade. Move both together when it lands.
+ARG NODE_IMAGE=node:24.20.0-bookworm-slim
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm
 
 # --------------------------------------------------------------------------- frontend
@@ -30,7 +33,10 @@ WORKDIR /build
 
 # Manifests first: the dependency layer is then reused whenever only source changed, which
 # is most of the time.
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+# pnpm-workspace.yaml belongs here too: pnpm 12 reads the overrides from it, and a
+# --frozen-lockfile install against a lockfile whose overrides the project no longer
+# declares is a mismatch, not a cache hit.
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN corepack enable pnpm && pnpm install --frozen-lockfile
 
 COPY frontend/ ./
