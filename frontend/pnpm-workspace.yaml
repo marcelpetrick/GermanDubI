@@ -1,0 +1,18 @@
+# pnpm 12 no longer reads the "pnpm" field in package.json; these settings live here now.
+# The install warns about what it ignored, but an ignored setting still installs, so both
+# of these have to be checked rather than assumed.
+
+# The one dependency allowed to run an install script, carried over unchanged. It is
+# currently inert: vite 8 bundles with rolldown and lists esbuild only as an optional peer,
+# so nothing in the tree installs it. Kept as the standing answer for the day something
+# pulls it back in, rather than as a setting that does anything today.
+onlyBuiltDependencies:
+  - esbuild
+
+# GHSA-2883-xcg3-v3hh (high): js-yaml below 4.3.2 does not bound CPU use for empty merge
+# sources. It arrives through openapi-typescript > @redocly/openapi-core, which pins 4.3.1
+# exactly and has no 1.x release carrying the fix -- Redocly shipped it in 2.x only, and
+# openapi-typescript 7.13.0 asks for ^1.34.6. Scoped to the 4.x line so a future consumer
+# on 5.x is not dragged backwards. Drop it once openapi-typescript moves to Redocly 2.
+overrides:
+  js-yaml@4: 4.3.2

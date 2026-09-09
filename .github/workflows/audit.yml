@@ -70,7 +70,7 @@ jobs:
           cd frontend && pnpm install --frozen-lockfile
           cd ../e2e && pnpm install --frozen-lockfile
 
-      # frontend/package.json carries a pnpm override forcing js-yaml to 4.3.2
+      # frontend/pnpm-workspace.yaml carries a pnpm override forcing js-yaml to 4.3.2
       # (GHSA-2883-xcg3-v3hh, high). The only consumer is the openapi-typescript
       # codegen chain: openapi-typescript 7.13.0 wants @redocly/openapi-core ^1.34.6,
       # and 1.34.19 -- the last 1.x -- pins js-yaml to exactly 4.3.1. Redocly shipped
