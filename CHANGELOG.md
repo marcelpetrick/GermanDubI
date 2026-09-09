@@ -10,6 +10,11 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-09-09
+
+A maintenance release: one security advisory closed, every pinned dependency moved to its
+current release. No behaviour changes.
+
 ### Security
 
 - The frontend dependency audit is green again. `js-yaml` below 4.3.2 is a high-severity
@@ -17,6 +22,18 @@ may occur in MINOR releases and are always listed here.
   `openapi-typescript > @redocly/openapi-core`, which pins 4.3.1 exactly and has no 1.x
   release carrying the fix. A pnpm override lifts it to 4.3.2. The package is a build-time
   code generator, never shipped to the browser, so nothing in the bundle changes.
+
+### Changed
+
+- Dependencies are at their current releases: hypothesis 6.168.0, `@types/node` 26.5.0,
+  typescript-eslint 8.70.0, pnpm 12.3.4, and Node 24.21.0, which is also the container
+  image's base. TypeScript stays at 5.9.3 although 7.0.2 exists: typescript-eslint declares
+  `typescript >=4.8.4 <6.1.0`, and typed linting is worth more than the newer major.
+- Building the browser bundle from a checkout now needs pnpm 12, which no longer reads the
+  `pnpm` field in `package.json` -- the frontend's settings moved to
+  `frontend/pnpm-workspace.yaml`. `corepack enable pnpm` picks the right version up from
+  the pinned `packageManager` field, so a checkout that follows the development guide needs
+  nothing new.
 
 ## [0.5.3] - 2026-09-07
 
