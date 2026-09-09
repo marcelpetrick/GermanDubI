@@ -10,6 +10,14 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Security
+
+- The frontend dependency audit is green again. `js-yaml` below 4.3.2 is a high-severity
+  denial of service (GHSA-2883-xcg3-v3hh) and reached the tree through
+  `openapi-typescript > @redocly/openapi-core`, which pins 4.3.1 exactly and has no 1.x
+  release carrying the fix. A pnpm override lifts it to 4.3.2. The package is a build-time
+  code generator, never shipped to the browser, so nothing in the bundle changes.
+
 ## [0.5.3] - 2026-09-07
 
 ### Fixed
