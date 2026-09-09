@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.5
+    rev: v0.16.6
     hooks:
       - id: ruff-check
         args: [--fix]
@@ -11,6 +11,11 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-yaml
+        # pnpm 12 writes pnpm-lock.yaml as two YAML documents: the package manager pins
+        # its own binaries in the first, the lockfile proper follows in the second. The
+        # hook rejects a multi-document stream by default, so it has to be told. Our own
+        # YAML is single-document and stays fully checked either way.
+        args: [--allow-multiple-documents]
       - id: end-of-file-fixer
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]

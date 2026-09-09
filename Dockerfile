@@ -21,7 +21,7 @@
 # Kept at the top so every stage can see them. Pinned by digest-free tag on purpose: the
 # lockfiles pin what actually matters, and a base image tag that never moves would go
 # unpatched.
-ARG NODE_IMAGE=node:24.20.0-bookworm-slim
+ARG NODE_IMAGE=node:24.21.0-bookworm-slim
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm
 
 # --------------------------------------------------------------------------- frontend
