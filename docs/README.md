@@ -6,7 +6,7 @@ expect to find immediately. Detailed product and engineering material lives here
 | Area | Contents |
 | --- | --- |
 | [`product/`](product/) | Product vision and target architecture. |
-| [`project/`](project/) | The committed execution plan and unresolved design questions. |
+| [`project/`](project/) | The committed execution plan, unresolved design questions, and unscheduled ideas. |
 | [`architecture/`](architecture/) | The concise C4 view of the implemented system. |
 | [`adr/`](adr/) | Accepted architecture decisions that are expensive to reverse. |
 | [`development/`](development/) | Workstation setup and the development workflow. |

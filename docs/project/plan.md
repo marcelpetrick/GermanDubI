@@ -635,7 +635,7 @@ is closed.
 
 ### Ideas, deliberately not scheduled
 
-[`future_features.md`](../../future_features.md) holds twenty-two, with what each is worth
+[`future-features.md`](future-features.md) holds twenty-two, with what each is worth
 and what it would cost, and a list of what is deliberately not worth building. The three
 cheapest real wins named there: the glossary UI, which is implemented and tested and never
 populated; a local LLM translator, which the provider port was designed for; and speaker
