@@ -146,6 +146,19 @@ def _explain(message: str) -> str:
         ("removed", "the video has been removed"),
         ("age-restricted", "the video is age-restricted and cannot be processed"),
         ("confirm your age", "the video is age-restricted and cannot be processed"),
+        # YouTube's bot check reads "Sign in to confirm you're not a bot", so it has to be
+        # matched before "sign in". It is a verdict on the network, not on the video: the
+        # same video downloads from a home connection while a VPN, a server or a CI
+        # runner is refused. Telling the user the video needs an account sends them the
+        # wrong way.
+        (
+            "not a bot",
+            (
+                "the source site refused this network as automated traffic, not this "
+                "video. Try again later or from another network; VPNs and server "
+                "addresses are the usual trigger"
+            ),
+        ),
         ("sign in", "the source requires signing in, which this version does not do"),
         ("not available in your country", "the video is blocked in this region"),
         # Ambiguous on purpose. A removed video says this, and so does a working one when

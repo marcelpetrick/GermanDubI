@@ -22,6 +22,14 @@ from germandubi.infrastructure.providers.ytdlp import (
         ("age-restricted", "age-restricted"),
         ("confirm your age", "age-restricted"),
         ("sign in", "signing in"),
+        # Contains "sign in", but is about the network, not an account the video needs.
+        (
+            (
+                "ERROR: [youtube] f3r05guSo1w: Sign in to confirm you\u2019re not a bot. "
+                "Use --cookies-from-browser or --cookies for the authentication."
+            ),
+            "refused this network",
+        ),
         ("not available in your country", "blocked"),
         ("unable to download webpage", "could not be reached"),
         # Says both things it can mean, because the words alone do not distinguish them.

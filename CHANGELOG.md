@@ -10,6 +10,13 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Fixed
+
+- YouTube's bot check ("Sign in to confirm you're not a bot") is no longer reported as a
+  video that requires signing in. It is a refusal of the network the request came from --
+  typically a VPN or a server address -- and the message now says so and suggests another
+  network, instead of implying the video needs an account.
+
 ## [0.5.4] - 2026-09-09
 
 A maintenance release: one security advisory closed, every pinned dependency moved to its
