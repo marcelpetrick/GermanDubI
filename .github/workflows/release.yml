@@ -28,7 +28,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # This job installs and runs every dependency of the project, and its token can
@@ -37,7 +37,7 @@ jobs:
           # behind for that code to find.
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
 
@@ -46,7 +46,7 @@ jobs:
       # path that never gets created and fails the whole job with a Path Validation Error,
       # after the gate has already passed. Caching a few seconds of install is not worth a
       # job that reports failure on a successful run.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
 
