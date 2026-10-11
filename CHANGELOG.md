@@ -10,6 +10,11 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-10-11
+
+A maintenance release: every open security advisory closed, two fixes, and a release
+pipeline that can no longer publish half a release.
+
 ### Security
 
 - The frontend dependency audit is green again, with no findings at any severity. Since
@@ -21,6 +26,18 @@ may occur in MINOR releases and are always listed here.
   held the old releases. Regenerating it was the whole fix, and it also made the js-yaml
   override from 0.5.4 unnecessary: `@redocly/openapi-core` 1.34.20 ships the fixed
   js-yaml itself, so the override is gone.
+- urllib3 moves to 2.8.0, closing two high advisories (GHSA-8988-9cw3-xx77,
+  GHSA-vxq7-64xx-v4gw); mako and virtualenv move to their fixed releases with it.
+- The provider stacks move from torch 2.2.2 to 2.10.0, closing a critical advisory against
+  `torch.load` (GHSA-53q9-r3pm-6pq6) and four others. The lockfile resolved for every
+  platform, and demucs caps torch below 2.3 on Intel macOS, which held every platform
+  there; it now resolves for Linux only, the supported platform. 2.10.0 is the last
+  release on the CUDA 12 libraries; cuDNN moves from 8.9 to 9.10 with it. One low torch
+  advisory, three without a fix, and one in stanza (pinned exactly by argostranslate) are
+  open and assessed in the project plan.
+- Dependabot security updates are enabled. An advisory against a pinned dependency now
+  opens a pull request that has to pass CI, instead of waiting for someone to notice a
+  red audit. Routine version bumps stay manual.
 
 ### Changed
 
@@ -30,6 +47,13 @@ may occur in MINOR releases and are always listed here.
   container image is published, and the image builds with uv 0.13.0. TypeScript stays at
   5.9.3: 7.x is still outside what typescript-eslint supports, and 6.0.3 is outside what
   openapi-typescript supports.
+- The container image is published only after the GitHub release for its tag succeeds.
+  The two used to start independently, so 0.5.0 has an image and no release, and 0.4.0
+  and 0.4.1 releases and no image. A pre-release tag such as `v1.0.0-rc1` now publishes
+  as a pre-release and does not move the image's `latest` tag.
+- The weekly real-provider run dubs an offline narration as well as the YouTube
+  reference. YouTube refuses GitHub's runners as bots, so that run had never passed; the
+  real models are now exercised regardless, and a refused download is reported as such.
 
 ### Fixed
 
