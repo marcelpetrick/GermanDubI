@@ -55,3 +55,21 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report/
           retention-days: 14
+
+  # The pipeline never builds the container image, so a Dockerfile that no longer matches
+  # the repository -- a manifest the frontend install now needs, a base image tag that does
+  # not exist -- was only found at tag time, by the workflow that publishes. This builds the
+  # lean image, which runs every stage of the Dockerfile in a few minutes, and starts it
+  # once. It does not catch what only the provider stacks hit, such as a dependency that has
+  # no wheel for arm64; the full multi-architecture build stays in image.yml.
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build the lean image
+        run: docker build --build-arg PROVIDERS=lean --build-arg VERSION=0.0.0-dev --tag germandubi:ci .
+
+      - name: Start the image
+        run: docker run --rm germandubi:ci version

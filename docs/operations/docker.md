@@ -265,6 +265,11 @@ three, so a single build ends up everywhere and the manifests point at identical
 takes hours for a stack with torch in it — and merges them into one manifest list, so
 `docker pull` picks the right architecture without anyone choosing.
 
+Between tags, CI (`.github/workflows/ci.yml`, job `image`) builds the lean image on every
+push and pull request and starts it once, so a Dockerfile that has drifted from the
+repository fails there rather than at release time. It does not build the provider stacks
+or arm64; those are still first exercised by the tag.
+
 **GHCR needs no setup.** The workflow uses the token GitHub provides. One manual step,
 once: the package starts private, so open the repository's *Packages* section and set its
 visibility to public.
