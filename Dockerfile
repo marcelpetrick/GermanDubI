@@ -21,10 +21,10 @@
 # Kept at the top so every stage can see them. Pinned by digest-free tag on purpose: the
 # lockfiles pin what actually matters, and a base image tag that never moves would go
 # unpatched.
-# Node stays at 24.20.0, matching .node-version. 24.21.0 is released upstream, but the
-# official node image for it is not published -- node:24.21.0-bookworm-slim is a 404 -- and
-# an image the build cannot pull is not an upgrade. Move both together when it lands.
-ARG NODE_IMAGE=node:24.20.0-bookworm-slim
+# Node matches .node-version exactly. Move both together, and only once the official
+# image for the new release is published: Node releases land upstream days before the
+# bookworm-slim tag does, and an image the build cannot pull is not an upgrade.
+ARG NODE_IMAGE=node:24.21.0-bookworm-slim
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm
 
 # --------------------------------------------------------------------------- frontend
@@ -63,7 +63,7 @@ ARG TORCH=cpu
 ARG VERSION=0.0.0
 ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_GERMANDUBI=${VERSION}
 
-COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.0 /uv /usr/local/bin/uv
 
 WORKDIR /app
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \

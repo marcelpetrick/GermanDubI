@@ -22,6 +22,15 @@ may occur in MINOR releases and are always listed here.
   override from 0.5.4 unnecessary: `@redocly/openapi-core` 1.34.20 ships the fixed
   js-yaml itself, so the override is gone.
 
+### Changed
+
+- Dependencies are at their current releases, among them SQLAlchemy 2.1.4, FastAPI
+  0.143.0, pydantic 2.14.0, ruff 0.17.0, React 19.3.0, vite 8.3.4, vitest 5.0.3, eslint
+  10.12.0, Playwright 1.64.0 and pnpm 12.11.2. Node moves to 24.21.0 now that its official
+  container image is published, and the image builds with uv 0.13.0. TypeScript stays at
+  5.9.3: 7.x is still outside what typescript-eslint supports, and 6.0.3 is outside what
+  openapi-typescript supports.
+
 ### Fixed
 
 - YouTube's bot check ("Sign in to confirm you're not a bot") is no longer reported as a

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==84.0.0", "setuptools-scm==10.2.3"]
+requires = ["setuptools==84.0.0", "setuptools-scm==10.3.4"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,13 +24,13 @@ requires-python = ">=3.12,<3.14"
 dynamic = ["version"]
 
 dependencies = [
-    "alembic==1.19.2",
-    "fastapi==0.141.1",
-    "pydantic==2.13.5",
+    "alembic==1.20.0",
+    "fastapi==0.143.0",
+    "pydantic==2.14.0",
     "pydantic-settings==2.15.0",
-    "sqlalchemy==2.0.52",
-    "typer==0.27.2",
-    "uvicorn[standard]==0.52.4",
+    "sqlalchemy==2.1.4",
+    "typer==0.27.3",
+    "uvicorn[standard]==0.54.0",
     "yt-dlp==2026.8.19",
     # YouTube asks for a solved JavaScript challenge before it will hand over formats.
     # Without this solver yt-dlp reports "This video is not available" for videos that are
@@ -58,17 +58,17 @@ germandubi = "germandubi.cli.main:main"
 [dependency-groups]
 dev = [
     "anyio==4.15.1",
-    "coverage[toml]==7.16.0",
+    "coverage[toml]==7.16.2",
     # starlette 1.6 requires httpx2 for its test client.
-    "httpx2==2.12.0",
-    "hypothesis==6.168.0",
-    "mypy==2.3.1",
+    "httpx2==2.13.1",
+    "hypothesis==6.169.0",
+    "mypy==2.4.0",
     "pre-commit==4.6.2",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "ruff==0.16.6",
+    "ruff==0.17.0",
     # Needed at runtime in a Git checkout so a build-generated _version.py cannot go stale.
-    "setuptools-scm==10.2.3",
+    "setuptools-scm==10.3.4",
 ]
 
 [tool.setuptools_scm]
@@ -196,15 +196,10 @@ markers = [
     "real_provider: needs a real model, network access or a GPU; deselected by default",
     "slow: takes more than a couple of seconds",
 ]
-# Warnings are errors, with two exceptions that are somebody else's code to fix.
-# starlette 1.6.0 -- the newest there is -- still reaches for `anyio.abc.BlockingPortal`
-# in its test client, which anyio 4.15 deprecated. The filter names the module so our own
-# use of a deprecated anyio API would still fail the build. Remove it when starlette moves
-# to `anyio.from_thread.BlockingPortal`.
+# Warnings are errors, with one exception that is somebody else's code to fix.
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning:pydantic.*",
-    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning:starlette.*",
 ]
 
 [tool.coverage.run]

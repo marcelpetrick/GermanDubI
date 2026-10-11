@@ -622,19 +622,27 @@ nobody has checked.
 
 ### Dependency majors, each rejected with a reason
 
-Both were tried, measured, and reverted. Neither is a "someday"; each has a specific
-condition that would change the answer.
+Each was tried, measured, and reverted, or held back for a reason that can be checked.
+None is a "someday"; each has a specific condition that would change the answer. Last
+re-checked against the registries on 2026-10-11.
 
-- **TypeScript 5.9.3 → 7.0.2.** `typescript-eslint` 8.69.0 refuses to load against TS 7 and
-  says so, pointing at its own tracking issue for TS ≥ 7.1. Adopting it today means no
-  TypeScript linting at all. TS 7 also removed `baseUrl`, which `tsconfig.json` uses.
-  *Closes when:* typescript-eslint ships TS 7 support; then the `baseUrl` removal is a
-  small, separate change.
-- **pnpm 10.34.5 → 11.25.0.** pnpm 11 no longer reads `pnpm.onlyBuiltDependencies` from
-  `package.json`, which this repository uses for esbuild, and it wants to purge
-  `node_modules`. That is a migration, not a bump: move the setting to
-  `pnpm-workspace.yaml`, regenerate both lockfiles, confirm esbuild still builds, and update
-  what CI and both `engines` fields expect.
+- **TypeScript 5.9.3 → 7.0.2.** `typescript-eslint` refuses to load against TS 7 and says
+  so, pointing at its own tracking issue for TS ≥ 7.1. Still true of 8.71.1, which
+  declares `typescript >=4.8.4 <6.1.0`. Adopting it today means no TypeScript linting at
+  all. TS 7 also removed `baseUrl`, which `tsconfig.json` uses. *Closes when:*
+  typescript-eslint ships TS 7 support; then the `baseUrl` removal is a small, separate
+  change.
+- **TypeScript 5.9.3 → 6.0.3.** Inside typescript-eslint's range, so it looked like the
+  step to take in the meantime. It is not: `openapi-typescript` 7.13.0, the newest, declares
+  a `typescript ^5.x` peer and pnpm reports it unmet, and TS 6 turns the `baseUrl`
+  deprecation into error TS5101. Silencing that with `ignoreDeprecations` would be a
+  config choice made only to land an unsupported combination. *Closes when:*
+  openapi-typescript accepts TS 6 or later.
+- **pnpm 10.34.5 → 11.25.0.** `CLOSED`. Done as the jump to pnpm 12 in 0.5.4: the settings
+  moved to `frontend/pnpm-workspace.yaml` and both lockfiles were regenerated.
+- **Node 24.20.0 → 24.21.0.** `CLOSED`. Held back only because the official
+  `node:24.21.0-bookworm-slim` image did not exist yet. It does now, and `.node-version`
+  and the Dockerfile moved together.
 
 ### Still open from the deep review
 
