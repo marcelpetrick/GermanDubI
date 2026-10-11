@@ -71,6 +71,22 @@ dev = [
     "setuptools-scm==10.3.4",
 ]
 
+[tool.uv]
+# Linux only, which is the platform this project supports (AGENTS.md); macOS and Windows
+# run it through the Linux container. Resolving for every platform also kept a fork for
+# Intel macOS, where demucs caps torch below 2.3, and that fork alone held a torch with a
+# critical advisory in the lockfile.
+environments = ["sys_platform == 'linux'"]
+# torch arrives through the separation and translation extras and is pinned here, where
+# a deliberate choice can be written down. 2.10.0 is the newest release whose wheels still
+# depend on the CUDA 12 libraries (nvidia-cublas-cu12, nvidia-cudnn-cu12); from 2.11 they
+# move to CUDA 13, which needs a newer NVIDIA driver and is a separate, GPU-verified step.
+# 2.10.0 closes GHSA-53q9-r3pm-6pq6 (critical, torch.load), GHSA-887c-mr87-cxwp,
+# GHSA-vgrw-7cvw-pwgx, GHSA-qfhq-4f3w-5fph and GHSA-3749-ghw9-m3mg. Still open:
+# GHSA-rrmf-rvhw-rf47 (low, torch.jit.script, fixed in 2.13) and three with no fix
+# released. Keep the Dockerfile's CPU torch pin equal to this one.
+constraint-dependencies = ["torch==2.10.0"]
+
 [tool.setuptools_scm]
 version_file = "backend/src/germandubi/_version.py"
 # Every commit after a tag becomes <next-patch>.devN+g<sha>, so no commit ever needs a

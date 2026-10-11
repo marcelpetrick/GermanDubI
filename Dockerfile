@@ -104,10 +104,10 @@ RUN set -eu; \
         uv sync --locked --no-dev --no-editable \
             --extra asr --extra translate --extra tts --extra separation; \
         if [ "${TORCH}" = "cpu" ]; then \
-            # `==2.2.2` matches `2.2.2+cpu` under PEP 440, which is what the index offers on
-            # x86-64; on arm64 the same index serves a plain 2.2.2 that is CPU-only already.
+            # `==2.10.0` matches `2.10.0+cpu` under PEP 440, which is what the index offers
+            # on both architectures. Must equal the torch pin in pyproject.toml.
             uv pip install --python /opt/venv --no-deps --reinstall \
-                --index-url https://download.pytorch.org/whl/cpu "torch==2.2.2"; \
+                --index-url https://download.pytorch.org/whl/cpu "torch==2.10.0"; \
             site="$(/opt/venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"; \
             rm -rf "${site}/nvidia" "${site}/triton"; \
             find "${site}" -maxdepth 1 \( -name 'nvidia_*' -o -name 'triton-*' \) -exec rm -rf {} +; \
