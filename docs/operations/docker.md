@@ -260,7 +260,9 @@ three, so a single build ends up everywhere and the manifests point at identical
 
 ### Automatically, on a version tag
 
-`.github/workflows/image.yml` runs on the same tag that cuts a release. It builds
+`.github/workflows/image.yml` runs as the last job of the release workflow, only once the
+release for that tag has been published -- a tag that fails the release gate publishes no
+image either. It builds
 `linux/amd64` and `linux/arm64` on runners of each architecture — never under QEMU, which
 takes hours for a stack with torch in it — and merges them into one manifest list, so
 `docker pull` picks the right architecture without anyone choosing.

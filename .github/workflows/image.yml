@@ -3,13 +3,11 @@ name: Container image
 # Publishes the image so nobody has to build it. `docker pull` is the shortest path from
 # "I heard about this" to a running dub, and building a 2.4 GB image on a laptop is not.
 #
-# Same trigger as the release: an annotated version tag is the deliberate act that publishes.
-# workflow_dispatch is here so the pipeline can be exercised without cutting a release.
+# Called by the release workflow once the release has been published, so a tag either
+# publishes both or neither; it runs with that workflow's tag as its ref. workflow_dispatch
+# is here so the pipeline can be exercised without cutting a release.
 on:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+  workflow_call:
   workflow_dispatch:
 
 permissions:

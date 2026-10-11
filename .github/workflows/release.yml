@@ -8,13 +8,8 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
-# Least privilege. `contents` creates the release; the other two exist solely so the
-# artifacts can be signed -- `id-token` for the short-lived OIDC identity that proves the
-# build ran here, `attestations` to record the result against the repository.
-permissions:
-  contents: write
-  id-token: write
-  attestations: write
+# Least privilege, granted per job below. Nothing is granted at the workflow level.
+permissions: {}
 
 # Two runs for one tag must never race to create the same release.
 concurrency:
@@ -25,6 +20,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # `contents` creates the release; the other two exist solely so the artifacts can be
+    # signed -- `id-token` for the short-lived OIDC identity that proves the build ran
+    # here, `attestations` to record the result against the repository.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -139,3 +141,15 @@ jobs:
             --verify-tag \
             "${prerelease[@]}" \
             dist/*.whl dist/*.tar.gz
+
+  # The image is published only after the release exists. The two used to start
+  # independently from the same tag, so a failure in either left the other behind: 0.5.0
+  # published an image and no release, 0.4.0 and 0.4.1 releases and no image. Now a tag
+  # that fails the gate publishes nothing, and it can be fixed and re-tagged cleanly.
+  image:
+    needs: release
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/image.yml
+    secrets: inherit
