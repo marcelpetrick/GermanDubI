@@ -43,6 +43,10 @@ jobs:
       version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The token here can push packages, and nothing after the checkout needs Git
+          # credentials; the registries are logged in to separately.
+          persist-credentials: false
 
       # A Docker reference must be lowercase and this repository is not: the name is
       # `marcelpetrick/GermanDubI`, and buildx rejects it outright. Expressions have no

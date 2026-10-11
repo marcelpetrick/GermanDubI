@@ -29,6 +29,11 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          # This job installs and runs every dependency of the project, and its token can
+          # write to the repository. Nothing after the checkout needs Git credentials --
+          # the release is created through the API with its own token -- so none are left
+          # behind for that code to find.
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
