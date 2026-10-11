@@ -33,9 +33,9 @@ WORKDIR /build
 
 # Manifests first: the dependency layer is then reused whenever only source changed, which
 # is most of the time.
-# pnpm-workspace.yaml belongs here too: pnpm 12 reads the overrides from it, and a
-# --frozen-lockfile install against a lockfile whose overrides the project no longer
-# declares is a mismatch, not a cache hit.
+# pnpm-workspace.yaml belongs here too: pnpm 12 reads its settings and any overrides from
+# it, and a --frozen-lockfile install against a lockfile whose overrides the project no
+# longer declares is a mismatch, not a cache hit.
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN corepack enable pnpm && pnpm install --frozen-lockfile
 

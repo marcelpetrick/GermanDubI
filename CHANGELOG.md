@@ -10,6 +10,18 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Security
+
+- The frontend dependency audit is green again, with no findings at any severity. Since
+  late September it had reported eighteen advisories, eight of them high, all in build and
+  test tooling rather than in the bundle: brace-expansion (GHSA-qhr7-859c-m2p7,
+  GHSA-6j4f-fj2g-mc7p and others) under eslint and openapi-typescript, source-map-js
+  (GHSA-68fv-2mgg-jv7q) under vite and jsdom, and undici under jsdom. Every one was
+  already fixed upstream within the ranges the tools declare; the lockfile simply still
+  held the old releases. Regenerating it was the whole fix, and it also made the js-yaml
+  override from 0.5.4 unnecessary: `@redocly/openapi-core` 1.34.20 ships the fixed
+  js-yaml itself, so the override is gone.
+
 ### Fixed
 
 - YouTube's bot check ("Sign in to confirm you're not a bot") is no longer reported as a
