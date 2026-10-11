@@ -567,7 +567,38 @@ Verified the way the claim is made: cloned the repository into an empty director
   used to hang ten times over and fails in 30 seconds if it returns; unit tests pin the
   bounded pad, the absence of `atrim`, the timeout bound, and the per-batch reports.
 
-## 27. Outstanding · `OPEN`
+## 27. Clear every red pipeline, and release 0.5.5 · `COMPLETE`
+
+- The daily dependency audit had been red since 2026-09-30: eighteen frontend advisories,
+  eight high, all in transitive build and test tooling. Every fix was already inside the
+  declared ranges, so regenerating the lockfile cleared all of them and made the js-yaml
+  override from 0.5.4 unnecessary.
+- The weekly real-provider run had never passed; see the closed item in section 28.
+- Dependabot security updates are enabled, with routine version bumps switched off
+  (`open-pull-requests-limit: 0`), so an advisory now arrives as a pull request that must
+  pass CI. Enabling it exposed what the audit's non-blocking extras step had only been
+  reporting: the provider stacks shipped torch 2.2.2, with a critical `torch.load` advisory.
+  The lockfile resolved for every platform, and demucs caps torch below 2.3 on Intel macOS,
+  which held that one resolution for everyone. It now resolves for Linux only, and torch is
+  pinned at 2.10.0, the last release on the CUDA 12 libraries. urllib3, mako and virtualenv
+  moved past their advisories in the same pass.
+- The container image is published as the last job of the release workflow, so a tag that
+  fails the release gate publishes nothing; 0.4.0, 0.4.1 and 0.5.0 had each published only
+  half. CI builds the lean image on every push, pre-release tags publish as pre-releases,
+  publishing jobs no longer leave their token in the checkout, and every action is off the
+  deprecated Node 20 runtime.
+- Two application fixes surfaced on the way: YouTube's bot check is reported as a refused
+  network instead of a video that needs signing in, and Demucs runs in the application's
+  own interpreter instead of whichever `python` is first on `PATH`.
+- Every pinned dependency moved to its current release, except TypeScript (still 5.9.3; see
+  section 28).
+- Acceptance: the full local pipeline passes; on GitHub, CI, the dependency audit and the
+  real-provider run are green on `main`; the full CPU image builds with torch 2.10.0+cpu and
+  `doctor` reports ready; v0.5.5 is released with its wheel, sdist and a two-architecture
+  image under `0.5.5` and `latest`. Every Dependabot alert is fixed or dismissed with the
+  reasoning recorded in section 28.
+
+## 28. Outstanding · `OPEN`
 
 Everything below is known, deliberate, and not done. It is written here rather than carried
 in someone's head, and each item says what would close it.
@@ -595,16 +626,12 @@ nobody has checked.
   did not build it: both architectures present, `doctor` reports "Ready to dub", and the
   image reports its own version as 0.4.2.
 
-- **The weekly real-provider workflow.** It had never passed. Every scheduled run since it
-  was added died in its first network call: YouTube's bot check refuses GitHub's runner
-  addresses ("Sign in to confirm you're not a bot"), so no model ever ran. The install was
-  sound. The providers are now dubbed from English narration generated offline, the
-  YouTube dub runs separately and reports a refusal as a warning rather than a failure, and
-  the uploaded measurement is the run's own instead of the committed one from 2026-08-30.
-  The fixture path was exercised locally end to end; the workflow itself was not, because
-  only GitHub can run it. *Closes when:* the next scheduled or manually dispatched run
-  is green, with the fixture measurement attached. The open choice about proving the
-  download path at all is Q-E6 in [`questions.md`](questions.md).
+- **The weekly real-provider workflow.** `CLOSED`. It had never passed: YouTube's bot check
+  refuses GitHub's runner addresses ("Sign in to confirm you're not a bot"), so no model
+  ever ran. The providers are now dubbed from English narration generated offline, and the
+  YouTube dub runs separately and reports a refusal as a warning. Verified green on GitHub
+  twice: run 38141304908 on `main` and run 38143899916 with torch 2.10.0. The open choice
+  about proving the download path at all is Q-E6 in [`questions.md`](questions.md).
 
 ### One-time account setup, before anyone can pull
 

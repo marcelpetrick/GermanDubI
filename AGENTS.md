@@ -115,6 +115,26 @@ requires a solved JavaScript challenge, and without `yt-dlp-ejs` and a JS runtim
 downloader reports "This video is not available" for a video that plainly is. Pinning back
 would have hidden that and lost six weeks of upstream fixes for nothing.
 
+**A pin is not a patch.** An exact version stays exactly as vulnerable as the day an
+advisory is published against it. Two things notice: `audit.yml`, daily, and Dependabot
+security updates, which open a pull request that has to pass CI. Routine version bumps stay
+manual. When an advisory lands:
+
+- **Regenerate the lockfile first.** Most transitive advisories are already fixed inside
+  the ranges the direct dependencies declare; the lockfile is simply still holding the old
+  release. A pnpm override or a uv constraint is the fallback, with a comment naming the
+  advisory and the condition that lets it go.
+- **Check what the lockfile resolves for.** `uv.lock` resolves for Linux only
+  (`tool.uv.environments`). A resolution fork for a platform nobody runs once held torch at
+  a release with a critical advisory, for everyone.
+- **torch is pinned in `pyproject.toml` at the last CUDA 12 release.** Moving to CUDA 13
+  changes the libraries faster-whisper's ctranslate2 loads, so it is a change verified on a
+  GPU, not a lockfile bump. Keep the Dockerfile's CPU torch pin equal to it.
+- **An advisory that cannot be fixed is accepted in writing**, not ignored: in the
+  outstanding section of `docs/project/plan.md`, with what would close it, and the
+  Dependabot alert dismissed with the same reasoning. A red audit nobody reads is worse than
+  none.
+
 ---
 
 ## 3. Versioning — how each commit gets a version
@@ -148,6 +168,11 @@ git commit -m "docs: release notes for v0.3.0"
 git tag -a v0.3.0 -m "v0.3.0"
 make version               # confirms 0.3.0
 ```
+
+The tag starts `release.yml`: it reruns the whole gate, publishes the GitHub release, and
+only then builds and pushes the container image, so a tag either publishes both or neither.
+A tag with a suffix (`v1.0.0-rc1`) publishes a pre-release and does not move the image's
+`latest`.
 
 ---
 
@@ -215,6 +240,10 @@ network, no YouTube, no multi-gigabyte model**.
 
 * Tests requiring a real model or the network are marked `@pytest.mark.real_provider` and
   are **deselected by default**. Never make default CI depend on a live YouTube video.
+* Not even the weekly real-provider run. YouTube refuses GitHub's runner addresses as bots,
+  so `providers.yml` proves the models on narration generated offline, and treats a
+  refused YouTube download as a warning, not a failure. A real-provider check that needs
+  the network to reach a site is a check of the site's mood.
 * Fake providers are deterministic by construction — same input, byte-identical output.
 * Prefer asserting on observable behaviour (artifact exists, duration within tolerance,
   state transition happened) over asserting on internal call sequences.
