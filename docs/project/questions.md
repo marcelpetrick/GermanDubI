@@ -228,6 +228,46 @@ of this repository. Provider-specific license metadata remains visible at the bo
 Affects package naming and whether the frontend build must be bundled into the wheel.
 Currently the wheel is built in CI but not published.
 
+### Q-E6 — How does CI prove a YouTube download works, when YouTube refuses CI? · `PROVISIONAL`
+
+The weekly `Real providers` workflow failed on every scheduled run from 2026-09-07 to
+2026-10-05 (runs 34105794651 to 37303691827) with the same line, before a single model ran:
+
+```text
+ERROR: [youtube] f3r05guSo1w: Sign in to confirm you're not a bot. Use --cookies-from-browser
+or --cookies for the authentication.
+```
+
+It is not the installation: `yt-dlp-ejs` 0.8.0 and Deno were present and `doctor` found the
+runtime. The same yt-dlp release, 2026.08.19, reads the same video from a residential
+connection. YouTube refuses anonymous requests from datacenter addresses, and a GitHub-hosted
+runner is one. Nothing in the repository can change where the runner sits.
+
+Options:
+
+- **(a) Separate the two questions.** The providers are proved on English narration
+  generated offline (`--spoken-fixture`), which no site can refuse; the YouTube dub runs
+  after it, and a bot-check refusal (exit status 3) is a warning annotation and a job
+  summary entry, not a failure. Any other download failure still fails. Cost: in a week
+  YouTube refuses, nothing proves the download path, and the run says so.
+- **(b) A self-hosted runner on a residential connection.** Restores real download
+  coverage. Costs a machine that is on every Monday morning, and a runner with access to
+  this repository on someone's home network.
+- **(c) Account cookies in a repository secret.** Rejected as written: it ties CI to a
+  personal Google account that YouTube may flag or lock, the cookies expire and need
+  rotating by hand, and the acquisition adapter is explicitly not to implement access
+  control workarounds -- feeding it an account's session is one in all but name.
+- **(d) A second source site that does not block datacenters**, downloaded through yt-dlp,
+  to keep the generic downloader path under test. Cheap, but proves nothing about YouTube,
+  which is the site every user starts from.
+
+**Provisional:** (a), implemented. The providers are now checked every week whatever
+YouTube decides, and the download is checked whenever YouTube allows it, visibly skipped
+otherwise. The synthetic narration is easier for recognition than a human narrator, so the
+fixture dub proves the providers run and produce German, not how well. Move to (b) if a
+YouTube download regression ever reaches a user before the weekly run reports it, or if the
+summary shows the download unverified for more than a month running.
+
 ---
 
 ## F. Questions inherited from `docs/product/vision.md` §74

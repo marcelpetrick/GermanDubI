@@ -595,6 +595,17 @@ nobody has checked.
   did not build it: both architectures present, `doctor` reports "Ready to dub", and the
   image reports its own version as 0.4.2.
 
+- **The weekly real-provider workflow.** It had never passed. Every scheduled run since it
+  was added died in its first network call: YouTube's bot check refuses GitHub's runner
+  addresses ("Sign in to confirm you're not a bot"), so no model ever ran. The install was
+  sound. The providers are now dubbed from English narration generated offline, the
+  YouTube dub runs separately and reports a refusal as a warning rather than a failure, and
+  the uploaded measurement is the run's own instead of the committed one from 2026-08-30.
+  The fixture path was exercised locally end to end; the workflow itself was not, because
+  only GitHub can run it. *Closes when:* the next scheduled or manually dispatched run
+  is green, with the fixture measurement attached. The open choice about proving the
+  download path at all is Q-E6 in [`questions.md`](questions.md).
+
 ### One-time account setup, before anyone can pull
 
 - **Make the GHCR package public.** `CLOSED`. It is public, and the first anonymous pull
