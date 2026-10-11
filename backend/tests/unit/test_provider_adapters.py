@@ -374,6 +374,24 @@ def test_demucs_success_and_failures(tmp_path: Path) -> None:
         no_stems.separate(audio, tmp_path / "empty")
 
 
+def test_demucs_runs_in_the_interpreter_that_found_it(tmp_path: Path) -> None:
+    """Availability is checked by importing Demucs here, so it must also run here.
+
+    Running whichever `python` was first on PATH failed every separation when the
+    application ran from a virtual environment that was not activated.
+    """
+    audio = tmp_path / "audio.wav"
+    audio.touch()
+    runner = StubRunner()
+    provider = DemucsSeparationProvider(runner)  # type: ignore[arg-type]
+
+    with pytest.raises(SeparationError):
+        provider.separate(audio, tmp_path / "stems")
+
+    argv, _ = runner.calls[0]
+    assert argv[:3] == [sys.executable, "-m", "demucs.separate"]
+
+
 def test_caption_provider_formats_and_errors(tmp_path: Path) -> None:
     vtt = tmp_path / "captions.vtt"
     vtt.write_text("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nHello world\n")

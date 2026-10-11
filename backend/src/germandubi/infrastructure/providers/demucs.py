@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import sys
 from pathlib import Path
 from typing import Final
 
@@ -98,7 +99,12 @@ class DemucsSeparationProvider:
         try:
             self.runner.run(
                 [
-                    "python",
+                    # The interpreter that is_available() imported Demucs into, not
+                    # whichever `python` is first on PATH. They differ whenever the
+                    # application runs from a virtual environment that is not activated --
+                    # a service, a launcher, `.venv/bin/germandubi` -- and the PATH one then
+                    # has no Demucs, so the stage fails on a machine that reports it ready.
+                    sys.executable,
                     "-m",
                     "demucs.separate",
                     "--name",

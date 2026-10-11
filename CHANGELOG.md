@@ -16,6 +16,10 @@ may occur in MINOR releases and are always listed here.
   video that requires signing in. It is a refusal of the network the request came from --
   typically a VPN or a server address -- and the message now says so and suggests another
   network, instead of implying the video needs an account.
+- Voice and background separation runs Demucs with the interpreter the application itself
+  runs in. It used whichever `python` came first on `PATH`, so starting GermanDubI from a
+  virtual environment that was not activated -- a service, a launcher,
+  `.venv/bin/germandubi` -- made every separation fail on a machine `doctor` called ready.
 
 ## [0.5.4] - 2026-09-09
 
