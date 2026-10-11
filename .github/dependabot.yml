@@ -1,0 +1,39 @@
+# Security updates only. Every version here is pinned exactly and moved deliberately (see
+# AGENTS.md §2.9), so routine version-bump pull requests are switched off with
+# `open-pull-requests-limit: 0`. That limit does not apply to security updates: when an
+# advisory hits a pinned dependency, Dependabot opens a pull request that has to pass the
+# full CI before it can be merged. Security updates themselves are enabled in the
+# repository settings (Code security → Dependabot security updates).
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: build(deps)
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: build(deps)
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: build(deps)
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: ci
