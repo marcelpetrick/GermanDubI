@@ -34,8 +34,9 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+      # espeak-ng speaks the offline narration fixture the first dub uses.
+      - name: Install FFmpeg and espeak-ng
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg espeak-ng
 
       # yt-dlp cannot get formats from YouTube without solving a JavaScript challenge, and
       # needs a runtime to do it. Without this the failure reads "This video is not
@@ -53,14 +54,51 @@ jobs:
       - name: Run the real-provider tests
         run: make test-real
 
-      - name: Dub a real source end to end
+      # The two dubs below answer different questions, so each can fail on its own.
+      #
+      # YouTube's bot check refuses anonymous downloads from GitHub's runner addresses
+      # ("Sign in to confirm you're not a bot"); every scheduled run from 2026-09-07 to
+      # 2026-10-05 died on it before a single model ran. A source no site can refuse keeps
+      # the real providers under test regardless.
+      - name: Dub generated English narration end to end
         # Bounded to an excerpt: this is a check that the pipeline still produces German
-        # from a real video, not a benchmark. Timings from a shared runner mean nothing.
-        run: ./scripts/benchmark_real_dub.py --excerpt-seconds 60
+        # from real English speech, not a benchmark. Timings from a shared runner mean
+        # nothing.
+        run: >-
+          ./scripts/benchmark_real_dub.py --spoken-fixture --excerpt-seconds 60
+          --output "$RUNNER_TEMP/measurements/real-dub-fixture.json"
+          --export-to "$RUNNER_TEMP/dub-fixture"
 
+      - name: Dub the reference YouTube source end to end
+        if: ${{ !cancelled() }}
+        # Exit status 3 means YouTube refused this runner's address. That is a verdict on
+        # the network, not on the code, so it does not fail the job -- but the script
+        # annotates the run with a warning and this step says so in the summary, so a week
+        # without a download check is visible, never silent. Any other failure fails.
+        run: |
+          set +e
+          ./scripts/benchmark_real_dub.py --excerpt-seconds 60 \
+            --output "$RUNNER_TEMP/measurements/real-dub-youtube.json" \
+            --export-to "$RUNNER_TEMP/dub-youtube"
+          status=$?
+          if [ "$status" -eq 3 ]; then
+            {
+              echo "### YouTube download not verified"
+              echo
+              echo "YouTube refused this runner's address with its bot check, so this run"
+              echo "could not test downloading from it. The offline narration dub above"
+              echo "still covers the providers. See Q-E6 in docs/project/questions.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          exit "$status"
+
+      # Only what this run measured. Writing to the committed docs/benchmarks/real-dub.json
+      # meant a failed run uploaded a weeks-old local measurement as if it were its own.
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: real-provider-measurement
-          path: docs/benchmarks/real-dub.json
+          path: ${{ runner.temp }}/measurements/
+          if-no-files-found: warn
           retention-days: 30
