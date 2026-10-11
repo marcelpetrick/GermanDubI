@@ -644,6 +644,25 @@ re-checked against the registries on 2026-10-11.
   `node:24.21.0-bookworm-slim` image did not exist yet. It does now, and `.node-version`
   and the Dockerfile moved together.
 
+### Accepted dependency advisories
+
+Known, assessed, and dismissed in the Dependabot alerts with the same reasoning. The
+non-blocking provider-extras step of `audit.yml` keeps reporting them.
+
+- **torch beyond 2.10.0.** 2.10.0 is the last release on the CUDA 12 libraries. Still open
+  against it: GHSA-rrmf-rvhw-rf47 (low, memory corruption in `torch.jit.script`, which
+  no inference path calls -- only Piper's training code uses it; fixed in 2.13) and three
+  advisories with no fixed release.
+  *Closes when:* torch moves to the CUDA 13 wheels, verified on a GPU with both Demucs and
+  faster-whisper -- ctranslate2 loads the cuBLAS and cuDNN that torch installs, so the CUDA
+  major has to match what ctranslate2 was built against.
+- **stanza 1.10.1** (GHSA-v5jw-96jm-7h2c, high: pickle deserialisation when loading a
+  model). `argostranslate` 1.11.0, the newest release, pins `stanza==1.10.1` exactly, so
+  nothing can be moved here. Exploiting it needs a malicious model file; Argos loads only
+  the packages it installs from its own index. *Closes when:* argostranslate releases with
+  a newer stanza. Setting `ARGOS_STANZA_AVAILABLE=0` would take stanza out of the path
+  entirely, at the cost of the sentence splitter, and is the fallback if this lingers.
+
 ### Still open from the deep review
 
 Three Low findings, listed in
