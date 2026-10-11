@@ -57,13 +57,18 @@ jobs:
 
       # Guards against tagging the wrong commit: the version the package reports is
       # derived from the tag by setuptools-scm, so a mismatch means the checkout is not
-      # what the tag says it is.
+      # what the tag says it is. Compared as versions, not strings: setuptools-scm
+      # normalises the tag to PEP 440, so a pre-release tag v1.0.0-rc1 builds as 1.0.0rc1.
       - name: Verify the tag matches the built version
         run: |
           tag="${GITHUB_REF_NAME#v}"
           built="$(uv run python -c 'from germandubi.version import build_info; print(build_info().version)')"
           echo "tag=$tag built=$built"
-          if [[ "$built" != "$tag" ]]; then
+          if ! uv run --with packaging python -c '
+          import sys
+          from packaging.version import Version
+          sys.exit(Version(sys.argv[1]) != Version(sys.argv[2]))
+          ' "$tag" "$built"; then
             echo "::error::tag $tag does not match built version $built" >&2
             exit 1
           fi
@@ -116,9 +121,16 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+        # A tag with a suffix (v1.0.0-rc1) is a pre-release: published, but not offered as
+        # the latest version.
         run: |
+          prerelease=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            prerelease=(--prerelease)
+          fi
           gh release create "$GITHUB_REF_NAME" \
             --title "GermanDubI $GITHUB_REF_NAME" \
             --notes-file release-notes.md \
             --verify-tag \
+            "${prerelease[@]}" \
             dist/*.whl dist/*.tar.gz

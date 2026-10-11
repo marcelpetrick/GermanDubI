@@ -175,8 +175,9 @@ jobs:
           tags=""
           for name in ${names}; do
             tags="${tags} -t ${name}:${version}"
-            # `latest` only ever moves for a real release, never for a manual run.
-            if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            # `latest` only ever moves for a real release: never for a manual run, and
+            # never for a pre-release tag such as v1.0.0-rc1.
+            if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME#*-}" = "${GITHUB_REF_NAME}" ]; then
               tags="${tags} -t ${name}:latest"
             fi
           done
