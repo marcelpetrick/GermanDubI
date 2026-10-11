@@ -12,6 +12,13 @@ several minutes, so it is run deliberately:
 
     ./scripts/benchmark_real_dub.py --excerpt-seconds 120
     ./scripts/benchmark_real_dub.py --full          # the entire source
+    ./scripts/benchmark_real_dub.py --source-file talk.mp4
+    ./scripts/benchmark_real_dub.py --spoken-fixture  # offline: no source site involved
+
+``--spoken-fixture`` dubs English narration generated on the spot with espeak-ng. It exists
+because the reference source is on YouTube, and YouTube refuses anonymous downloads from
+datacenter addresses -- a CI runner among them. Every provider after acquisition still runs
+for real; what it does not prove is that the source site can be downloaded from.
 
 Timings come from the pipeline's own persisted job records rather than from a stopwatch
 wrapped around the call, so what is reported is what the application actually recorded.
@@ -22,6 +29,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -44,6 +52,32 @@ REFERENCE_URL = "https://www.youtube.com/watch?v=f3r05guSo1w"
 
 #: Pause before retrying an upstream hiccup, multiplied by the attempt number.
 _RETRY_PAUSE_S = 5
+
+#: Exit status when the source site refused the network rather than the request. Distinct
+#: from 1 so automation can tell "the product is broken" from "this machine may not
+#: download from that site": the second says nothing about the code or the providers.
+EXIT_SOURCE_REFUSED = 3
+
+#: What yt-dlp prints when YouTube's bot check rejects the requesting address. Retrying
+#: does not help: the verdict is on the network, and it holds for hours.
+_BOT_CHECK = "not a bot"
+
+#: Narration for ``--spoken-fixture``: plain English prose of about a minute, written for
+#: this purpose, so there is no licence question and nothing to download.
+SPOKEN_FIXTURE_TEXT = (
+    "The Roman legion was the largest unit of the Roman army. "
+    "In the early republic, a legion was raised for a single campaign and disbanded when "
+    "the fighting was over. Its soldiers were citizens who owned property, and they paid "
+    "for their own equipment. "
+    "Over time, the wars grew longer and moved further from home. A farmer could not leave "
+    "his fields for years at a time, and the army began to accept men who owned nothing. "
+    "These soldiers served for a fixed number of years, and they expected land or money "
+    "when they retired. "
+    "By the time of the first emperor, the legions had become a permanent professional "
+    "force. Each one carried a number and a name, and many of them kept both for "
+    "centuries. They built roads, bridges and camps wherever they went, and some of those "
+    "camps grew into cities that still exist today."
+)
 
 
 @dataclass(frozen=True)
@@ -83,7 +117,21 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("--url", default=REFERENCE_URL, help="Source to dub.")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--url", default=REFERENCE_URL, help="Source to dub.")
+    source.add_argument(
+        "--source-file",
+        type=Path,
+        help="Dub a local media file instead of downloading one.",
+    )
+    source.add_argument(
+        "--spoken-fixture",
+        action="store_true",
+        help=(
+            "Dub English narration generated offline with espeak-ng. Exercises every "
+            "provider without depending on a source site."
+        ),
+    )
     parser.add_argument(
         "--excerpt-seconds",
         type=int,
@@ -122,15 +170,32 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def fail(message: str) -> None:
-    """Print an error and exit non-zero."""
+def fail(message: str, *, status: int = 1, title: str = "Real dub failed") -> None:
+    """Print an error and exit with ``status``.
+
+    On GitHub Actions the message is also emitted as an annotation, so it appears on the
+    run's summary page instead of only deep inside the step's log.
+    """
     print(f"error: {message}", file=sys.stderr)
-    raise SystemExit(1)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        level = "warning" if status == EXIT_SOURCE_REFUSED else "error"
+        print(f"::{level} title={title}::{_annotation_escape(message)}")
+    raise SystemExit(status)
 
 
-def require_tools() -> None:
-    """Exit unless the external tools a real run needs are installed."""
-    missing = [tool for tool in ("yt-dlp", "ffmpeg", "ffprobe") if shutil.which(tool) is None]
+def _annotation_escape(message: str) -> str:
+    """Escape a message for a GitHub workflow command, which must be one line."""
+    return message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def require_tools(*, download: bool, speak: bool) -> None:
+    """Exit unless the external tools this run needs are installed."""
+    needed = ["ffmpeg", "ffprobe"]
+    if download:
+        needed.append("yt-dlp")
+    if speak:
+        needed.append("espeak-ng")
+    missing = [tool for tool in needed if shutil.which(tool) is None]
     if missing:
         fail(f"missing required tools: {', '.join(missing)}")
 
@@ -219,6 +284,12 @@ def download_excerpt(url: str, seconds: int, destination: Path) -> Path:
             fail("the download produced no file")
         downloaded = candidates[0]
 
+    return cut_excerpt(downloaded, seconds, destination)
+
+
+def cut_excerpt(source: Path, seconds: int, destination: Path) -> Path:
+    """Write the first ``seconds`` of ``source`` to ``destination`` as a standalone file."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
     print(f"cutting the first {seconds}s")
     _run_or_fail(
         [
@@ -227,7 +298,7 @@ def download_excerpt(url: str, seconds: int, destination: Path) -> Path:
             "-loglevel",
             "error",
             "-i",
-            str(downloaded),
+            str(source),
             "-t",
             str(seconds),
             "-c:v",
@@ -243,6 +314,50 @@ def download_excerpt(url: str, seconds: int, destination: Path) -> Path:
     return destination
 
 
+def make_spoken_fixture(destination: Path) -> Path:
+    """Generate a video of English narration with espeak-ng, entirely offline.
+
+    The voice is synthetic, which makes recognition easier than a human narrator would.
+    That is the price of a source no site can refuse; it still takes the real recognition,
+    translation, speech and mixing providers through the whole pipeline.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    speech = destination.parent / "narration.wav"
+    print("generating English narration with espeak-ng")
+    _run_or_fail(
+        ["espeak-ng", "-v", "en-us", "-s", "150", "-w", str(speech), SPOKEN_FIXTURE_TEXT],
+        what="generate the narration",
+        attempts=1,
+    )
+    _run_or_fail(
+        [
+            "ffmpeg",
+            "-y",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=size=640x360:rate=25",
+            "-i",
+            str(speech),
+            "-shortest",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            str(destination),
+        ],
+        what="build the narration video",
+        attempts=1,
+    )
+    return destination
+
+
 def _run_or_fail(argv: list[str], *, what: str, attempts: int = 3) -> None:
     """Run a command, retrying an upstream hiccup and reporting failure as a message.
 
@@ -252,6 +367,9 @@ def _run_or_fail(argv: list[str], *, what: str, attempts: int = 3) -> None:
     would otherwise report a healthy video as broken.
 
     A stack trace tells the reader nothing they can act on, so a real failure is a message.
+
+    YouTube's bot check is the exception to retrying: it rejects the requesting network,
+    not the request, and it ends the run at once with :data:`EXIT_SOURCE_REFUSED`.
     """
     for attempt in range(1, attempts + 1):
         result = subprocess.run(argv, capture_output=True, text=True, check=False)
@@ -259,6 +377,15 @@ def _run_or_fail(argv: list[str], *, what: str, attempts: int = 3) -> None:
             return
         detail = (result.stderr or result.stdout).strip().splitlines()
         reason = detail[-1] if detail else f"exit code {result.returncode}"
+        if _BOT_CHECK in reason.lower():
+            fail(
+                f"could not {what}: the source site refused this network as automated "
+                "traffic. That is a verdict on the address, not on this code or the "
+                "providers: the same download works from a residential connection. "
+                f"Use --spoken-fixture to dub without a source site. ({reason})",
+                status=EXIT_SOURCE_REFUSED,
+                title="Source site refused this network",
+            )
         if attempt < attempts:
             print(f"could not {what} ({reason}); retrying {attempt}/{attempts - 1}")
             time.sleep(_RETRY_PAUSE_S * attempt)
@@ -344,7 +471,8 @@ def render_summary(result: BenchmarkResult) -> str:
 def main() -> int:
     """Run the benchmark."""
     arguments = parse_arguments()
-    require_tools()
+    downloading = arguments.source_file is None and not arguments.spoken_fixture
+    require_tools(download=downloading, speak=arguments.spoken_fixture)
 
     workspace = Path.cwd() / ".benchmark"
     if workspace.exists():
@@ -363,8 +491,24 @@ def main() -> int:
         )
 
     mode = "full source" if arguments.full else f"first {arguments.excerpt_seconds}s"
+    source_label: str = arguments.url
+    local: Path | None = None
+    if arguments.spoken_fixture:
+        source_label = "espeak-ng narration (offline fixture)"
+        local = make_spoken_fixture(workspace / "fixture" / "narration.mp4")
+    elif arguments.source_file is not None:
+        source_label = arguments.source_file.name
+        local = arguments.source_file.resolve()
+        if not local.is_file():
+            fail(f"no such file: {arguments.source_file}")
+
     source: str = arguments.url
-    if not arguments.full:
+    from_file = local is not None or not arguments.full
+    if local is not None and arguments.full:
+        source = str(local)
+    elif local is not None:
+        source = str(cut_excerpt(local, arguments.excerpt_seconds, workspace / "excerpt.mp4"))
+    elif not arguments.full:
         source = str(
             download_excerpt(arguments.url, arguments.excerpt_seconds, workspace / "excerpt.mp4")
         )
@@ -374,7 +518,7 @@ def main() -> int:
     try:
         project = (
             application.projects.create_from_file(source, quality=arguments.quality)
-            if not arguments.full
+            if from_file
             else application.projects.create_from_url(source, quality=arguments.quality)
         )
         print(f"project {project.id}")
@@ -444,7 +588,7 @@ def main() -> int:
         shutil.copy2(export_path, kept)
 
         result = BenchmarkResult(
-            source_url=arguments.url,
+            source_url=source_label,
             mode=mode,
             recorded_at=datetime.now(UTC).isoformat(timespec="seconds"),
             host={
@@ -455,7 +599,11 @@ def main() -> int:
             },
             providers=providers,
             source_title=analysed.display_title,
-            source_duration_s=2400.0 if arguments.full else float(arguments.excerpt_seconds),
+            source_duration_s=(
+                (2400.0 if downloading else processed)
+                if arguments.full
+                else float(arguments.excerpt_seconds)
+            ),
             processed_duration_s=processed,
             total_seconds=round(total_seconds, 1),
             realtime_factor=round(total_seconds / processed, 2) if processed else 0.0,

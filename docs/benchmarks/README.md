@@ -13,7 +13,19 @@ real pipeline with real providers on a real source and records what it cost.
 make install-providers
 ./scripts/benchmark_real_dub.py --excerpt-seconds 120   # quick, repeatable
 ./scripts/benchmark_real_dub.py --full                  # the whole source
+./scripts/benchmark_real_dub.py --source-file talk.mp4  # a local file instead of a URL
+./scripts/benchmark_real_dub.py --spoken-fixture        # offline narration, no source site
 ```
+
+`--spoken-fixture` dubs English narration generated with `espeak-ng`. It is what the weekly
+`Real providers` workflow uses, because YouTube refuses anonymous downloads from GitHub's
+runner addresses (Q-E6 in [`questions.md`](../project/questions.md)). A synthetic voice is
+easier to recognise than a person, so it proves the providers produce German, not how well:
+its numbers are not comparable with the files below.
+
+When the source site refuses the network itself -- YouTube's "Sign in to confirm you're not a
+bot" -- the script stops at once with exit status 3 instead of 1, so automation can tell a
+refused address from a broken product.
 
 The script refuses to run if any port resolves to a placeholder provider, so a result here
 always reflects real work. Stage timings are read from the pipeline's own persisted job
