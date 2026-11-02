@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==84.0.0", "setuptools-scm==10.3.4"]
+requires = ["setuptools==84.2.1", "setuptools-scm==10.3.4"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,14 +24,14 @@ requires-python = ">=3.12,<3.14"
 dynamic = ["version"]
 
 dependencies = [
-    "alembic==1.20.0",
-    "fastapi==0.143.0",
-    "pydantic==2.14.0",
-    "pydantic-settings==2.15.0",
-    "sqlalchemy==2.1.4",
+    "alembic==1.20.1",
+    "fastapi==0.162.0",
+    "pydantic==2.14.2",
+    "pydantic-settings==2.16.2",
+    "sqlalchemy==2.1.6",
     "typer==0.27.3",
     "uvicorn[standard]==0.54.0",
-    "yt-dlp==2026.8.19",
+    "yt-dlp==2026.10.26",
     # YouTube asks for a solved JavaScript challenge before it will hand over formats.
     # Without this solver yt-dlp reports "This video is not available" for videos that are
     # plainly available, which is indistinguishable from a removed video. It also needs a
@@ -57,16 +57,16 @@ germandubi = "germandubi.cli.main:main"
 
 [dependency-groups]
 dev = [
-    "anyio==4.15.1",
-    "coverage[toml]==7.16.2",
+    "anyio==4.16.0",
+    "coverage[toml]==7.17.0",
     # starlette 1.6 requires httpx2 for its test client.
-    "httpx2==2.13.1",
-    "hypothesis==6.169.0",
-    "mypy==2.4.0",
-    "pre-commit==4.6.2",
-    "pytest==9.1.1",
+    "httpx2==2.16.0",
+    "hypothesis==6.170.14",
+    "mypy==2.4.1",
+    "pre-commit==4.7.0",
+    "pytest==9.2.0",
     "pytest-cov==7.1.0",
-    "ruff==0.17.0",
+    "ruff==0.17.3",
     # Needed at runtime in a Git checkout so a build-generated _version.py cannot go stale.
     "setuptools-scm==10.3.4",
 ]

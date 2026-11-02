@@ -13,7 +13,10 @@ if (typeof window.matchMedia !== 'function') {
       onchange: null,
       addEventListener: () => undefined,
       removeEventListener: () => undefined,
+      // MediaQueryList still exposes these legacy methods in supported browsers.
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       addListener: () => undefined,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       removeListener: () => undefined,
       dispatchEvent: () => false,
     }) as MediaQueryList;

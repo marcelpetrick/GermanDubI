@@ -1,3 +1,7 @@
+# Allow the security fix without waiting for the release-age window.
+minimumReleaseAgeExclude:
+  - minimatch@11.0.4
+
 # pnpm 12 no longer reads the "pnpm" field in package.json; its settings live here now.
 # The install warns about what it ignored, but an ignored setting still installs, so every
 # setting here has to be checked rather than assumed. Security overrides belong here too,
@@ -9,3 +13,7 @@
 # pulls it back in, rather than as a setting that does anything today.
 onlyBuiltDependencies:
   - esbuild
+
+# GHSA-g3hv-75wg-m249: remove this when every parent resolves a patched version.
+overrides:
+  minimatch: 11.0.4
