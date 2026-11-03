@@ -28,7 +28,7 @@ dependencies = [
     "fastapi==0.162.0",
     "pydantic==2.14.2",
     "pydantic-settings==2.16.2",
-    "sqlalchemy==2.1.6",
+    "sqlalchemy==2.1.7",
     "typer==0.27.3",
     "uvicorn[standard]==0.54.0",
     "yt-dlp==2026.10.26",
@@ -58,7 +58,7 @@ germandubi = "germandubi.cli.main:main"
 [dependency-groups]
 dev = [
     "anyio==4.16.0",
-    "coverage[toml]==7.17.0",
+    "coverage[toml]==7.17.1",
     # starlette 1.6 requires httpx2 for its test client.
     "httpx2==2.16.0",
     "hypothesis==6.170.14",
