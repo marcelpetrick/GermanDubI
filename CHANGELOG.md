@@ -10,6 +10,18 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.6] - 2026-11-05
+
+### Security
+
+- Update vulnerable backend and frontend lockfile packages and refresh the dependency audit.
+
+### Changed
+
+- Refresh backend and frontend dependencies, including FastAPI, SQLAlchemy, React,
+  React Query, Vitest and the Vite React plugin.
+- Retain the supported CUDA 12 provider stack and TypeScript compatibility pin.
+
 ## [0.5.5] - 2026-10-11
 
 A maintenance release: every open security advisory closed, two fixes, and a release
