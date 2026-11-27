@@ -1,10 +1,16 @@
 # GermanDubI
 
 [![CI](https://github.com/marcelpetrick/GermanDubI/actions/workflows/ci.yml/badge.svg)](https://github.com/marcelpetrick/GermanDubI/actions/workflows/ci.yml)
+[![Dependency audit](https://github.com/marcelpetrick/GermanDubI/actions/workflows/audit.yml/badge.svg?branch=main)](https://github.com/marcelpetrick/GermanDubI/actions/workflows/audit.yml)
 [![Release](https://img.shields.io/github/v/release/marcelpetrick/GermanDubI?sort=semver)](https://github.com/marcelpetrick/GermanDubI/releases)
+[![Docker image on GHCR](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/marcelpetrick/GermanDubI/pkgs/container/germandubi)
 [![Coverage](https://img.shields.io/badge/coverage-%3E95%25-brightgreen)](pyproject.toml)
-[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+
+[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)](pyproject.toml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](pyproject.toml)
+[![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)](frontend/package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](frontend/package.json)
 
 **German Dub Interface** — English YouTube videos to German ones, made easy.
 
