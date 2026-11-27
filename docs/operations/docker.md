@@ -255,8 +255,8 @@ larger. The round trip was verified: `docker load` restores the image under its 
 | **GitHub Container Registry** | `ghcr.io` | Sits beside the source. No pull rate limit, no second account, and the workflow authenticates with a token GitHub already provides. |
 | **Quay.io** | `quay.io` | Red Hat's, and what the Kubernetes and RHEL world reaches for. Free public repositories. |
 
-There is no reason to choose. The workflow publishes the same digests under all
-three, so a single build ends up everywhere and the manifests point at identical bytes.
+Public releases publish to GHCR. Docker Hub and Quay use the same build when their
+registry credentials are configured.
 
 ### Automatically, on a version tag
 

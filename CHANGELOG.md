@@ -10,6 +10,14 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-11-27
+
+### Documentation
+
+- Add README badges for the public Docker image, dependency audit, and application stack.
+- Record the Compose verification of the public image.
+- Clarify how to push a single release tag, recover from a failed run, and enable additional registries.
+
 ## [0.5.7] - 2026-11-27
 
 ### Security

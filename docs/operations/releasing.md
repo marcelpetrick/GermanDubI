@@ -16,12 +16,13 @@ from that tag. See [`AGENTS.md`](../../AGENTS.md) section 3.
 
 3. Confirm the working tree is clean. A dirty tree produces a version with a `.dNNNNNNNN`
    suffix, which will not match the tag.
+4. Push the reviewed commit to `main` and wait for its CI and dependency audit to pass.
 
 ## Tagging
 
 ```bash
 git tag -a v0.1.0 -m "GermanDubI 0.1.0"
-git push origin main --follow-tags
+git push origin refs/tags/v0.1.0
 ```
 
 Pushing the tag is the act that publishes. The `Release` workflow then:
@@ -39,16 +40,16 @@ then builds and publishes the image for `linux/amd64` and `linux/arm64`.
 
 ## If it fails
 
-If the release job fails before publication, delete the tag, fix the cause, and tag again:
+For a transient failure, rerun the failed jobs for the same tag. If a source change is
+needed and the GitHub release has yet to be published, remove the failed tag first:
 
 ```bash
 git tag -d v0.1.0
 git push origin :refs/tags/v0.1.0
 ```
 
-Keep tags that already have a published release. If container publishing fails after
-the release is public, rerun the failed image jobs when the failure is transient. Publish
-a new patch version if a source change is needed.
+If the GitHub release is already public, keep its tag and publish a new patch version
+when the fix needs a source change.
 
 ## Verifying afterwards
 

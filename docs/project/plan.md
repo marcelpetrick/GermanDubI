@@ -600,8 +600,7 @@ Verified the way the claim is made: cloned the repository into an empty director
 
 ## 28. Outstanding · `OPEN`
 
-Everything below is known, deliberate, and not done. It is written here rather than carried
-in someone's head, and each item says what would close it.
+Open items below record what would close them. Closed entries record how they were verified.
 
 ### Container and provider verification
 
