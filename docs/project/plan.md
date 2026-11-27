@@ -650,11 +650,11 @@ nobody has checked.
 ### Dependency majors, each rejected with a reason
 
 Each was tried, measured, and reverted, or held back for a reason that can be checked.
-None is a "someday"; each has a specific condition that would change the answer. Last
-re-checked against the registries on 2026-10-11.
+None is a "someday"; each has a specific condition that would change the answer. The
+TypeScript compatibility pins were rechecked against the registries on 2026-11-27.
 
 - **TypeScript 5.9.3 → 7.0.2.** `typescript-eslint` refuses to load against TS 7 and says
-  so, pointing at its own tracking issue for TS ≥ 7.1. Still true of 8.71.1, which
+  so, pointing at its own tracking issue for TS ≥ 7.1. Still true of 8.74.0, which
   declares `typescript >=4.8.4 <6.1.0`. Adopting it today means no TypeScript linting at
   all. TS 7 also removed `baseUrl`, which `tsconfig.json` uses. *Closes when:*
   typescript-eslint ships TS 7 support; then the `baseUrl` removal is a small, separate
@@ -670,6 +670,10 @@ re-checked against the registries on 2026-10-11.
 - **Node 24.20.0 → 24.21.0.** `CLOSED`. Held back only because the official
   `node:24.21.0-bookworm-slim` image did not exist yet. It does now, and `.node-version`
   and the Dockerfile moved together.
+- **PyAV 18.1.1 → 19.0.2.** An offline dub reached transcription and failed because
+  faster-whisper 1.2.1 passes `metadata_errors` to `av.open`, which PyAV 19 removed.
+  *Closes when:* a stable faster-whisper release includes the upstream fix.
+  [faster-whisper #1495](https://github.com/SYSTRAN/faster-whisper/pull/1495)
 
 ### Accepted dependency advisories
 

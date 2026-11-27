@@ -463,9 +463,15 @@ class TestEventStream:
         assert len(events) > 1
 
         cursor = events[0][0]
-        with application.unit_of_work() as uow:
-            replayed = uow.events.since(ProjectId(Ulid(project_id)), after=cursor)
-        assert len(replayed) == len(events) - 1
+        with client.stream(
+            "GET", url(f"/projects/{project_id}/events"), headers={"Last-Event-ID": str(cursor)}
+        ) as response:
+            assert response.status_code == 200
+            lines = response.read().decode().splitlines()
+
+        assert [line for line in lines if line.startswith("id: ")] == [
+            f"id: {sequence}" for sequence, _, _ in events[1:]
+        ]
 
     def test_the_stream_advertises_the_right_content_type(self, client: TestClient) -> None:
         project_id = create_project(client)

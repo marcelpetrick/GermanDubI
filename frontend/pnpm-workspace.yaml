@@ -1,11 +1,6 @@
-# Allow the security fix without waiting for the release-age window.
+# Keep the exact dependency available to clean installs during the release-age window.
 minimumReleaseAgeExclude:
-  - minimatch@11.0.4
-
-# pnpm 12 no longer reads the "pnpm" field in package.json; its settings live here now.
-# The install warns about what it ignored, but an ignored setting still installs, so every
-# setting here has to be checked rather than assumed. Security overrides belong here too,
-# under "overrides:", each with the advisory it covers and when it can go.
+  - eslint-config-prettier@10.1.9
 
 # The one dependency allowed to run an install script, carried over unchanged. It is
 # currently inert: vite 8 bundles with rolldown and lists esbuild only as an optional peer,
@@ -13,7 +8,3 @@ minimumReleaseAgeExclude:
 # pulls it back in, rather than as a setting that does anything today.
 onlyBuiltDependencies:
   - esbuild
-
-# GHSA-g3hv-75wg-m249: remove this when every parent resolves a patched version.
-overrides:
-  minimatch: 11.0.4

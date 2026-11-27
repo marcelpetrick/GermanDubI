@@ -10,6 +10,23 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+### Security
+
+- Update OpenTelemetry API to 1.45.2 to resolve GHSA-mf5v-w3w3-f6cg.
+- Resolve patched minimatch versions through the frontend dependency tree and remove the
+  temporary override for GHSA-g3hv-75wg-m249.
+- Audit Python lockfile exports without downloading provider wheels.
+
+### Fixed
+
+- Pin PyAV to 18.1.1 so the released faster-whisper can decode audio for local transcription.
+
+### Changed
+
+- Refresh Python and frontend dependencies, including yt-dlp, FastAPI, SQLAlchemy, Vite,
+  Vitest, and Playwright. Update Node to 24.22.3, pnpm to 12.23.0, and container uv to 0.13.10.
+- Pin GitHub Actions to verified release commits.
+
 ## [0.5.6] - 2026-11-05
 
 ### Security
