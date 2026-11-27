@@ -603,15 +603,12 @@ Verified the way the claim is made: cloned the repository into an empty director
 Everything below is known, deliberate, and not done. It is written here rather than carried
 in someone's head, and each item says what would close it.
 
-### Blocked on this machine, not on the code
+### Container and provider verification
 
-Three parts of the container work are written and unverified, each because this development
-machine lacks the thing that would exercise them. None is a defect; all three are claims
-nobody has checked.
-
-- **`docker compose up`.** No Compose plugin installed here. The file parses and the two
-  commands its services run were both exercised directly, so the risk is in the YAML rather
-  than in the application. *Closes when:* someone with `docker-compose-plugin` runs it once.
+- **`docker compose up`.** `CLOSED`. Verified with Compose 5.7.1 on Linux amd64 using
+  the repository's `compose.yaml` and an image override for the published
+  `ghcr.io/marcelpetrick/germandubi:0.5.7`. The API and CPU worker both reached healthy
+  on a fresh shared volume, and the API health endpoint reported `ok`.
 - **The GPU profile.** No NVIDIA Container Toolkit here. *Closes when:* run on a host that
   has it, confirming `germandubi doctor` inside the container reports `GPU (cuda)`.
 - **The publish workflow.** `CLOSED`. It had never run: GitHub rejected the file for using
@@ -633,7 +630,7 @@ nobody has checked.
   twice: run 38141304908 on `main` and run 38143899916 with torch 2.10.0. The open choice
   about proving the download path at all is Q-E6 in [`questions.md`](questions.md).
 
-### One-time account setup, before anyone can pull
+### Registry setup
 
 - **Make the GHCR package public.** `CLOSED`. It is public, and the first anonymous pull
   confirmed it. Worth keeping the note that `denied` is what the registry says about a
