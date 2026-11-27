@@ -39,15 +39,8 @@ YouTube URL
 German-dubbed MKV/MP4 (+ DE/EN subtitles, original audio track kept)
 ```
 
-The first target is deliberately narrow: **English source, German target, one dominant
-narrator, Linux host, local browser UI.**
-
----
-
-## Status
-
-Early development (`0.x`). The project format and HTTP API are still evolving.
-See [`CHANGELOG.md`](CHANGELOG.md) for what exists today.
+GermanDubI supports **English-to-German dubbing for videos with one dominant narrator**.
+Run it in a local browser on Linux or use the published Docker image.
 
 ---
 

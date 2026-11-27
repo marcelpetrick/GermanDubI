@@ -225,8 +225,9 @@ of this repository. Provider-specific license metadata remains visible at the bo
 
 ### Q-E5 — Do we publish to PyPI? · `OPEN`
 
-Affects package naming and whether the frontend build must be bundled into the wheel.
-Currently the wheel is built in CI but not published.
+Publishing to PyPI would affect package naming and whether the frontend build must be
+bundled into the wheel. The release workflow publishes the wheel and source distribution
+as [GitHub release assets](https://github.com/marcelpetrick/GermanDubI/releases).
 
 ### Q-E6 — How does CI prove a YouTube download works, when YouTube refuses CI? · `PROVISIONAL`
 

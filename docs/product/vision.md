@@ -1,12 +1,16 @@
-# Sprachwechsel — Product Vision and Technical Architecture
+# GermanDubI — Product Vision and Technical Architecture
 
-> **Document:** `docs/product/vision.md`
-> **Status:** Draft architecture baseline  
-> **Date:** 2026-08-30  
-> **Primary platform:** Linux host, browser UI  
-> **Backend:** Python  
-> **Primary use case:** English single-narrator YouTube video → German dubbed video  
-> **Working product name:** Sprachwechsel
+> - **Original design baseline:** 2026-08-30
+> - **Primary platform:** Linux host, browser UI
+> - **Backend:** Python
+> - **Primary use case:** English single-narrator YouTube video → German dubbed video
+> - **Original working name:** Sprachwechsel
+
+GermanDubI is available as a working browser application and a published Docker image.
+This document records the original design and target architecture. For current commands
+and deployment instructions, see the [README](../../README.md) and
+[Docker guide](../operations/docker.md). The [C4 diagrams](../architecture/c4.md) describe
+the implemented system.
 
 ---
 

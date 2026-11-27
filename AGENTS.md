@@ -169,8 +169,8 @@ git tag -a v0.3.0 -m "v0.3.0"
 make version               # confirms 0.3.0
 ```
 
-The tag starts `release.yml`: it reruns the whole gate, publishes the GitHub release, and
-only then builds and pushes the container image, so a tag either publishes both or neither.
+The tag starts `release.yml`, which reruns the whole gate. Once the GitHub release is
+published, the workflow builds and pushes the container image.
 A tag with a suffix (`v1.0.0-rc1`) publishes a pre-release and does not move the image's
 `latest`.
 

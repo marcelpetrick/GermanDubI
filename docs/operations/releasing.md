@@ -1,8 +1,7 @@
 # Creating a release
 
-A release is an annotated `vX.Y.Z` tag. Nothing else creates one, and no version number is
-ever edited by hand: `setuptools-scm` derives the version from the tag, so the tag *is* the
-version. See [`AGENTS.md`](../../AGENTS.md) section 3.
+A release starts with an annotated `vX.Y.Z` tag. `setuptools-scm` derives the build version
+from that tag. See [`AGENTS.md`](../../AGENTS.md) section 3.
 
 ## Before tagging
 
@@ -35,26 +34,27 @@ Pushing the tag is the act that publishes. The `Release` workflow then:
 - publishes the wheel and the sdist as a GitHub release, with the changelog section as its
   notes.
 
-Any of those failing stops the release before it is visible. Nothing is published
-partially: the release is created in one step, at the end.
+The release job publishes the GitHub release after its checks pass. The container job
+then builds and publishes the image for `linux/amd64` and `linux/arm64`.
 
 ## If it fails
 
-Delete the tag, fix the cause, and tag again:
+If the release job fails before publication, delete the tag, fix the cause, and tag again:
 
 ```bash
 git tag -d v0.1.0
 git push origin :refs/tags/v0.1.0
 ```
 
-Do not force-push a tag that already produced a published release; publish a new patch
-version instead. Someone may already have downloaded the artifacts from the old one.
+Keep tags that already have a published release. If container publishing fails after
+the release is public, rerun the failed image jobs when the failure is transient. Publish
+a new patch version if a source change is needed.
 
 ## Verifying afterwards
 
 ```bash
-pip download germandubi==X.Y.Z --no-deps -d /tmp/check   # if published to an index
 gh release view vX.Y.Z
+docker buildx imagetools inspect ghcr.io/marcelpetrick/germandubi:X.Y.Z
 ```
 
 The version the CLI reports should match the tag exactly, with no local segment:

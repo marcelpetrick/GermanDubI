@@ -10,6 +10,8 @@ may occur in MINOR releases and are always listed here.
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-11-27
+
 ### Security
 
 - Update OpenTelemetry API to 1.45.2 to resolve GHSA-mf5v-w3w3-f6cg.
@@ -26,6 +28,11 @@ may occur in MINOR releases and are always listed here.
 - Refresh Python and frontend dependencies, including yt-dlp, FastAPI, SQLAlchemy, Vite,
   Vitest, and Playwright. Update Node to 24.22.3, pnpm to 12.23.0, and container uv to 0.13.10.
 - Pin GitHub Actions to verified release commits.
+
+### Documentation
+
+- Describe GermanDubI as a working browser app with a published Docker image.
+- Clarify where release artifacts are published and how to verify the container image.
 
 ## [0.5.6] - 2026-11-05
 
